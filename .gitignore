@@ -8,6 +8,11 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
+
+# Firebase configuration files
+google-services.json
+app/src/main/assets/firebase/
+*firebase-adminsdk*.json
 /build
 /captures
 .externalNativeBuild

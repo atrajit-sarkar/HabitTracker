@@ -13,6 +13,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.habittracker.auth.GoogleSignInHelper
+import com.example.habittracker.auth.ui.AuthScreen
+import com.example.habittracker.auth.ui.AuthViewModel
+import com.example.habittracker.auth.ui.ProfileScreen
 import com.example.habittracker.data.local.Habit
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -20,12 +24,62 @@ import java.time.ZoneOffset
 @Composable
 fun HabitTrackerNavigation(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = "home"
+    startDestination: String = "loading",
+    googleSignInHelper: GoogleSignInHelper
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        composable("loading") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Check authentication state and navigate accordingly
+            LaunchedEffect(Unit) {
+                if (authState.user != null) {
+                    navController.navigate("home") {
+                        popUpTo("loading") { inclusive = true }
+                    }
+                } else {
+                    navController.navigate("auth") {
+                        popUpTo("loading") { inclusive = true }
+                    }
+                }
+            }
+            
+            // Loading screen
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        
+        composable("auth") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+            
+            // If user becomes authenticated, navigate to home
+            LaunchedEffect(authState.user) {
+                if (authState.user != null) {
+                    navController.navigate("home") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                }
+            }
+            
+            AuthScreen(
+                viewModel = authViewModel,
+                googleSignInHelper = googleSignInHelper,
+                onAuthSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                }
+            )
+        }
         composable("home") {
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -37,7 +91,8 @@ fun HabitTrackerNavigation(
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
                 onDeleteHabit = viewModel::deleteHabit,
                 onHabitDetailsClick = { habitId -> navController.navigate("habit_details/$habitId") },
-                onTrashClick = { navController.navigate("trash") }
+                onTrashClick = { navController.navigate("trash") },
+                onProfileClick = { navController.navigate("profile") }
             )
         }
         
@@ -89,6 +144,20 @@ fun HabitTrackerNavigation(
                 onPermanentlyDeleteHabit = viewModel::permanentlyDeleteHabit,
                 onEmptyTrash = viewModel::emptyTrash,
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+        
+        composable("profile") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            ProfileScreen(
+                viewModel = authViewModel,
+                onBackClick = { navController.popBackStack() },
+                onSignedOut = {
+                    navController.navigate("auth") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
     }

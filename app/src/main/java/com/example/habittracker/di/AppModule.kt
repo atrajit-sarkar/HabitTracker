@@ -1,13 +1,12 @@
 package com.example.habittracker.di
 
 import android.content.Context
-import androidx.room.Room
 import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.HabitRepositoryImpl
-import com.example.habittracker.data.local.HabitDao
-import com.example.habittracker.data.local.HabitDatabase
+import com.example.habittracker.data.firestore.FirestoreHabitRepository
 import com.example.habittracker.notification.HabitReminderScheduler
 import com.example.habittracker.notification.HabitReminderSchedulerImpl
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -21,7 +20,7 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
     @Binds
     @Singleton
-    abstract fun bindHabitRepository(impl: HabitRepositoryImpl): HabitRepository
+    abstract fun bindHabitRepository(impl: FirestoreHabitRepository): HabitRepository
 }
 
 @Module
@@ -30,13 +29,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): HabitDatabase =
-        Room.databaseBuilder(context, HabitDatabase::class.java, HabitDatabase.DATABASE_NAME)
-            .fallbackToDestructiveMigration()
-            .build()
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
     @Provides
-    fun provideHabitDao(db: HabitDatabase): HabitDao = db.habitDao()
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+
 
     @Provides
     @Singleton

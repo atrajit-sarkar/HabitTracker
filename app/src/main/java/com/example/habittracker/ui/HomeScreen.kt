@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
@@ -127,7 +128,8 @@ fun HabitHomeRoute(
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
-    onTrashClick: () -> Unit = {}
+    onTrashClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -167,6 +169,7 @@ fun HabitHomeRoute(
         onDeleteHabit = onDeleteHabit,
         onHabitDetailsClick = onHabitDetailsClick,
         onTrashClick = onTrashClick,
+        onProfileClick = onProfileClick,
         notificationPermissionVisible = shouldShowPermissionCard,
         onRequestNotificationPermission = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -188,6 +191,7 @@ fun HabitHomeScreen(
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit,
+    onProfileClick: () -> Unit,
     notificationPermissionVisible: Boolean,
     onRequestNotificationPermission: () -> Unit,
     onDismissPermissionCard: () -> Unit
@@ -200,6 +204,7 @@ fun HabitHomeScreen(
         drawerContent = {
             DrawerContent(
                 onTrashClick = onTrashClick,
+                onProfileClick = onProfileClick,
                 onCloseDrawer = { 
                     scope.launch { drawerState.close() }
                 }
@@ -301,6 +306,7 @@ fun HabitHomeScreen(
 @Composable
 private fun DrawerContent(
     onTrashClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
     // Limit drawer width to 60% of screen width
@@ -388,6 +394,73 @@ private fun DrawerContent(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
                 
+                // Profile Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onCloseDrawer()
+                            onProfileClick()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column {
+                            Text(
+                                text = "Profile",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Account settings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.weight(1f))
+                        
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Trash Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1353,7 +1426,8 @@ internal fun cardPaletteFor(habitId: Long): CardPalette {
         listOf(Color(0xFF3949AB), Color(0xFF5C6BC0)),
         listOf(Color(0xFF00838F), Color(0xFF00ACC1))
     )
-    val colors = palettes[(habitId % palettes.size).toInt()]
+    val index = ((habitId % palettes.size) + palettes.size) % palettes.size
+    val colors = palettes[index.toInt()]
     return CardPalette(
         brush = Brush.linearGradient(colors),
         accent = colors.last()
