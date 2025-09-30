@@ -399,13 +399,15 @@ private fun HabitCard(
                             )
                         ) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = stringResource(id = R.string.mark_as_done), fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Done", fontWeight = FontWeight.SemiBold)
                         }
                         
                         OutlinedButton(
                             onClick = onSeeDetails,
-                            modifier = Modifier.clip(RoundedCornerShape(20.dp)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(20.dp)),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                                 contentColor = Color.White
                             ),
