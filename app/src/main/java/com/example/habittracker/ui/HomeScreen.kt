@@ -1426,7 +1426,8 @@ internal fun cardPaletteFor(habitId: Long): CardPalette {
         listOf(Color(0xFF3949AB), Color(0xFF5C6BC0)),
         listOf(Color(0xFF00838F), Color(0xFF00ACC1))
     )
-    val index = ((habitId % palettes.size) + palettes.size) % palettes.size
+    val paletteCount = palettes.size.toLong()
+    val index = ((habitId % paletteCount) + paletteCount) % paletteCount
     val colors = palettes[index.toInt()]
     return CardPalette(
         brush = Brush.linearGradient(colors),
