@@ -413,12 +413,35 @@ class HabitViewModel @Inject constructor(
     private fun calculateCurrentStreak(completedDates: Set<LocalDate>): Int {
         if (completedDates.isEmpty()) return 0
 
-        // Define the "current" streak as the consecutive run ending at the most recent
-        // completed date, even if that date is not today or yesterday. This allows
-        // retroactive marking of past days to immediately reflect a streak length.
-        val latest = completedDates.max()  // Kotlin stdlib on Set<LocalDate>
+        val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
+        
+        // Check if there's a recent completion (today or yesterday)
+        val hasRecentCompletion = today in completedDates || yesterday in completedDates
+        
+        if (!hasRecentCompletion) {
+            // No recent completion - apply penalty system
+            // Find the most recent completion
+            val mostRecent = completedDates.max()
+            val daysSinceLastCompletion = ChronoUnit.DAYS.between(mostRecent, today).toInt()
+            
+            // Calculate what the streak would have been
+            var consecutiveStreak = 1
+            var cursor = mostRecent.minusDays(1)
+            while (cursor in completedDates) {
+                consecutiveStreak++
+                cursor = cursor.minusDays(1)
+            }
+            
+            // Apply penalty: -1 for each missed day, but don't go below 0
+            val penalty = daysSinceLastCompletion - 1 // -1 because first day after is acceptable
+            return maxOf(0, consecutiveStreak - penalty)
+        }
+        
+        // Has recent completion - calculate normal streak from most recent date
+        val startDate = if (today in completedDates) today else yesterday
         var streak = 1
-        var cursor = latest.minusDays(1)
+        var cursor = startDate.minusDays(1)
         while (cursor in completedDates) {
             streak++
             cursor = cursor.minusDays(1)

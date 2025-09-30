@@ -1,8 +1,9 @@
 package com.example.habittracker.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -180,15 +182,14 @@ private fun HeroSection(
                 )
             }
 
-            // Current Streak
+            // Current Streak with Animated Fire
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.LocalFireDepartment,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                AnimatedFireIcon(
+                    isActive = isSelectedDateCompleted && isToday,
+                    streakCount = progress.currentStreak
                 )
                 Text(
                     text = stringResource(R.string.current_streak_days, progress.currentStreak),
@@ -196,6 +197,44 @@ private fun HeroSection(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+            
+            // Streak Rules Explanation
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Streak Rules",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "• Complete today or yesterday to maintain streak\n• Miss days? Streak reduces by 1 per missed day (motivational penalty)\n• Backfill past days to recover your streak progress",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        lineHeight = 18.sp
+                    )
+                }
             }
 
             // Selected date information
@@ -207,11 +246,25 @@ private fun HeroSection(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
             )
 
-            // Complete Button
+            // Complete Button with Animation
             if (isSelectedDateCompleted) {
+                // Success animation
+                val successScale by animateFloatAsState(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "success_scale"
+                )
+                
                 AssistChip(
                     onClick = { },
                     enabled = false,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = successScale
+                        scaleY = successScale
+                    },
                     label = {
                         Text(
                             text = if (isToday) {
@@ -237,9 +290,23 @@ private fun HeroSection(
                     )
                 )
             } else {
+                // Pulsing call-to-action for incomplete days
+                val infiniteTransition = rememberInfiniteTransition(label = "button_pulse")
+                val buttonAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.8f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "button_alpha"
+                )
+                
                 FilledTonalButton(
                     onClick = onMarkCompleted,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer { alpha = if (canMarkSelectedDate) buttonAlpha else 0.6f },
                     enabled = canMarkSelectedDate
                 ) {
                     Icon(imageVector = Icons.Default.Check, contentDescription = null)
@@ -263,38 +330,41 @@ private fun ProgressStatsSection(progress: HabitProgress) {
             fontWeight = FontWeight.Bold
         )
 
-        val statCards = remember(progress) {
-            listOf(
-                StatCard(
-                    title = "Current Streak",
-                    value = progress.currentStreak.toString(),
-                    subtitle = "days",
-                    icon = Icons.Default.LocalFireDepartment,
-                    color = androidx.compose.ui.graphics.Color.Blue
-                ),
-                StatCard(
-                    title = "Longest Streak",
-                    value = progress.longestStreak.toString(),
-                    subtitle = "days",
-                    icon = Icons.Default.Star,
-                    color = androidx.compose.ui.graphics.Color.Green
-                ),
-                StatCard(
-                    title = "Total Completions",
-                    value = progress.totalCompletions.toString(),
-                    subtitle = "times",
-                    icon = Icons.Default.CheckCircle,
-                    color = androidx.compose.ui.graphics.Color.Magenta
-                ),
-                StatCard(
-                    title = "Success Rate",
-                    value = "${(progress.completionRate * 100).toInt()}%",
-                    subtitle = "completed",
-                    icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    color = androidx.compose.ui.graphics.Color.Blue
-                )
+        val isDark = isSystemInDarkTheme()
+        val currentStreakColor = MaterialTheme.colorScheme.primary
+        val longestStreakColor = MaterialTheme.colorScheme.secondary
+        val totalCompletionsColor = MaterialTheme.colorScheme.tertiary
+        val successRateColor = MaterialTheme.colorScheme.inversePrimary
+        val statCards = listOf(
+            StatCard(
+                title = "Current Streak",
+                value = progress.currentStreak.toString(),
+                subtitle = "days",
+                icon = Icons.Default.LocalFireDepartment,
+                color = currentStreakColor
+            ),
+            StatCard(
+                title = "Longest Streak",
+                value = progress.longestStreak.toString(),
+                subtitle = "days",
+                icon = Icons.Default.Star,
+                color = longestStreakColor
+            ),
+            StatCard(
+                title = "Total Completions",
+                value = progress.totalCompletions.toString(),
+                subtitle = "times",
+                icon = Icons.Default.CheckCircle,
+                color = totalCompletionsColor
+            ),
+            StatCard(
+                title = "Success Rate",
+                value = "${(progress.completionRate * 100).toInt()}%",
+                subtitle = "completed",
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
+                color = successRateColor
             )
-        }
+        )
 
         Column(
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -342,11 +412,30 @@ private fun StatCardItem(
     statCard: StatCard,
     modifier: Modifier = Modifier
 ) {
+    val isDark = isSystemInDarkTheme()
+    val containerAlpha = if (isDark) 0.28f else 0.12f
+    // Subtle pulse animation for stat cards
+    val infiniteTransition = rememberInfiniteTransition(label = "stat_card_pulse")
+    val cardScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.02f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "card_scale"
+    )
+    
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = statCard.color.copy(alpha = 0.1f)
+            containerColor = statCard.color.copy(alpha = containerAlpha)
         )
     ) {
         Column(
@@ -585,8 +674,21 @@ private fun CalendarDay(
         dayModifier = dayModifier.clickable { onClick() }
     }
 
+    // Calendar day entrance animation
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "calendar_day_scale"
+    )
+    
     Box(
-        modifier = dayModifier,
+        modifier = dayModifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        },
         contentAlignment = Alignment.Center
     ) {
         if (date != null) {
@@ -691,6 +793,61 @@ private fun InfoRow(
             fontWeight = FontWeight.SemiBold
         )
     }
+}
+
+@Composable
+private fun AnimatedFireIcon(
+    isActive: Boolean,
+    streakCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "fire_animation")
+    
+    // Flame flickering animation
+    val flameScale by infiniteTransition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "flame_scale"
+    )
+    
+    // Color animation based on active state
+    val fireColor by animateColorAsState(
+        targetValue = if (isActive) {
+            Color(0xFFFF6B35) // Bright orange-red
+        } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) // Faded
+        },
+        animationSpec = tween(600),
+        label = "fire_color"
+    )
+    
+    // Rotation for extra liveliness
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -2f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "fire_rotation"
+    )
+    
+    Icon(
+        imageVector = Icons.Default.LocalFireDepartment,
+        contentDescription = "Streak Fire",
+        tint = fireColor,
+        modifier = modifier
+            .size(28.dp)
+            .graphicsLayer {
+                scaleX = if (isActive) flameScale else 1f
+                scaleY = if (isActive) flameScale else 1f
+                rotationZ = if (isActive) rotation else 0f
+            }
+    )
 }
 
 @Composable
