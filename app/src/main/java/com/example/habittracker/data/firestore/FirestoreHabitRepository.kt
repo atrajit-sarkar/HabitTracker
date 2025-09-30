@@ -215,11 +215,32 @@ class FirestoreHabitRepository @Inject constructor(
 
     private suspend fun findHabitDocument(habitId: Long): DocumentSnapshot? {
         val userCollection = getUserCollection() ?: return null
+
+        // Primary lookup using the numericId field
         val numericSnapshot = userCollection.whereEqualTo("numericId", habitId).limit(1).get().await()
         val numericDoc = numericSnapshot.documents.firstOrNull()
         if (numericDoc != null) return numericDoc
+
+        // Fallback: scan existing documents and compare against legacy identifiers
         val allSnapshot = userCollection.get().await()
-        return allSnapshot.documents.firstOrNull { it.id.hashCode().toLong() == habitId }
+        val matchedDoc = allSnapshot.documents.firstOrNull { doc ->
+            val docIdHash = doc.id.hashCode().toLong()
+            val storedNumeric = (doc.get("numericId") as? Number)?.toLong()
+            val storedIdString = doc.getString("id")
+            val storedIdHash = storedIdString?.hashCode()?.toLong()
+            val storedIdLong = storedIdString?.toLongOrNull()
+            habitId == docIdHash || habitId == storedNumeric || habitId == storedIdHash || habitId == storedIdLong
+        }
+
+        matchedDoc?.let { doc ->
+            // Backfill numericId for faster lookups in the future
+            val currentNumeric = (doc.get("numericId") as? Number)?.toLong()
+            if (currentNumeric == null) {
+                doc.reference.update("numericId", habitId).await()
+            }
+        }
+
+        return matchedDoc
     }
 }
 
