@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -323,75 +324,111 @@ private fun HeroSection(
 
 @Composable
 private fun ProgressStatsSection(progress: HabitProgress) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            text = stringResource(R.string.progress_overview),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        val isDark = isSystemInDarkTheme()
-        val currentStreakColor = MaterialTheme.colorScheme.primary
-        val longestStreakColor = MaterialTheme.colorScheme.secondary
-        val totalCompletionsColor = MaterialTheme.colorScheme.tertiary
-        val successRateColor = MaterialTheme.colorScheme.inversePrimary
-        val statCards = listOf(
-            StatCard(
-                title = "Current Streak",
-                value = progress.currentStreak.toString(),
-                subtitle = "days",
-                icon = Icons.Default.LocalFireDepartment,
-                color = currentStreakColor
-            ),
-            StatCard(
-                title = "Longest Streak",
-                value = progress.longestStreak.toString(),
-                subtitle = "days",
-                icon = Icons.Default.Star,
-                color = longestStreakColor
-            ),
-            StatCard(
-                title = "Total Completions",
-                value = progress.totalCompletions.toString(),
-                subtitle = "times",
-                icon = Icons.Default.CheckCircle,
-                color = totalCompletionsColor
-            ),
-            StatCard(
-                title = "Success Rate",
-                value = "${(progress.completionRate * 100).toInt()}%",
-                subtitle = "completed",
-                icon = Icons.AutoMirrored.Filled.TrendingUp,
-                color = successRateColor
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // Enhanced Section Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Animated gradient icon
+            val infiniteTransition = rememberInfiniteTransition(label = "header_glow")
+            val glowAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "glow_alpha"
             )
-        )
+            
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Text(
+                text = stringResource(R.string.progress_overview),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
+        // Main Stats in 2x2 Grid with Beautiful Cards
+        val isDark = isSystemInDarkTheme()
         Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCardItem(
-                    statCard = statCards[0],
+                EnhancedStatCard(
+                    title = "Current Streak",
+                    value = progress.currentStreak.toString(),
+                    subtitle = "days",
+                    icon = Icons.Default.LocalFireDepartment,
+                    gradient = listOf(
+                        Color(0xFFFF6B35),
+                        Color(0xFFFF8E53)
+                    ),
                     modifier = Modifier.weight(1f)
                 )
-                StatCardItem(
-                    statCard = statCards[1],
+                EnhancedStatCard(
+                    title = "Longest Streak",
+                    value = progress.longestStreak.toString(),
+                    subtitle = "days",
+                    icon = Icons.Default.Star,
+                    gradient = listOf(
+                        Color(0xFFFFD700),
+                        Color(0xFFFFA500)
+                    ),
                     modifier = Modifier.weight(1f)
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCardItem(
-                    statCard = statCards[2],
+                EnhancedStatCard(
+                    title = "Total Completions",
+                    value = progress.totalCompletions.toString(),
+                    subtitle = "times",
+                    icon = Icons.Default.CheckCircle,
+                    gradient = listOf(
+                        Color(0xFF9C27B0),
+                        Color(0xFFE91E63)
+                    ),
                     modifier = Modifier.weight(1f)
                 )
-                StatCardItem(
-                    statCard = statCards[3],
+                EnhancedStatCard(
+                    title = "Success Rate",
+                    value = "${(progress.completionRate * 100).toInt()}%",
+                    subtitle = "completed",
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    gradient = listOf(
+                        Color(0xFF2196F3),
+                        Color(0xFF03DAC6)
+                    ),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -408,61 +445,166 @@ data class StatCard(
 )
 
 @Composable
-private fun StatCardItem(
-    statCard: StatCard,
+private fun EnhancedStatCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    icon: ImageVector,
+    gradient: List<Color>,
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
-    val containerAlpha = if (isDark) 0.28f else 0.12f
-    // Subtle pulse animation for stat cards
-    val infiniteTransition = rememberInfiniteTransition(label = "stat_card_pulse")
-    val cardScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.02f,
+    
+    // Enhanced animations
+    val infiniteTransition = rememberInfiniteTransition(label = "enhanced_stat_card")
+    
+    // Subtle float animation
+    val cardElevation by infiniteTransition.animateFloat(
+        initialValue = 4f,
+        targetValue = 8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutSine),
+            animation = tween(3000, easing = EaseInOutSine),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "card_scale"
+        label = "card_elevation"
+    )
+    
+    // Icon rotation for visual interest
+    val iconRotation by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "icon_rotation"
+    )
+    
+    // Shimmer effect
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shimmer_alpha"
     )
     
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = cardScale
-                scaleY = cardScale
-            },
-        shape = RoundedCornerShape(16.dp),
+            .aspectRatio(1f)
+            .shadow(
+                elevation = cardElevation.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = gradient[0].copy(alpha = 0.3f),
+                spotColor = gradient[1].copy(alpha = 0.3f)
+            ),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = statCard.color.copy(alpha = containerAlpha)
+            containerColor = if (isDark) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Icon(
-                imageVector = statCard.icon,
-                contentDescription = null,
-                tint = statCard.color,
-                modifier = Modifier.size(24.dp)
+            // Gradient background overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = gradient.map { it.copy(alpha = 0.1f) },
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset.Infinite
+                        )
+                    )
             )
-            Text(
-                text = statCard.value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = statCard.color
+            
+            // Shimmer overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0f),
+                                Color.White.copy(alpha = shimmerAlpha * 0.1f),
+                                Color.White.copy(alpha = 0f)
+                            ),
+                            start = androidx.compose.ui.geometry.Offset(-100f, -100f),
+                            end = androidx.compose.ui.geometry.Offset(100f, 100f)
+                        )
+                    )
             )
-            Text(
-                text = statCard.title,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
+            
+            // Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Animated Icon with gradient
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = gradient.map { it.copy(alpha = 0.2f) }
+                            ),
+                            shape = CircleShape
+                        )
+                        .graphicsLayer {
+                            rotationZ = iconRotation
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = gradient[0],
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                // Value with enhanced typography
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    color = gradient[0],
+                    textAlign = TextAlign.Center
+                )
+                
+                // Title and subtitle
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
