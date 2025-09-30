@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.local.Habit
+import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import com.example.habittracker.notification.HabitReminderScheduler
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.temporal.ChronoUnit
+import java.time.ZoneOffset
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
@@ -48,6 +51,10 @@ class HabitViewModel @Inject constructor(
 
     fun hideAddHabitSheet() {
         _uiState.update { it.copy(isAddSheetVisible = false, addHabitState = AddHabitState()) }
+    }
+
+    fun resetAddHabitState() {
+        _uiState.update { it.copy(addHabitState = AddHabitState()) }
     }
 
     fun onHabitNameChange(value: String) {
@@ -125,6 +132,14 @@ class HabitViewModel @Inject constructor(
         }
     }
 
+    fun onAvatarChange(avatar: HabitAvatar) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(avatar = avatar)
+            )
+        }
+    }
+
     fun saveHabit() {
         val currentState = _uiState.value
         if (currentState.addHabitState.isSaving) return
@@ -153,7 +168,8 @@ class HabitViewModel @Inject constructor(
                 dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
                 dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
                 monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                notificationSound = addForm.notificationSound
+                notificationSound = addForm.notificationSound,
+                avatar = addForm.avatar
             )
             val savedHabit = withContext(Dispatchers.IO) {
                 val id = habitRepository.insertHabit(habit)
@@ -235,7 +251,8 @@ class HabitViewModel @Inject constructor(
             isReminderEnabled = habit.reminderEnabled,
             isCompletedToday = habit.lastCompletedDate == LocalDate.now(),
             frequency = habit.frequency,
-            frequencyText = frequencyText
+            frequencyText = frequencyText,
+            avatar = habit.avatar
         )
     }
 
@@ -292,6 +309,94 @@ class HabitViewModel @Inject constructor(
             11 -> "November"
             12 -> "December"
             else -> "January"
+        }
+    }
+
+    suspend fun getHabitProgress(habitId: Long): HabitProgress {
+        return withContext(Dispatchers.IO) {
+            val habit = habitRepository.getHabitById(habitId)
+            val completions = habitRepository.getHabitCompletions(habitId)
+            val completedDates = completions.map { it.completedDate }.toSet()
+            
+            // Calculate current streak
+            val currentStreak = calculateCurrentStreak(completedDates)
+            
+            // Calculate longest streak
+            val longestStreak = calculateLongestStreak(completedDates)
+            
+            // Calculate total completions
+            val totalCompletions = completions.size
+            
+            // Calculate success rate
+            val daysSinceCreation = ChronoUnit.DAYS.between(
+                LocalDate.ofInstant(habit.createdAt, ZoneOffset.UTC), 
+                LocalDate.now()
+            ).toInt() + 1
+            val completionRate = if (daysSinceCreation > 0) {
+                totalCompletions.toFloat() / daysSinceCreation
+            } else 0f
+            
+            HabitProgress(
+                currentStreak = currentStreak,
+                longestStreak = longestStreak,
+                totalCompletions = totalCompletions,
+                completionRate = completionRate.coerceAtMost(1.0f),
+                completedDates = completedDates
+            )
+        }
+    }
+
+    private fun calculateCurrentStreak(completedDates: Set<LocalDate>): Int {
+        if (completedDates.isEmpty()) return 0
+        
+        var streak = 0
+        var currentDate = LocalDate.now()
+        
+        // Check if today is completed or if yesterday was the last completion
+        if (currentDate in completedDates) {
+            streak = 1
+            currentDate = currentDate.minusDays(1)
+        } else {
+            currentDate = currentDate.minusDays(1)
+            if (currentDate !in completedDates) return 0
+            streak = 1
+            currentDate = currentDate.minusDays(1)
+        }
+        
+        // Count consecutive days backwards
+        while (currentDate in completedDates) {
+            streak++
+            currentDate = currentDate.minusDays(1)
+        }
+        
+        return streak
+    }
+
+    private fun calculateLongestStreak(completedDates: Set<LocalDate>): Int {
+        if (completedDates.isEmpty()) return 0
+        
+        val sortedDates = completedDates.sorted()
+        var longestStreak = 1
+        var currentStreak = 1
+        
+        for (i in 1 until sortedDates.size) {
+            val currentDate = sortedDates[i]
+            val previousDate = sortedDates[i - 1]
+            
+            if (ChronoUnit.DAYS.between(previousDate, currentDate) == 1L) {
+                currentStreak++
+                longestStreak = maxOf(longestStreak, currentStreak)
+            } else {
+                currentStreak = 1
+            }
+        }
+        
+        return longestStreak
+    }
+
+    suspend fun getHabitById(habitId: Long): Habit {
+        return withContext(Dispatchers.IO) {
+            habitRepository.getHabitById(habitId)
         }
     }
 }

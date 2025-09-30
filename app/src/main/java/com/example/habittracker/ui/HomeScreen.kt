@@ -10,6 +10,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,16 +24,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState // Added import
 import androidx.compose.foundation.verticalScroll // Added import
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -41,7 +49,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -50,6 +60,7 @@ import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -78,6 +89,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 // import androidx.compose.ui.platform.LocalLifecycleOwner // Already imported via androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +104,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
 import com.example.habittracker.R
+import com.example.habittracker.data.local.HabitAvatar
+import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import kotlinx.coroutines.launch
@@ -98,32 +115,34 @@ import java.time.format.FormatStyle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitHomeRoute(
-    viewModel: HabitViewModel = hiltViewModel()
+    state: HabitScreenState,
+    onAddHabitClick: () -> Unit,
+    onToggleReminder: (Long, Boolean) -> Unit,
+    onMarkHabitCompleted: (Long) -> Unit,
+    onDeleteHabit: (Long) -> Unit,
+    onHabitDetailsClick: (Long) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
     val notificationPermissionState = rememberNotificationPermissionState()
     var notificationCardDismissed by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        notificationPermissionState.value = granted || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-        if (!granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    context.getString(R.string.notification_permission_rationale)
-                )
-            }
-        }
+    ) { isGranted ->
+        notificationPermissionState.value = isGranted
     }
 
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.dismissSnackbar()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationPermissionState.value = checkNotificationPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -135,21 +154,11 @@ fun HabitHomeRoute(
     HabitHomeScreen(
         state = state,
         snackbarHostState = snackbarHostState,
-        onAddHabitClick = viewModel::showAddHabitSheet,
-        onDismissAddHabit = viewModel::hideAddHabitSheet,
-        onHabitNameChange = viewModel::onHabitNameChange,
-        onHabitDescriptionChange = viewModel::onHabitDescriptionChange,
-        onHabitReminderToggleChange = viewModel::onHabitReminderToggle,
-        onHabitTimeChange = viewModel::onHabitTimeChange,
-        onHabitFrequencyChange = viewModel::onHabitFrequencyChange,
-        onHabitDayOfWeekChange = viewModel::onHabitDayOfWeekChange,
-        onHabitDayOfMonthChange = viewModel::onHabitDayOfMonthChange,
-        onHabitMonthOfYearChange = viewModel::onHabitMonthOfYearChange,
-        onNotificationSoundChange = viewModel::onNotificationSoundChange,
-        onSaveHabit = viewModel::saveHabit,
-        onToggleReminder = viewModel::toggleReminder,
-        onMarkHabitCompleted = viewModel::markHabitCompleted,
-        onDeleteHabit = viewModel::deleteHabit,
+        onAddHabitClick = onAddHabitClick,
+        onToggleReminder = onToggleReminder,
+        onMarkHabitCompleted = onMarkHabitCompleted,
+        onDeleteHabit = onDeleteHabit,
+        onHabitDetailsClick = onHabitDetailsClick,
         notificationPermissionVisible = shouldShowPermissionCard,
         onRequestNotificationPermission = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -166,49 +175,14 @@ fun HabitHomeScreen(
     state: HabitScreenState,
     snackbarHostState: SnackbarHostState,
     onAddHabitClick: () -> Unit,
-    onDismissAddHabit: () -> Unit,
-    onHabitNameChange: (String) -> Unit,
-    onHabitDescriptionChange: (String) -> Unit,
-    onHabitReminderToggleChange: (Boolean) -> Unit,
-    onHabitTimeChange: (Int, Int) -> Unit,
-    onHabitFrequencyChange: (HabitFrequency) -> Unit,
-    onHabitDayOfWeekChange: (Int) -> Unit,
-    onHabitDayOfMonthChange: (Int) -> Unit,
-    onHabitMonthOfYearChange: (Int) -> Unit,
-    onNotificationSoundChange: (NotificationSound) -> Unit,
-    onSaveHabit: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
+    onHabitDetailsClick: (Long) -> Unit,
     notificationPermissionVisible: Boolean,
     onRequestNotificationPermission: () -> Unit,
     onDismissPermissionCard: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    // val coroutineScope = rememberCoroutineScope() // Not used in this specific composable, consider removing if not needed elsewhere
-
-    if (state.isAddSheetVisible) {
-        ModalBottomSheet(
-            onDismissRequest = onDismissAddHabit,
-            sheetState = sheetState,
-            tonalElevation = 8.dp
-        ) {
-            AddHabitSheet(
-                state = state.addHabitState,
-                onHabitNameChange = onHabitNameChange,
-                onHabitDescriptionChange = onHabitDescriptionChange,
-                onHabitReminderToggleChange = onHabitReminderToggleChange,
-                onHabitTimeChange = onHabitTimeChange,
-                onHabitFrequencyChange = onHabitFrequencyChange,
-                onHabitDayOfWeekChange = onHabitDayOfWeekChange,
-                onHabitDayOfMonthChange = onHabitDayOfMonthChange,
-                onHabitMonthOfYearChange = onHabitMonthOfYearChange,
-                onNotificationSoundChange = onNotificationSoundChange,
-                onDismiss = onDismissAddHabit,
-                onSaveHabit = onSaveHabit
-            )
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -224,12 +198,27 @@ fun HabitHomeScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            LargeFloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = onAddHabitClick,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary
+                shape = RoundedCornerShape(16.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 12.dp
+                )
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(id = R.string.add_habit))
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(id = R.string.add_habit),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     ) { padding ->
@@ -261,7 +250,8 @@ fun HabitHomeScreen(
                     habit = habit,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
                     onMarkCompleted = { onMarkHabitCompleted(habit.id) },
-                    onDelete = { onDeleteHabit(habit.id) }
+                    onDelete = { onDeleteHabit(habit.id) },
+                    onSeeDetails = { onHabitDetailsClick(habit.id) }
                 )
             }
 
@@ -286,6 +276,7 @@ private fun HabitCard(
     onToggleReminder: (Boolean) -> Unit,
     onMarkCompleted: () -> Unit,
     onDelete: () -> Unit,
+    onSeeDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
@@ -307,7 +298,16 @@ private fun HabitCard(
                 .padding(24.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Avatar display
+                    AvatarDisplay(
+                        avatar = habit.avatar,
+                        size = 48.dp
+                    )
+                    
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = habit.title,
@@ -384,17 +384,56 @@ private fun HabitCard(
                         )
                     )
                 } else {
-                    FilledTonalButton(
-                        onClick = onMarkCompleted,
-                        modifier = Modifier.clip(RoundedCornerShape(20.dp)),
-                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Color.White,
-                            contentColor = palette.accent
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                        FilledTonalButton(
+                            onClick = onMarkCompleted,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(20.dp)),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = Color.White,
+                                contentColor = palette.accent
+                            )
+                        ) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(id = R.string.mark_as_done), fontWeight = FontWeight.SemiBold)
+                        }
+                        
+                        OutlinedButton(
+                            onClick = onSeeDetails,
+                            modifier = Modifier.clip(RoundedCornerShape(20.dp)),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            ),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
+                        ) {
+                            Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Details", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // Add "See Details" button for completed habits too
+                if (habit.isCompletedToday) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onSeeDetails,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp)),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
+                    ) {
+                        Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(id = R.string.mark_as_done), fontWeight = FontWeight.SemiBold)
+                        Text(text = "See Details", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -468,6 +507,7 @@ private fun AddHabitSheet(
     onHabitDayOfWeekChange: (Int) -> Unit,
     onHabitDayOfMonthChange: (Int) -> Unit,
     onHabitMonthOfYearChange: (Int) -> Unit,
+    onAvatarChange: (HabitAvatar) -> Unit,
     onNotificationSoundChange: (NotificationSound) -> Unit,
     onDismiss: () -> Unit,
     onSaveHabit: () -> Unit
@@ -517,6 +557,12 @@ private fun AddHabitSheet(
             label = { Text(text = stringResource(id = R.string.habit_description_label)) },
             minLines = 2,
             maxLines = 4
+        )
+        
+        // Avatar Selection
+        AvatarSelector(
+            selectedAvatar = state.avatar,
+            onAvatarChange = onAvatarChange
         )
         
         // Frequency Selection
@@ -877,6 +923,185 @@ private fun NotificationSoundSelector(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AvatarSelector(
+    selectedAvatar: HabitAvatar,
+    onAvatarChange: (HabitAvatar) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = stringResource(id = R.string.avatar_label),
+            style = MaterialTheme.typography.titleMedium
+        )
+        
+        // Current avatar display
+        AvatarDisplay(
+            avatar = selectedAvatar,
+            size = 56.dp,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        
+        // Emoji selection grid
+        Text(
+            text = stringResource(id = R.string.choose_emoji_label),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(6),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.height(120.dp)
+        ) {
+            items(HabitAvatar.POPULAR_EMOJIS) { emoji ->
+                EmojiItem(
+                    emoji = emoji,
+                    isSelected = selectedAvatar.value == emoji && selectedAvatar.type == HabitAvatarType.EMOJI,
+                    onClick = {
+                        onAvatarChange(
+                            selectedAvatar.copy(
+                                type = HabitAvatarType.EMOJI,
+                                value = emoji
+                            )
+                        )
+                    }
+                )
+            }
+        }
+        
+        // Background color selection
+        Text(
+            text = stringResource(id = R.string.background_color_label),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(HabitAvatar.BACKGROUND_COLORS) { color ->
+                ColorItem(
+                    color = color,
+                    isSelected = selectedAvatar.backgroundColor == color,
+                    onClick = {
+                        onAvatarChange(selectedAvatar.copy(backgroundColor = color))
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvatarDisplay(
+    avatar: HabitAvatar,
+    size: Dp,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .background(
+                color = Color(android.graphics.Color.parseColor(avatar.backgroundColor)),
+                shape = CircleShape
+            )
+    ) {
+        when (avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                Text(
+                    text = avatar.value,
+                    fontSize = (size.value * 0.6f).sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+            HabitAvatarType.DEFAULT_ICON -> {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size((size.value * 0.6f).dp)
+                )
+            }
+            HabitAvatarType.CUSTOM_IMAGE -> {
+                // For future implementation of custom images
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size((size.value * 0.6f).dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiItem(
+    emoji: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .background(
+                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer 
+                       else MaterialTheme.colorScheme.surface,
+                shape = CircleShape
+            )
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary 
+                       else MaterialTheme.colorScheme.outline,
+                shape = CircleShape
+            )
+            .clickable { onClick() }
+    ) {
+        Text(
+            text = emoji,
+            fontSize = 20.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun ColorItem(
+    color: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .background(
+                color = Color(android.graphics.Color.parseColor(color)),
+                shape = CircleShape
+            )
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary 
+                       else MaterialTheme.colorScheme.outline,
+                shape = CircleShape
+            )
+            .clickable { onClick() }
+    ) {
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(16.dp)
+            )
         }
     }
 }

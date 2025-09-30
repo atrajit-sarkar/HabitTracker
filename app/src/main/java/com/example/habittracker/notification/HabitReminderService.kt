@@ -10,9 +10,16 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
+import androidx.core.graphics.toColorInt
 import com.example.habittracker.MainActivity
 import com.example.habittracker.R
 import com.example.habittracker.data.local.Habit
+import com.example.habittracker.data.local.HabitAvatar
+import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.NotificationSound
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -52,6 +59,8 @@ object HabitReminderService {
             habit.id.toInt(),
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("habitId", habit.id)
+                putExtra("openHabitDetails", true)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -67,14 +76,19 @@ object HabitReminderService {
         )
 
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_habit)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle(habit.title)
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(contentIntent)
-            .setAutoCancel(true)
+            .setAutoCancel(false)
+            .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        // Set avatar as large icon
+        val avatarBitmap = createAvatarBitmap(habit.avatar)
+        notificationBuilder.setLargeIcon(avatarBitmap)
 
         // Set custom sound for the habit
         val soundUri = habit.notificationSound.getUri(context)
@@ -91,9 +105,109 @@ object HabitReminderService {
         }
         notificationBuilder.setVibrate(vibrationPattern)
 
+        // Add action buttons
+        val completeAction = NotificationCompat.Action.Builder(
+            R.drawable.ic_check_24,
+            context.getString(R.string.mark_as_completed),
+            createCompleteActionPendingIntent(context, habit.id)
+        ).build()
+
+        val dismissAction = NotificationCompat.Action.Builder(
+            R.drawable.ic_close_24,
+            context.getString(R.string.dismiss),
+            createDismissActionPendingIntent(context, habit.id)
+        ).build()
+
+        notificationBuilder
+            .addAction(completeAction)
+            .addAction(dismissAction)
+
         val notification = notificationBuilder.build()
 
         notificationManager.notify(habit.id.toInt(), notification)
+    }
+
+    private fun createAvatarBitmap(avatar: HabitAvatar): Bitmap {
+        val size = 128
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        
+        // Draw background circle
+        val backgroundPaint = Paint().apply {
+            color = avatar.backgroundColor.toColorInt()
+            isAntiAlias = true
+        }
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, backgroundPaint)
+        
+        when (avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                // Draw emoji
+                val textPaint = Paint().apply {
+                    textSize = size * 0.6f
+                    textAlign = Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+                val textY = size / 2f - (textPaint.descent() + textPaint.ascent()) / 2
+                canvas.drawText(avatar.value, size / 2f, textY, textPaint)
+            }
+            HabitAvatarType.DEFAULT_ICON -> {
+                // Draw a simple icon (could be improved with actual vector drawable)
+                val iconPaint = Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    isAntiAlias = true
+                    strokeWidth = 8f
+                    style = Paint.Style.STROKE
+                }
+                val centerX = size / 2f
+                val centerY = size / 2f
+                val radius = size * 0.2f
+                canvas.drawCircle(centerX, centerY, radius, iconPaint)
+            }
+            HabitAvatarType.CUSTOM_IMAGE -> {
+                // Future implementation for custom images
+                val iconPaint = Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    isAntiAlias = true
+                    textSize = size * 0.4f
+                    textAlign = Paint.Align.CENTER
+                }
+                val textY = size / 2f - (iconPaint.descent() + iconPaint.ascent()) / 2
+                canvas.drawText("IMG", size / 2f, textY, iconPaint)
+            }
+        }
+        
+        return bitmap
+    }
+
+    private fun createCompleteActionPendingIntent(context: Context, habitId: Long): PendingIntent {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "COMPLETE_HABIT"
+            putExtra("habitId", habitId)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            "complete_$habitId".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun createDismissActionPendingIntent(context: Context, habitId: Long): PendingIntent {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "DISMISS_HABIT"
+            putExtra("habitId", habitId)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            "dismiss_$habitId".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    fun dismissNotification(context: Context, habitId: Long) {
+        val notificationManager = NotificationManagerCompat.from(context)
+        notificationManager.cancel(habitId.toInt())
     }
 }
 

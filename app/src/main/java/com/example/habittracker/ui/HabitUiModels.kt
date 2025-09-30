@@ -1,5 +1,6 @@
 package com.example.habittracker.ui
 
+import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import java.time.LocalTime
@@ -12,7 +13,8 @@ data class HabitCardUi(
     val isReminderEnabled: Boolean,
     val isCompletedToday: Boolean,
     val frequency: HabitFrequency,
-    val frequencyText: String
+    val frequencyText: String,
+    val avatar: HabitAvatar
 )
 
 data class AddHabitState(
@@ -26,6 +28,7 @@ data class AddHabitState(
     val dayOfMonth: Int = 1,
     val monthOfYear: Int = 1, // January
     val notificationSound: NotificationSound = NotificationSound.DEFAULT,
+    val avatar: HabitAvatar = HabitAvatar.DEFAULT,
     val nameError: String? = null,
     val isSaving: Boolean = false
 ) {

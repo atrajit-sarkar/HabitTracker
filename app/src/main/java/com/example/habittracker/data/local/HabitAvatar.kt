@@ -1,11 +1,15 @@
 package com.example.habittracker.data.local
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class HabitAvatarType {
     EMOJI,
     DEFAULT_ICON,
     CUSTOM_IMAGE
 }
 
+@Serializable
 data class HabitAvatar(
     val type: HabitAvatarType = HabitAvatarType.DEFAULT_ICON,
     val value: String = "🎯", // emoji character, icon name, or image path

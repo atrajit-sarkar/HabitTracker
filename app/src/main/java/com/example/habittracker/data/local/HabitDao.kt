@@ -14,7 +14,7 @@ interface HabitDao {
     fun observeHabits(): Flow<List<Habit>>
 
     @Query("SELECT * FROM habits WHERE id = :habitId LIMIT 1")
-    suspend fun getHabitById(habitId: Long): Habit?
+    suspend fun getHabitById(habitId: Long): Habit
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabit(habit: Habit): Long
@@ -24,4 +24,13 @@ interface HabitDao {
 
     @Delete
     suspend fun deleteHabit(habit: Habit)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCompletion(completion: HabitCompletion)
+
+    @Query("SELECT * FROM habit_completions WHERE habitId = :habitId ORDER BY completedDate DESC")
+    suspend fun getHabitCompletions(habitId: Long): List<HabitCompletion>
+
+    @Query("DELETE FROM habit_completions WHERE habitId = :habitId AND completedDate = :date")
+    suspend fun removeCompletion(habitId: Long, date: java.time.LocalDate)
 }
