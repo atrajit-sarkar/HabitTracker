@@ -59,6 +59,9 @@
     <string name="completed">completed</string>
     <string name="progress_overview">Progress Overview</string>
     <string name="calendar_view">Calendar View</string>
+    <string name="selected_date">Selected date: %1$s</string>
+    <string name="completed_on">Completed on %1$s</string>
+    <string name="calendar_helper_text">Tap any previous date (even before creation) to view it. Use the button above to backfill completion.</string>
     <string name="habit_details">Habit Details</string>
     <string name="frequency">Frequency</string>
     <string name="daily">Daily</string>

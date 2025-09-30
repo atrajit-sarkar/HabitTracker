@@ -231,9 +231,9 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    fun toggleHabitCompletionForDate(habitId: Long, date: java.time.LocalDate) {
+    fun markHabitCompletedForDate(habitId: Long, date: java.time.LocalDate) {
         viewModelScope.launch(Dispatchers.IO) {
-            habitRepository.toggleCompletionForDate(habitId, date)
+            habitRepository.markCompletedForDate(habitId, date)
         }
     }
 
@@ -412,27 +412,17 @@ class HabitViewModel @Inject constructor(
 
     private fun calculateCurrentStreak(completedDates: Set<LocalDate>): Int {
         if (completedDates.isEmpty()) return 0
-        
-        var streak = 0
-        var currentDate = LocalDate.now()
-        
-        // Check if today is completed or if yesterday was the last completion
-        if (currentDate in completedDates) {
-            streak = 1
-            currentDate = currentDate.minusDays(1)
-        } else {
-            currentDate = currentDate.minusDays(1)
-            if (currentDate !in completedDates) return 0
-            streak = 1
-            currentDate = currentDate.minusDays(1)
-        }
-        
-        // Count consecutive days backwards
-        while (currentDate in completedDates) {
+
+        // Define the "current" streak as the consecutive run ending at the most recent
+        // completed date, even if that date is not today or yesterday. This allows
+        // retroactive marking of past days to immediately reflect a streak length.
+        val latest = completedDates.max()  // Kotlin stdlib on Set<LocalDate>
+        var streak = 1
+        var cursor = latest.minusDays(1)
+        while (cursor in completedDates) {
             streak++
-            currentDate = currentDate.minusDays(1)
+            cursor = cursor.minusDays(1)
         }
-        
         return streak
     }
 

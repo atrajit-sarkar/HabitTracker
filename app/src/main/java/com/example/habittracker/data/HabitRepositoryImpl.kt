@@ -64,31 +64,13 @@ class HabitRepositoryImpl @Inject constructor(
         
         // Update lastCompletedDate if this is the most recent completion
         val existing = habitDao.getHabitById(habitId)
-        if (existing.lastCompletedDate == null || date.isAfter(existing.lastCompletedDate)) {
-            val updated = existing.copy(lastCompletedDate = date)
-            habitDao.updateHabit(updated)
+        val newLast = when {
+            existing.lastCompletedDate == null -> date
+            date.isAfter(existing.lastCompletedDate) -> date
+            else -> existing.lastCompletedDate
         }
-    }
-
-    override suspend fun toggleCompletionForDate(habitId: Long, date: LocalDate) {
-        val completions = habitDao.getHabitCompletions(habitId)
-        val isCompleted = completions.any { it.completedDate == date }
-        
-        if (isCompleted) {
-            // Remove completion
-            habitDao.removeCompletion(habitId, date)
-            
-            // Update lastCompletedDate if we removed the most recent completion
-            val existing = habitDao.getHabitById(habitId)
-            if (existing.lastCompletedDate == date) {
-                val remainingCompletions = completions.filter { it.completedDate != date }
-                val newLastDate = remainingCompletions.maxByOrNull { it.completedDate }?.completedDate
-                val updated = existing.copy(lastCompletedDate = newLastDate)
-                habitDao.updateHabit(updated)
-            }
-        } else {
-            // Add completion
-            markCompletedForDate(habitId, date)
+        if (newLast != existing.lastCompletedDate) {
+            habitDao.updateHabit(existing.copy(lastCompletedDate = newLast))
         }
     }
 

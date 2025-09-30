@@ -14,6 +14,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.habittracker.data.local.Habit
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Composable
 fun HabitTrackerNavigation(
@@ -100,28 +102,45 @@ fun HabitDetailsRoute(
 ) {
     var habit by remember { mutableStateOf<Habit?>(null) }
     var progress by remember { mutableStateOf<HabitProgress?>(null) }
-    var isCompletedToday by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var refreshTrigger by remember { mutableStateOf(0) }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     // Function to refresh progress data
     suspend fun refreshProgress() {
         try {
-            habit = viewModel.getHabitById(habitId)
-            progress = viewModel.getHabitProgress(habitId)
-            
-            // Check if completed today
-            val today = java.time.LocalDate.now()
-            isCompletedToday = progress?.completedDates?.contains(today) ?: false
+            val loadedHabit = viewModel.getHabitById(habitId)
+            val loadedProgress = viewModel.getHabitProgress(habitId)
+            habit = loadedHabit
+            progress = loadedProgress
+
+            val creationDate = LocalDate.ofInstant(loadedHabit.createdAt, ZoneOffset.UTC)
+            val today = LocalDate.now()
+            val adjustedDate = when {
+                selectedDate.isBefore(creationDate) -> creationDate
+                selectedDate.isAfter(today) -> today
+                else -> selectedDate
+            }
+            if (adjustedDate != selectedDate) {
+                selectedDate = adjustedDate
+            }
         } catch (e: Exception) {
             // Handle error
         }
     }
 
-    LaunchedEffect(habitId, refreshTrigger) {
+    // Initial load only shows full screen loader
+    LaunchedEffect(habitId) {
         isLoading = true
         refreshProgress()
         isLoading = false
+    }
+
+    // Subsequent refreshes (e.g. after marking completion) should not blank the screen
+    LaunchedEffect(refreshTrigger) {
+        if (!isLoading) {
+            refreshProgress()
+        }
     }
 
     if (isLoading) {
@@ -136,18 +155,19 @@ fun HabitDetailsRoute(
         val currentProgress = progress
         
         if (currentHabit != null && currentProgress != null) {
+            val isSelectedDateCompleted = currentProgress.completedDates.contains(selectedDate)
             HabitDetailsScreen(
                 habit = currentHabit,
                 progress = currentProgress,
-                isCompletedToday = isCompletedToday,
+                selectedDate = selectedDate,
+                isSelectedDateCompleted = isSelectedDateCompleted,
                 onBackClick = onBackClick,
-                onMarkCompleted = {
-                    viewModel.markHabitCompleted(habitId)
-                    refreshTrigger++
+                onSelectDate = { date ->
+                    selectedDate = date
                 },
-                onDateClick = { date ->
-                    viewModel.toggleHabitCompletionForDate(habitId, date)
-                    // Trigger refresh by updating the trigger
+                onMarkCompleted = {
+                    viewModel.markHabitCompletedForDate(habitId, selectedDate)
+                    // Trigger a lightweight refresh without showing the full-screen loader
                     refreshTrigger++
                 }
             )

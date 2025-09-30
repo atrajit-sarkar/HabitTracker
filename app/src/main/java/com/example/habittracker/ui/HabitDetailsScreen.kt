@@ -57,10 +57,11 @@ data class HabitProgress(
 fun HabitDetailsScreen(
     habit: Habit,
     progress: HabitProgress,
-    isCompletedToday: Boolean,
+    selectedDate: LocalDate,
+    isSelectedDateCompleted: Boolean,
     onBackClick: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit = { _ -> },
     onMarkCompleted: () -> Unit,
-    onDateClick: (LocalDate) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -104,7 +105,8 @@ fun HabitDetailsScreen(
             HeroSection(
                 habit = habit,
                 progress = progress,
-                isCompletedToday = isCompletedToday,
+                selectedDate = selectedDate,
+                isSelectedDateCompleted = isSelectedDateCompleted,
                 onMarkCompleted = onMarkCompleted
             )
 
@@ -115,7 +117,8 @@ fun HabitDetailsScreen(
             CalendarSection(
                 habit = habit,
                 completedDates = progress.completedDates,
-                onDateClick = onDateClick
+                selectedDate = selectedDate,
+                onDateSelected = onSelectDate
             )
 
             // Habit Information
@@ -131,9 +134,15 @@ fun HabitDetailsScreen(
 private fun HeroSection(
     habit: Habit,
     progress: HabitProgress,
-    isCompletedToday: Boolean,
+    selectedDate: LocalDate,
+    isSelectedDateCompleted: Boolean,
     onMarkCompleted: () -> Unit
 ) {
+    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL) }
+    val selectedDateText = remember(selectedDate) { dateFormatter.format(selectedDate) }
+    val isToday = selectedDate == LocalDate.now()
+    val canMarkSelectedDate = !isSelectedDateCompleted && !selectedDate.isAfter(LocalDate.now())
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -189,13 +198,27 @@ private fun HeroSection(
                 )
             }
 
+            // Selected date information
+            Text(
+                text = stringResource(R.string.selected_date, selectedDateText),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+            )
+
             // Complete Button
-            if (isCompletedToday) {
+            if (isSelectedDateCompleted) {
                 AssistChip(
                     onClick = { },
+                    enabled = false,
                     label = {
                         Text(
-                            text = stringResource(R.string.completed_today)
+                            text = if (isToday) {
+                                stringResource(R.string.completed_today)
+                            } else {
+                                stringResource(R.string.completed_on, selectedDateText)
+                            }
                         )
                     },
                     leadingIcon = {
@@ -207,13 +230,17 @@ private fun HeroSection(
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                         labelColor = MaterialTheme.colorScheme.primary,
-                        leadingIconContentColor = MaterialTheme.colorScheme.primary
+                        leadingIconContentColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        disabledLabelColor = MaterialTheme.colorScheme.primary,
+                        disabledLeadingIconContentColor = MaterialTheme.colorScheme.primary
                     )
                 )
             } else {
                 FilledTonalButton(
                     onClick = onMarkCompleted,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canMarkSelectedDate
                 ) {
                     Icon(imageVector = Icons.Default.Check, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -355,9 +382,10 @@ private fun StatCardItem(
 private fun CalendarSection(
     habit: Habit,
     completedDates: Set<LocalDate>,
-    onDateClick: (LocalDate) -> Unit = {}
+    selectedDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit = { _ -> }
 ) {
-    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+    var currentMonth by remember(selectedDate) { mutableStateOf(YearMonth.from(selectedDate)) }
     
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
@@ -415,7 +443,11 @@ private fun CalendarSection(
                     month = currentMonth,
                     completedDates = completedDates,
                     habitCreationDate = java.time.LocalDate.ofInstant(habit.createdAt, java.time.ZoneOffset.UTC),
-                    onDateClick = onDateClick
+                    selectedDate = selectedDate,
+                    onDateSelected = { date ->
+                        currentMonth = YearMonth.from(date)
+                        onDateSelected(date)
+                    }
                 )
                 
                 // Helper text
@@ -424,7 +456,7 @@ private fun CalendarSection(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Tap on past dates to mark them as complete",
+                        text = stringResource(R.string.calendar_helper_text),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
@@ -440,7 +472,8 @@ private fun MonthCalendar(
     month: YearMonth,
     completedDates: Set<LocalDate>,
     habitCreationDate: LocalDate,
-    onDateClick: (LocalDate) -> Unit = {}
+    selectedDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit
 ) {
     val firstDayOfMonth = month.atDay(1)
     val lastDayOfMonth = month.atEndOfMonth()
@@ -483,9 +516,11 @@ private fun MonthCalendar(
                     isCompleted = date?.let { it in completedDates } ?: false,
                     isToday = date == today,
                     isBeforeHabitCreation = date?.let { it < habitCreationDate } ?: true,
+                    isSelected = date == selectedDate,
                     onClick = { 
-                        if (date != null && !date.isAfter(today) && !date.isBefore(habitCreationDate)) {
-                            onDateClick(date)
+                        // Allow selecting any past date (including before creation) but still block future
+                        if (date != null && !date.isAfter(today)) {
+                            onDateSelected(date)
                         }
                     }
                 )
@@ -500,48 +535,58 @@ private fun CalendarDay(
     isCompleted: Boolean,
     isToday: Boolean,
     isBeforeHabitCreation: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit = {}
 ) {
-    val isClickable = date != null && !date.isAfter(LocalDate.now()) && !isBeforeHabitCreation
-    
+    // Allow selecting any past date (incl. before habit creation) for backfill
+    val isClickable = date != null && !date.isAfter(LocalDate.now())
+
     val backgroundColor = when {
         date == null -> Color.Transparent
         isCompleted -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        isBeforeHabitCreation -> Color.Transparent
-        isClickable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        isClickable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
     }
 
     val textColor = when {
         date == null -> Color.Transparent
         isCompleted -> MaterialTheme.colorScheme.onPrimary
-        isBeforeHabitCreation -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+        isSelected -> MaterialTheme.colorScheme.primary
         isClickable -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     }
-    
+
+    val borderColor = when {
+        isSelected && isCompleted -> MaterialTheme.colorScheme.onPrimary
+        isSelected -> MaterialTheme.colorScheme.primary
+        isToday && !isCompleted -> MaterialTheme.colorScheme.primary
+        isBeforeHabitCreation && isClickable -> MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+        else -> null
+    }
+
+    var dayModifier = Modifier
+        .size(36.dp)
+        .background(
+            color = backgroundColor,
+            shape = CircleShape
+        )
+
+    if (borderColor != null) {
+        dayModifier = dayModifier.border(
+            width = 2.dp,
+            color = borderColor,
+            shape = CircleShape
+        )
+    }
+
+    if (isClickable) {
+        dayModifier = dayModifier.clickable { onClick() }
+    }
+
     Box(
-        modifier = Modifier
-            .size(32.dp)
-            .background(
-                color = backgroundColor,
-                shape = CircleShape
-            )
-            .let { modifier ->
-                if (isToday && !isCompleted) {
-                    modifier.border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    )
-                } else modifier
-            }
-            .let { modifier ->
-                if (isClickable) {
-                    modifier.clickable { onClick() }
-                } else modifier
-            },
+        modifier = dayModifier,
         contentAlignment = Alignment.Center
     ) {
         if (date != null) {
