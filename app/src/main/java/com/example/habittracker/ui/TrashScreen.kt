@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,101 +48,100 @@ fun TrashScreen(
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
     var showPermanentDeleteDialog by remember { mutableStateOf<Long?>(null) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(trashGradientBackground())
-    ) {
-        // Top App Bar
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Trash",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${deletedHabits.size} deleted habits",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-                if (deletedHabits.isNotEmpty()) {
-                    IconButton(onClick = { showEmptyTrashDialog = true }) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Trash",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        if (deletedHabits.isNotEmpty()) {
+                            Text(
+                                text = "${deletedHabits.size} item${if (deletedHabits.size == 1) "" else "s"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = "Empty Trash",
-                            tint = MaterialTheme.colorScheme.error
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    if (deletedHabits.isNotEmpty()) {
+                        IconButton(
+                            onClick = { showEmptyTrashDialog = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = "Empty Trash",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Auto-cleanup info card
+            if (deletedHabits.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Items will be automatically deleted after 30 days",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
             }
-        }
-
-        // Content
-        if (deletedHabits.isEmpty()) {
-            EmptyTrashState()
-        } else {
+            
+            // Content
+            if (deletedHabits.isEmpty()) {
+                EmptyTrashState()
+            } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "Auto-cleanup in 30 days",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Text(
-                                text = "Habits in trash will be permanently deleted after 30 days. You can restore them anytime before that.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-
                 items(deletedHabits, key = { it.id }) { habit ->
                     DeletedHabitCard(
                         habit = habit,
@@ -147,10 +149,11 @@ fun TrashScreen(
                         onPermanentlyDelete = { showPermanentDeleteDialog = habit.id }
                     )
                 }
-
+                
                 item {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+            }
             }
         }
     }
@@ -183,29 +186,52 @@ private fun EmptyTrashState() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(48.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Delete,
-            contentDescription = null,
-            modifier = Modifier.size(120.dp),
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+        // Empty state illustration
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    RoundedCornerShape(80.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
         Text(
             text = "Trash is Empty",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
         Text(
-            text = "Deleted habits will appear here.\nYou can restore them within 30 days.",
+            text = "Deleted habits will appear here",
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "You can restore them within 30 days",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
     }
 }
@@ -225,63 +251,83 @@ private fun DeletedHabitCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
-                .background(palette.brush.copy(alpha = 0.3f), shape = RoundedCornerShape(24.dp))
-                .padding(20.dp)
+                .background(palette.brush, shape = RoundedCornerShape(28.dp))
+                .background(
+                    Color.Black.copy(alpha = 0.3f), // Overlay for deleted state
+                    shape = RoundedCornerShape(28.dp)
+                )
+                .padding(24.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Avatar display
+                    // Avatar display with deleted state effect
                     TrashAvatarDisplay(
                         avatar = habit.avatar,
-                        size = 40.dp
+                        size = 48.dp,
+                        alpha = 0.8f
                     )
                     
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = habit.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                         if (habit.description.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = habit.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        deletedDate?.let {
-                            Text(
-                                text = "Deleted on $it",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.7f),
+                                maxLines = 3
                             )
                         }
                     }
                 }
 
+                // Deleted status info
+                deletedDate?.let {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Deleted on $it",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                // Action buttons - same style as home screen
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onRestore,
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
+                            .clip(RoundedCornerShape(20.dp)),
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color.White,
+                            contentColor = palette.accent
                         )
                     ) {
                         Icon(imageVector = Icons.Default.Restore, contentDescription = null)
@@ -291,10 +337,13 @@ private fun DeletedHabitCard(
                     
                     OutlinedButton(
                         onClick = onPermanentlyDelete,
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(20.dp)),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
                     ) {
                         Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
@@ -310,14 +359,15 @@ private fun DeletedHabitCard(
 private fun TrashAvatarDisplay(
     avatar: HabitAvatar,
     size: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alpha: Float = 1f
 ) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size)
             .background(
-                color = Color(avatar.backgroundColor.toColorInt()).copy(alpha = 0.7f),
+                color = Color(avatar.backgroundColor.toColorInt()).copy(alpha = alpha * 0.5f),
                 shape = androidx.compose.foundation.shape.CircleShape
             )
     ) {
@@ -326,21 +376,22 @@ private fun TrashAvatarDisplay(
                 Text(
                     text = avatar.value,
                     fontSize = (size.value * 0.5).sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = Color.Black.copy(alpha = alpha)
                 )
             }
             HabitAvatarType.DEFAULT_ICON -> {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = Color.White.copy(alpha = alpha),
                     modifier = Modifier.size(size * 0.6f)
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
                 Text(
                     text = "IMG",
-                    color = Color.White,
+                    color = Color.White.copy(alpha = alpha),
                     fontSize = (size.value * 0.3).sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -425,13 +476,4 @@ private fun PermanentDeleteConfirmationDialog(
     )
 }
 
-@Composable
-private fun trashGradientBackground(): Brush = Brush.verticalGradient(
-    colors = listOf(
-        MaterialTheme.colorScheme.surface,
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        MaterialTheme.colorScheme.surface
-    )
-)
 
-private fun Brush.copy(alpha: Float): Brush = this
