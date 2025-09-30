@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.HabitTracker" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.HabitTracker" parent="android:Theme.Material.NoActionBar" />
     
-    <!-- Splash Screen Theme -->
+    <!-- Dark Mode Splash Screen Theme -->
     <style name="Theme.HabitTracker.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@drawable/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
