@@ -1,3 +1,4 @@
+# Current Version v1.0.0
 # Habit Tracker Android App
 
 A beautifully designed habit tracker app built with Jetpack Compose and modern Android architecture.
