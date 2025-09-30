@@ -171,7 +171,8 @@ private fun HeroSection(
                 text = habit.title,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
             if (habit.description.isNotBlank()) {

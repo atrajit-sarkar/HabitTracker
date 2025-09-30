@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
+import android.app.Notification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -41,8 +42,13 @@ object HabitReminderService {
                 ).apply {
                     description = context.getString(R.string.notification_channel_description)
                     enableLights(true)
-                    lightColor = Color.MAGENTA
+                    lightColor = Color.BLUE
                     enableVibration(true)
+                    // Enable heads-up notifications and status bar icon
+                    setShowBadge(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    // Allow notification to bypass DND
+                    setBypassDnd(false)
                     // Note: For per-habit custom sounds, we'll set sound on individual notifications
                     setSound(null, null)
                 }
@@ -76,15 +82,22 @@ object HabitReminderService {
         )
 
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_habit) // Use proper notification icon
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle(habit.title)
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(contentIntent)
-            .setAutoCancel(false)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true) // Allow swipe to dismiss
+            .setOngoing(false) // Not an ongoing notification
+            .setPriority(NotificationCompat.PRIORITY_MAX) // Maximum priority for status bar
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Default sound, vibration, lights
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setShowWhen(true)
+            .setWhen(System.currentTimeMillis())
+            .setNumber(1) // Show badge number
+            .setTicker(habit.title) // Legacy ticker text for older Android versions
 
         // Set avatar as large icon
         val avatarBitmap = createAvatarBitmap(habit.avatar)
@@ -94,6 +107,9 @@ object HabitReminderService {
         val soundUri = habit.notificationSound.getUri(context)
         if (soundUri != null) {
             notificationBuilder.setSound(soundUri)
+        } else {
+            // Use default notification sound if custom sound not available
+            notificationBuilder.setDefaults(NotificationCompat.DEFAULT_SOUND)
         }
         
         // Add custom vibration pattern based on sound type
@@ -104,6 +120,11 @@ object HabitReminderService {
             NotificationSound.SYSTEM_DEFAULT -> longArrayOf(0, 300, 200, 300)
         }
         notificationBuilder.setVibrate(vibrationPattern)
+        
+        // Enable heads-up notification (appears on top of screen)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            notificationBuilder.setFullScreenIntent(contentIntent, false)
+        }
 
         // Add action buttons
         val completeAction = NotificationCompat.Action.Builder(
@@ -123,8 +144,18 @@ object HabitReminderService {
             .addAction(dismissAction)
 
         val notification = notificationBuilder.build()
-
-        notificationManager.notify(habit.id.toInt(), notification)
+        
+        try {
+            // Check if notifications are enabled before showing
+            if (notificationManager.areNotificationsEnabled()) {
+                notificationManager.notify(habit.id.toInt(), notification)
+            } else {
+                android.util.Log.w("HabitNotification", "Notifications are disabled by user")
+            }
+        } catch (e: SecurityException) {
+            // Handle case where notification permission is not granted
+            android.util.Log.e("HabitNotification", "Failed to show notification: ${e.message}")
+        }
     }
 
     private fun createAvatarBitmap(avatar: HabitAvatar): Bitmap {
