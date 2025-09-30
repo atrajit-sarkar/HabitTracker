@@ -130,9 +130,11 @@ fun AddHabitScreen(
             )
         },
         bottomBar = {
-            // Action buttons at bottom
+            // Action buttons at bottom with padding to avoid navigation bar
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
