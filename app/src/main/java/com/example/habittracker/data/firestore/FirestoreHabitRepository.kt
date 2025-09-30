@@ -8,8 +8,8 @@ import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitCompletion
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -92,16 +92,8 @@ class FirestoreHabitRepository @Inject constructor(
         }
 
     override suspend fun getHabitById(id: Long): Habit {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        // First attempt: numericId match
-        val numericSnapshot = userCollection.whereEqualTo("numericId", id).limit(1).get().await()
-        val numericDoc = numericSnapshot.documents.firstOrNull()
-        if (numericDoc != null) return numericDoc.toFirestoreHabit()?.toHabit()
-            ?: throw NoSuchElementException("Habit not found")
-        // Fallback: legacy docs without numericId -> scan minimal fields (could be optimized)
-        val allSnapshot = userCollection.get().await()
-        val legacyDoc = allSnapshot.documents.firstOrNull { it.id.hashCode().toLong() == id }
-        return legacyDoc?.toFirestoreHabit()?.toHabit() ?: throw NoSuchElementException("Habit not found")
+        val doc = findHabitDocument(id) ?: throw NoSuchElementException("Habit not found")
+        return doc.toFirestoreHabit()?.toHabit() ?: throw NoSuchElementException("Habit not found")
     }
 
     override suspend fun insertHabit(habit: Habit): Long {
@@ -115,25 +107,18 @@ class FirestoreHabitRepository @Inject constructor(
     }
 
     override suspend fun updateHabit(habit: Habit) {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        // Need to locate document by matching numericId field (single query)
-        val snapshot = userCollection.whereEqualTo("numericId", habit.id).get().await()
-        val doc = snapshot.documents.firstOrNull()
+        val doc = findHabitDocument(habit.id)
             ?: throw NoSuchElementException("Habit not found for update")
         val firestoreHabit = habit.toFirestoreHabit(doc.id, habit.id)
-        userCollection.document(doc.id).set(firestoreHabit).await()
+        doc.reference.set(firestoreHabit).await()
     }
 
     override suspend fun deleteHabit(habit: Habit) {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        val snapshot = userCollection.whereEqualTo("numericId", habit.id).get().await()
-        snapshot.documents.firstOrNull()?.reference?.delete()?.await()
+        findHabitDocument(habit.id)?.reference?.delete()?.await()
     }
 
     override suspend fun moveToTrash(habitId: Long) {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        val snapshot = userCollection.whereEqualTo("numericId", habitId).get().await()
-        snapshot.documents.firstOrNull()?.reference?.update(
+        findHabitDocument(habitId)?.reference?.update(
             mapOf(
                 "isDeleted" to true,
                 "deletedAt" to System.currentTimeMillis()
@@ -142,9 +127,7 @@ class FirestoreHabitRepository @Inject constructor(
     }
 
     override suspend fun restoreFromTrash(habitId: Long) {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        val snapshot = userCollection.whereEqualTo("numericId", habitId).get().await()
-        snapshot.documents.firstOrNull()?.reference?.update(
+        findHabitDocument(habitId)?.reference?.update(
             mapOf(
                 "isDeleted" to false,
                 "deletedAt" to null
@@ -153,16 +136,19 @@ class FirestoreHabitRepository @Inject constructor(
     }
 
     override suspend fun permanentlyDeleteHabit(habitId: Long) {
-        val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
         val userCompletionsCollection = getUserCompletionsCollection() ?: throw IllegalStateException("User not authenticated")
-        val snapshot = userCollection.whereEqualTo("numericId", habitId).get().await()
-        val habitDoc = snapshot.documents.firstOrNull()
+        val habitDoc = findHabitDocument(habitId)
         habitDoc?.reference?.delete()?.await()
         if (habitDoc != null) {
             val completions = userCompletionsCollection
                 .whereEqualTo("habitId", habitId.toString())
                 .get().await()
             completions.documents.forEach { doc -> doc.reference.delete() }
+            // Legacy completions may have stored the Firestore document ID instead of numericId
+            val legacyCompletions = userCompletionsCollection
+                .whereEqualTo("habitId", habitDoc.id)
+                .get().await()
+            legacyCompletions.documents.forEach { doc -> doc.reference.delete() }
         }
     }
 
@@ -185,8 +171,8 @@ class FirestoreHabitRepository @Inject constructor(
             .get().await()
         
         oldDeletedHabits.documents.forEach { doc ->
-            val habitId = doc.id
-            permanentlyDeleteHabit(habitId.hashCode().toLong())
+            val numericId = (doc.get("numericId") as? Long) ?: doc.id.hashCode().toLong()
+            permanentlyDeleteHabit(numericId)
         }
     }
 
@@ -212,8 +198,7 @@ class FirestoreHabitRepository @Inject constructor(
         val habit = getHabitById(habitId)
         val shouldUpdate = habit.lastCompletedDate == null || date.isAfter(habit.lastCompletedDate)
         if (shouldUpdate) {
-            val snapshot = userCollection.whereEqualTo("numericId", habitId).get().await()
-            snapshot.documents.firstOrNull()?.reference?.update("lastCompletedDate", date.toEpochDay())?.await()
+            findHabitDocument(habitId)?.reference?.update("lastCompletedDate", date.toEpochDay())?.await()
         }
     }
 
@@ -226,6 +211,15 @@ class FirestoreHabitRepository @Inject constructor(
             .get().await()
         
         return completions.toFirestoreHabitCompletions().map { it.toHabitCompletion() }
+    }
+
+    private suspend fun findHabitDocument(habitId: Long): DocumentSnapshot? {
+        val userCollection = getUserCollection() ?: return null
+        val numericSnapshot = userCollection.whereEqualTo("numericId", habitId).limit(1).get().await()
+        val numericDoc = numericSnapshot.documents.firstOrNull()
+        if (numericDoc != null) return numericDoc
+        val allSnapshot = userCollection.get().await()
+        return allSnapshot.documents.firstOrNull { it.id.hashCode().toLong() == habitId }
     }
 }
 
@@ -291,3 +285,4 @@ private fun FirestoreHabitCompletion.toHabitCompletion(): HabitCompletion {
         )
     )
 }
+
