@@ -1,0 +1,297 @@
+package com.example.habittracker.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.habittracker.data.HabitRepository
+import com.example.habittracker.data.local.Habit
+import com.example.habittracker.data.local.HabitFrequency
+import com.example.habittracker.data.local.NotificationSound
+import com.example.habittracker.notification.HabitReminderScheduler
+import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.LocalTime
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@HiltViewModel
+class HabitViewModel @Inject constructor(
+    private val habitRepository: HabitRepository,
+    private val reminderScheduler: HabitReminderScheduler
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(HabitScreenState(isLoading = true))
+    val uiState: StateFlow<HabitScreenState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            habitRepository.observeHabits().collectLatest { habits ->
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
+                    )
+                }
+            }
+        }
+    }
+
+    fun showAddHabitSheet() {
+        _uiState.update { it.copy(isAddSheetVisible = true) }
+    }
+
+    fun hideAddHabitSheet() {
+        _uiState.update { it.copy(isAddSheetVisible = false, addHabitState = AddHabitState()) }
+    }
+
+    fun onHabitNameChange(value: String) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(
+                    title = value,
+                    nameError = null
+                )
+            )
+        }
+    }
+
+    fun onHabitDescriptionChange(value: String) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(description = value)
+            )
+        }
+    }
+
+    fun onHabitReminderToggle(enabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(reminderEnabled = enabled)
+            )
+        }
+    }
+
+    fun onHabitTimeChange(hour: Int, minute: Int) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(hour = hour, minute = minute)
+            )
+        }
+    }
+
+    fun onHabitFrequencyChange(frequency: HabitFrequency) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(frequency = frequency)
+            )
+        }
+    }
+
+    fun onHabitDayOfWeekChange(dayOfWeek: Int) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(dayOfWeek = dayOfWeek)
+            )
+        }
+    }
+
+    fun onHabitDayOfMonthChange(dayOfMonth: Int) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(dayOfMonth = dayOfMonth)
+            )
+        }
+    }
+
+    fun onHabitMonthOfYearChange(monthOfYear: Int) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(monthOfYear = monthOfYear)
+            )
+        }
+    }
+
+    fun onNotificationSoundChange(sound: NotificationSound) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(notificationSound = sound)
+            )
+        }
+    }
+
+    fun saveHabit() {
+        val currentState = _uiState.value
+        if (currentState.addHabitState.isSaving) return
+        val title = currentState.addHabitState.title.trim()
+        if (title.isBlank()) {
+            _uiState.update { state ->
+                state.copy(
+                    addHabitState = state.addHabitState.copy(
+                        nameError = state.addHabitState.nameError
+                            ?: state.habitsValidationError()
+                    )
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
+            val addForm = _uiState.value.addHabitState
+            val habit = Habit(
+                title = title,
+                description = addForm.description.trim(),
+                reminderHour = addForm.hour,
+                reminderMinute = addForm.minute,
+                reminderEnabled = addForm.reminderEnabled,
+                frequency = addForm.frequency,
+                dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                notificationSound = addForm.notificationSound
+            )
+            val savedHabit = withContext(Dispatchers.IO) {
+                val id = habitRepository.insertHabit(habit)
+                habit.copy(id = id)
+            }
+            if (savedHabit.reminderEnabled) {
+                reminderScheduler.schedule(savedHabit)
+            } else {
+                reminderScheduler.cancel(savedHabit.id)
+            }
+            _uiState.update { state ->
+                state.copy(
+                    snackbarMessage = state.habitSavedMessage(),
+                    addHabitState = AddHabitState(),
+                    isAddSheetVisible = false
+                )
+            }
+        }
+    }
+
+    fun dismissSnackbar() {
+        _uiState.update { it.copy(snackbarMessage = null) }
+    }
+
+    fun toggleReminder(habitId: Long, enabled: Boolean) {
+        viewModelScope.launch {
+            val updated = withContext(Dispatchers.IO) {
+                val habit = habitRepository.getHabitById(habitId) ?: return@withContext null
+                val newHabit = habit.copy(reminderEnabled = enabled)
+                habitRepository.updateHabit(newHabit)
+                newHabit
+            } ?: return@launch
+            if (enabled) {
+                reminderScheduler.schedule(updated)
+            } else {
+                reminderScheduler.cancel(updated.id)
+            }
+        }
+    }
+
+    fun markHabitCompleted(habitId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            habitRepository.markCompletedToday(habitId)
+        }
+    }
+
+    fun deleteHabit(habitId: Long) {
+        viewModelScope.launch {
+            val habit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(habitId)
+            } ?: return@launch
+            withContext(Dispatchers.IO) {
+                habitRepository.deleteHabit(habit)
+            }
+            reminderScheduler.cancel(habit.id)
+            _uiState.update { state ->
+                state.copy(snackbarMessage = state.habitDeletedMessage(habit.title))
+            }
+        }
+    }
+
+    private fun HabitScreenState.habitsValidationError(): String =
+        if (habits.isEmpty()) "Name is required" else "Pick a name to remember the habit"
+
+    private fun HabitScreenState.habitSavedMessage(): String =
+        "Habit saved"
+
+    private fun HabitScreenState.habitDeletedMessage(title: String): String =
+        "Removed \"$title\""
+
+    private fun mapToUi(habit: Habit): HabitCardUi {
+        val reminderTime = LocalTime.of(habit.reminderHour, habit.reminderMinute)
+        val frequencyText = buildFrequencyText(habit)
+        return HabitCardUi(
+            id = habit.id,
+            title = habit.title,
+            description = habit.description,
+            reminderTime = reminderTime,
+            isReminderEnabled = habit.reminderEnabled,
+            isCompletedToday = habit.lastCompletedDate == LocalDate.now(),
+            frequency = habit.frequency,
+            frequencyText = frequencyText
+        )
+    }
+
+    private fun buildFrequencyText(habit: Habit): String {
+        return when (habit.frequency) {
+            HabitFrequency.DAILY -> "Daily"
+            HabitFrequency.WEEKLY -> {
+                val dayName = getDayName(habit.dayOfWeek ?: 1)
+                "Weekly on $dayName"
+            }
+            HabitFrequency.MONTHLY -> {
+                val day = habit.dayOfMonth ?: 1
+                val suffix = when (day % 10) {
+                    1 -> if (day == 11) "th" else "st"
+                    2 -> if (day == 12) "th" else "nd"
+                    3 -> if (day == 13) "th" else "rd"
+                    else -> "th"
+                }
+                "Monthly on the $day$suffix"
+            }
+            HabitFrequency.YEARLY -> {
+                val month = getMonthName(habit.monthOfYear ?: 1)
+                val day = habit.dayOfMonth ?: 1
+                "Yearly on $month $day"
+            }
+        }
+    }
+
+    private fun getDayName(dayOfWeek: Int): String {
+        return when (dayOfWeek) {
+            1 -> "Monday"
+            2 -> "Tuesday"
+            3 -> "Wednesday"
+            4 -> "Thursday"
+            5 -> "Friday"
+            6 -> "Saturday"
+            7 -> "Sunday"
+            else -> "Monday"
+        }
+    }
+
+    private fun getMonthName(month: Int): String {
+        return when (month) {
+            1 -> "January"
+            2 -> "February"
+            3 -> "March"
+            4 -> "April"
+            5 -> "May"
+            6 -> "June"
+            7 -> "July"
+            8 -> "August"
+            9 -> "September"
+            10 -> "October"
+            11 -> "November"
+            12 -> "December"
+            else -> "January"
+        }
+    }
+}
