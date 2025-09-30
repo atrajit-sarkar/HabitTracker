@@ -231,6 +231,12 @@ class HabitViewModel @Inject constructor(
         }
     }
 
+    fun toggleHabitCompletionForDate(habitId: Long, date: java.time.LocalDate) {
+        viewModelScope.launch(Dispatchers.IO) {
+            habitRepository.toggleCompletionForDate(habitId, date)
+        }
+    }
+
     fun deleteHabit(habitId: Long) {
         viewModelScope.launch {
             val habit = withContext(Dispatchers.IO) {

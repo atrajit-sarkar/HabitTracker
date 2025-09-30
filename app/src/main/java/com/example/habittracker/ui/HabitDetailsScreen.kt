@@ -60,6 +60,7 @@ fun HabitDetailsScreen(
     isCompletedToday: Boolean,
     onBackClick: () -> Unit,
     onMarkCompleted: () -> Unit,
+    onDateClick: (LocalDate) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -113,7 +114,8 @@ fun HabitDetailsScreen(
             // Calendar View
             CalendarSection(
                 habit = habit,
-                completedDates = progress.completedDates
+                completedDates = progress.completedDates,
+                onDateClick = onDateClick
             )
 
             // Habit Information
@@ -352,7 +354,8 @@ private fun StatCardItem(
 @Composable
 private fun CalendarSection(
     habit: Habit,
-    completedDates: Set<LocalDate>
+    completedDates: Set<LocalDate>,
+    onDateClick: (LocalDate) -> Unit = {}
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     
@@ -411,8 +414,22 @@ private fun CalendarSection(
                 MonthCalendar(
                     month = currentMonth,
                     completedDates = completedDates,
-                    habitCreationDate = java.time.LocalDate.ofInstant(habit.createdAt, java.time.ZoneOffset.UTC)
+                    habitCreationDate = java.time.LocalDate.ofInstant(habit.createdAt, java.time.ZoneOffset.UTC),
+                    onDateClick = onDateClick
                 )
+                
+                // Helper text
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Tap on past dates to mark them as complete",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -422,7 +439,8 @@ private fun CalendarSection(
 private fun MonthCalendar(
     month: YearMonth,
     completedDates: Set<LocalDate>,
-    habitCreationDate: LocalDate
+    habitCreationDate: LocalDate,
+    onDateClick: (LocalDate) -> Unit = {}
 ) {
     val firstDayOfMonth = month.atDay(1)
     val lastDayOfMonth = month.atEndOfMonth()
@@ -464,7 +482,12 @@ private fun MonthCalendar(
                     date = date,
                     isCompleted = date?.let { it in completedDates } ?: false,
                     isToday = date == today,
-                    isBeforeHabitCreation = date?.let { it < habitCreationDate } ?: true
+                    isBeforeHabitCreation = date?.let { it < habitCreationDate } ?: true,
+                    onClick = { 
+                        if (date != null && !date.isAfter(today) && !date.isBefore(habitCreationDate)) {
+                            onDateClick(date)
+                        }
+                    }
                 )
             }
         }
@@ -476,23 +499,28 @@ private fun CalendarDay(
     date: LocalDate?,
     isCompleted: Boolean,
     isToday: Boolean,
-    isBeforeHabitCreation: Boolean
+    isBeforeHabitCreation: Boolean,
+    onClick: () -> Unit = {}
 ) {
+    val isClickable = date != null && !date.isAfter(LocalDate.now()) && !isBeforeHabitCreation
+    
     val backgroundColor = when {
         date == null -> Color.Transparent
         isCompleted -> MaterialTheme.colorScheme.primary
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
         isBeforeHabitCreation -> Color.Transparent
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        isClickable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
     }
 
     val textColor = when {
         date == null -> Color.Transparent
         isCompleted -> MaterialTheme.colorScheme.onPrimary
         isBeforeHabitCreation -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        else -> MaterialTheme.colorScheme.onSurface
+        isClickable -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
     }
-
+    
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -508,16 +536,30 @@ private fun CalendarDay(
                         shape = CircleShape
                     )
                 } else modifier
+            }
+            .let { modifier ->
+                if (isClickable) {
+                    modifier.clickable { onClick() }
+                } else modifier
             },
         contentAlignment = Alignment.Center
     ) {
         if (date != null) {
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = textColor,
-                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
-            )
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Completed",
+                    tint = textColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor,
+                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         }
     }
 }

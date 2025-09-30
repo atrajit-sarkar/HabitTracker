@@ -102,8 +102,10 @@ fun HabitDetailsRoute(
     var progress by remember { mutableStateOf<HabitProgress?>(null) }
     var isCompletedToday by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
-    LaunchedEffect(habitId) {
+    // Function to refresh progress data
+    suspend fun refreshProgress() {
         try {
             habit = viewModel.getHabitById(habitId)
             progress = viewModel.getHabitProgress(habitId)
@@ -111,12 +113,15 @@ fun HabitDetailsRoute(
             // Check if completed today
             val today = java.time.LocalDate.now()
             isCompletedToday = progress?.completedDates?.contains(today) ?: false
-            
-            isLoading = false
         } catch (e: Exception) {
-            isLoading = false
             // Handle error
         }
+    }
+
+    LaunchedEffect(habitId, refreshTrigger) {
+        isLoading = true
+        refreshProgress()
+        isLoading = false
     }
 
     if (isLoading) {
@@ -138,7 +143,12 @@ fun HabitDetailsRoute(
                 onBackClick = onBackClick,
                 onMarkCompleted = {
                     viewModel.markHabitCompleted(habitId)
-                    isCompletedToday = true
+                    refreshTrigger++
+                },
+                onDateClick = { date ->
+                    viewModel.toggleHabitCompletionForDate(habitId, date)
+                    // Trigger refresh by updating the trigger
+                    refreshTrigger++
                 }
             )
         } else {

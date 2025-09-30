@@ -17,5 +17,7 @@ interface HabitRepository {
     suspend fun emptyTrash()
     suspend fun cleanupOldDeletedHabits()
     suspend fun markCompletedToday(habitId: Long)
+    suspend fun markCompletedForDate(habitId: Long, date: java.time.LocalDate)
+    suspend fun toggleCompletionForDate(habitId: Long, date: java.time.LocalDate)
     suspend fun getHabitCompletions(habitId: Long): List<HabitCompletion>
 }
