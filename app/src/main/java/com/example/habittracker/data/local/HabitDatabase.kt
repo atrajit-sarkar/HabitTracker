@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [Habit::class, HabitCompletion::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(HabitConverters::class)

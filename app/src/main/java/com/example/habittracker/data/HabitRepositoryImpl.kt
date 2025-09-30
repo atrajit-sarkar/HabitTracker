@@ -15,6 +15,8 @@ class HabitRepositoryImpl @Inject constructor(
 
     override fun observeHabits(): Flow<List<Habit>> = habitDao.observeHabits()
 
+    override fun observeDeletedHabits(): Flow<List<Habit>> = habitDao.observeDeletedHabits()
+
     override suspend fun getHabitById(id: Long): Habit = habitDao.getHabitById(id)
 
     override suspend fun insertHabit(habit: Habit): Long = habitDao.insertHabit(habit)
@@ -25,6 +27,28 @@ class HabitRepositoryImpl @Inject constructor(
 
     override suspend fun deleteHabit(habit: Habit) {
         habitDao.deleteHabit(habit)
+    }
+
+    override suspend fun moveToTrash(habitId: Long) {
+        habitDao.moveToTrash(habitId, java.time.Instant.now())
+    }
+
+    override suspend fun restoreFromTrash(habitId: Long) {
+        habitDao.restoreFromTrash(habitId)
+    }
+
+    override suspend fun permanentlyDeleteHabit(habitId: Long) {
+        val habit = habitDao.getHabitById(habitId)
+        habitDao.deleteHabit(habit)
+    }
+
+    override suspend fun emptyTrash() {
+        habitDao.emptyTrash()
+    }
+
+    override suspend fun cleanupOldDeletedHabits() {
+        val thirtyDaysAgo = java.time.Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS)
+        habitDao.permanentlyDeleteOldHabits(thirtyDaysAgo)
     }
 
     override suspend fun markCompletedToday(habitId: Long) {

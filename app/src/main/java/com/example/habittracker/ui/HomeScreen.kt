@@ -1,5 +1,6 @@
 package com.example.habittracker.ui
 
+// import androidx.compose.ui.platform.LocalLifecycleOwner // Already imported via androidx.lifecycle.compose.LocalLifecycleOwner
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -9,8 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,37 +32,38 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState // Added import
-import androidx.compose.foundation.verticalScroll // Added import
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -71,7 +75,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -89,25 +93,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// import androidx.compose.ui.platform.LocalLifecycleOwner // Already imported via androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.core.content.ContextCompat
 import com.example.habittracker.R
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
+import com.example.habittracker.ui.DeleteHabitConfirmationDialog
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -120,7 +121,8 @@ fun HabitHomeRoute(
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
-    onHabitDetailsClick: (Long) -> Unit
+    onHabitDetailsClick: (Long) -> Unit,
+    onTrashClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -159,6 +161,7 @@ fun HabitHomeRoute(
         onMarkHabitCompleted = onMarkHabitCompleted,
         onDeleteHabit = onDeleteHabit,
         onHabitDetailsClick = onHabitDetailsClick,
+        onTrashClick = onTrashClick,
         notificationPermissionVisible = shouldShowPermissionCard,
         onRequestNotificationPermission = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -179,12 +182,26 @@ fun HabitHomeScreen(
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
+    onTrashClick: () -> Unit,
     notificationPermissionVisible: Boolean,
     onRequestNotificationPermission: () -> Unit,
     onDismissPermissionCard: () -> Unit
 ) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            DrawerContent(
+                onTrashClick = onTrashClick,
+                onCloseDrawer = { 
+                    scope.launch { drawerState.close() }
+                }
+            )
+        }
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -193,6 +210,18 @@ fun HabitHomeScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = { 
+                            scope.launch { drawerState.open() } 
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Menu"
+                        )
+                    }
                 }
             )
         },
@@ -260,6 +289,43 @@ fun HabitHomeScreen(
             }
         }
     }
+    }
+}
+
+@Composable
+private fun DrawerContent(
+    onTrashClick: () -> Unit,
+    onCloseDrawer: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Menu",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Restore,
+                    contentDescription = null
+                )
+            },
+            label = {
+                Text("Trash")
+            },
+            selected = false,
+            onClick = {
+                onCloseDrawer()
+                onTrashClick()
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
 }
 
 @Composable
@@ -279,6 +345,7 @@ private fun HabitCard(
     onSeeDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
     val reminderText = if (habit.isReminderEnabled) {
@@ -326,7 +393,7 @@ private fun HabitCard(
                             )
                         }
                     }
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = { showDeleteConfirmation = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(id = R.string.delete),
@@ -440,6 +507,20 @@ private fun HabitCard(
                 }
             }
         }
+    }
+    
+    // Delete confirmation dialog
+    if (showDeleteConfirmation) {
+        DeleteHabitConfirmationDialog(
+            habitTitle = habit.title,
+            onConfirm = {
+                showDeleteConfirmation = false
+                onDelete()
+            },
+            onDismiss = {
+                showDeleteConfirmation = false
+            }
+        )
     }
 }
 
@@ -1135,9 +1216,9 @@ private fun checkNotificationPermission(context: android.content.Context): Boole
     ) == PackageManager.PERMISSION_GRANTED
 }
 
-private data class CardPalette(val brush: Brush, val accent: Color)
+internal data class CardPalette(val brush: Brush, val accent: Color)
 
-private fun cardPaletteFor(habitId: Long): CardPalette {
+internal fun cardPaletteFor(habitId: Long): CardPalette {
     val palettes = listOf(
         listOf(Color(0xFF6650A4), Color(0xFF9575CD)),
         listOf(Color(0xFF006C62), Color(0xFF00BFA6)),

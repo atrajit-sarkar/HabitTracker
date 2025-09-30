@@ -34,7 +34,8 @@ fun HabitTrackerNavigation(
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
                 onDeleteHabit = viewModel::deleteHabit,
-                onHabitDetailsClick = { habitId -> navController.navigate("habit_details/$habitId") }
+                onHabitDetailsClick = { habitId -> navController.navigate("habit_details/$habitId") },
+                onTrashClick = { navController.navigate("trash") }
             )
         }
         
@@ -72,6 +73,19 @@ fun HabitTrackerNavigation(
             HabitDetailsRoute(
                 habitId = habitId,
                 viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        
+        composable("trash") {
+            val viewModel: HabitViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            TrashScreen(
+                deletedHabits = state.deletedHabits,
+                onRestoreHabit = viewModel::restoreHabit,
+                onPermanentlyDeleteHabit = viewModel::permanentlyDeleteHabit,
+                onEmptyTrash = viewModel::emptyTrash,
                 onBackClick = { navController.popBackStack() }
             )
         }

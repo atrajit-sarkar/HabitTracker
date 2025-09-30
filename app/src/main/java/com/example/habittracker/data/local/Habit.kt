@@ -20,5 +20,7 @@ data class Habit(
     val notificationSound: NotificationSound = NotificationSound.DEFAULT,
     val avatar: HabitAvatar = HabitAvatar.DEFAULT,
     val lastCompletedDate: LocalDate? = null,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Instant = Instant.now(),
+    val isDeleted: Boolean = false,
+    val deletedAt: Instant? = null
 )

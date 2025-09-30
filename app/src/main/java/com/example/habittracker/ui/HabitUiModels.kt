@@ -1,5 +1,6 @@
 package com.example.habittracker.ui
 
+import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
@@ -37,6 +38,7 @@ data class AddHabitState(
 
 data class HabitScreenState(
     val habits: List<HabitCardUi> = emptyList(),
+    val deletedHabits: List<Habit> = emptyList(),
     val isLoading: Boolean = false,
     val isAddSheetVisible: Boolean = false,
     val addHabitState: AddHabitState = AddHabitState(),

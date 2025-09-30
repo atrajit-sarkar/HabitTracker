@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HabitDao {
-    @Query("SELECT * FROM habits ORDER BY reminderHour, reminderMinute")
+    @Query("SELECT * FROM habits WHERE isDeleted = 0 ORDER BY reminderHour, reminderMinute")
     fun observeHabits(): Flow<List<Habit>>
+
+    @Query("SELECT * FROM habits WHERE isDeleted = 1 ORDER BY deletedAt DESC")
+    fun observeDeletedHabits(): Flow<List<Habit>>
 
     @Query("SELECT * FROM habits WHERE id = :habitId LIMIT 1")
     suspend fun getHabitById(habitId: Long): Habit
@@ -24,6 +27,18 @@ interface HabitDao {
 
     @Delete
     suspend fun deleteHabit(habit: Habit)
+
+    @Query("UPDATE habits SET isDeleted = 1, deletedAt = :deletedAt WHERE id = :habitId")
+    suspend fun moveToTrash(habitId: Long, deletedAt: java.time.Instant)
+
+    @Query("UPDATE habits SET isDeleted = 0, deletedAt = NULL WHERE id = :habitId")
+    suspend fun restoreFromTrash(habitId: Long)
+
+    @Query("DELETE FROM habits WHERE isDeleted = 1 AND deletedAt < :cutoffTime")
+    suspend fun permanentlyDeleteOldHabits(cutoffTime: java.time.Instant)
+
+    @Query("DELETE FROM habits WHERE isDeleted = 1")
+    suspend fun emptyTrash()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCompletion(completion: HabitCompletion)

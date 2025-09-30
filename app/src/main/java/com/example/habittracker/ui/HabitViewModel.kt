@@ -43,6 +43,21 @@ class HabitViewModel @Inject constructor(
                 }
             }
         }
+        
+        viewModelScope.launch {
+            habitRepository.observeDeletedHabits().collectLatest { deletedHabits ->
+                _uiState.update { state ->
+                    state.copy(deletedHabits = deletedHabits)
+                }
+            }
+        }
+        
+        // Schedule cleanup of old deleted habits
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                habitRepository.cleanupOldDeletedHabits()
+            }
+        }
     }
 
     fun showAddHabitSheet() {
@@ -220,13 +235,56 @@ class HabitViewModel @Inject constructor(
         viewModelScope.launch {
             val habit = withContext(Dispatchers.IO) {
                 habitRepository.getHabitById(habitId)
-            } ?: return@launch
+            }
             withContext(Dispatchers.IO) {
-                habitRepository.deleteHabit(habit)
+                habitRepository.moveToTrash(habitId)
             }
             reminderScheduler.cancel(habit.id)
             _uiState.update { state ->
-                state.copy(snackbarMessage = state.habitDeletedMessage(habit.title))
+                state.copy(snackbarMessage = "\"${habit.title}\" moved to trash")
+            }
+        }
+    }
+
+    fun restoreHabit(habitId: Long) {
+        viewModelScope.launch {
+            val habit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(habitId)
+            }
+            withContext(Dispatchers.IO) {
+                habitRepository.restoreFromTrash(habitId)
+            }
+            // Reschedule notifications if reminder is enabled
+            if (habit.reminderEnabled) {
+                reminderScheduler.schedule(habit)
+            }
+            _uiState.update { state ->
+                state.copy(snackbarMessage = "\"${habit.title}\" restored")
+            }
+        }
+    }
+
+    fun permanentlyDeleteHabit(habitId: Long) {
+        viewModelScope.launch {
+            val habit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(habitId)
+            }
+            withContext(Dispatchers.IO) {
+                habitRepository.permanentlyDeleteHabit(habitId)
+            }
+            _uiState.update { state ->
+                state.copy(snackbarMessage = "\"${habit.title}\" permanently deleted")
+            }
+        }
+    }
+
+    fun emptyTrash() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                habitRepository.emptyTrash()
+            }
+            _uiState.update { state ->
+                state.copy(snackbarMessage = "Trash emptied")
             }
         }
     }
