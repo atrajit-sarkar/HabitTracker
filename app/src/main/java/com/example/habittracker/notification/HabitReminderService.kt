@@ -36,6 +36,9 @@ object HabitReminderService {
     private fun ensureHabitChannel(context: Context, habit: Habit): String {
         val channelId = "${CHANNEL_PREFIX}${habit.id}"
         
+        android.util.Log.d("HabitReminderService", "ensureHabitChannel called for habit: ${habit.title} (ID: ${habit.id})")
+        android.util.Log.d("HabitReminderService", "  Habit sound: ${habit.notificationSoundName} (ID: ${habit.notificationSoundId}, URI: ${habit.notificationSoundUri})")
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 ?: return channelId
@@ -48,15 +51,24 @@ object HabitReminderService {
                 val currentSoundUri = existing.sound
                 val newSoundUri = NotificationSound.getActualUri(context, habit.getNotificationSound())
                 
+                android.util.Log.d("HabitReminderService", "  Channel exists. Current sound: $currentSoundUri, New sound: $newSoundUri")
+                
                 // If sounds are different, delete and recreate the channel
                 if (currentSoundUri != newSoundUri) {
+                    android.util.Log.d("HabitReminderService", "  Sounds are different! Deleting channel to recreate...")
                     manager.deleteNotificationChannel(channelId)
+                } else {
+                    android.util.Log.d("HabitReminderService", "  Sounds are same, keeping existing channel")
                 }
+            } else {
+                android.util.Log.d("HabitReminderService", "  Channel does not exist, will create new one")
             }
             
             // Create or recreate the channel
             if (manager.getNotificationChannel(channelId) == null) {
                 val soundUri = NotificationSound.getActualUri(context, habit.getNotificationSound())
+                
+                android.util.Log.d("HabitReminderService", "  Creating channel with sound URI: $soundUri")
                 
                 val channel = NotificationChannel(
                     channelId,
@@ -78,10 +90,19 @@ object HabitReminderService {
                             .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                             .build()
                         setSound(soundUri, audioAttributes)
+                        android.util.Log.d("HabitReminderService", "  Sound set on channel: $soundUri")
+                    } else {
+                        android.util.Log.w("HabitReminderService", "  Sound URI is null! Channel will use default sound")
                     }
                 }
                 manager.createNotificationChannel(channel)
-                android.util.Log.d("HabitReminderService", "Created channel $channelId with sound: ${soundUri}")
+                android.util.Log.d("HabitReminderService", "✓ Created channel $channelId with sound: ${soundUri}")
+                
+                // Verify the channel was created with correct sound
+                val verifyChannel = manager.getNotificationChannel(channelId)
+                android.util.Log.d("HabitReminderService", "  Verification: Channel sound after creation: ${verifyChannel?.sound}")
+            } else {
+                android.util.Log.d("HabitReminderService", "  Channel already exists after check, not recreating")
             }
         }
         

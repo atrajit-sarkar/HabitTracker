@@ -185,6 +185,7 @@ class HabitViewModel @Inject constructor(
     }
 
     fun onNotificationSoundChange(sound: NotificationSound) {
+        android.util.Log.d("HabitViewModel", "Notification sound changed to: ${sound.displayName} (ID: ${sound.id}, URI: ${sound.uri})")
         _uiState.update { state ->
             state.copy(
                 addHabitState = state.addHabitState.copy(notificationSound = sound)
@@ -218,6 +219,10 @@ class HabitViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
             val addForm = _uiState.value.addHabitState
+            
+            // Log the notification sound being saved
+            android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
+            
             val habit = Habit(
                 title = title,
                 description = addForm.description.trim(),
@@ -233,10 +238,15 @@ class HabitViewModel @Inject constructor(
                 notificationSoundUri = addForm.notificationSound.uri,
                 avatar = addForm.avatar
             )
+            
+            android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
+            
             val savedHabit = withContext(Dispatchers.IO) {
                 val id = habitRepository.insertHabit(habit)
                 habit.copy(id = id)
             }
+            
+            android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
             
             // Force update notification channel with the new/changed sound
             HabitReminderService.updateHabitChannel(context, savedHabit)

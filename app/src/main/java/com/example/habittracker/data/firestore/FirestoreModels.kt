@@ -20,7 +20,10 @@ data class FirestoreHabit(
     val dayOfWeek: Int? = null,
     val dayOfMonth: Int? = null,
     val monthOfYear: Int? = null,
-    val notificationSound: String = "DEFAULT",
+    val notificationSound: String = "DEFAULT", // Legacy: Keep for backward compatibility
+    val notificationSoundId: String = "default", // New: Sound ID
+    val notificationSoundName: String = "Default Notification", // New: Sound display name
+    val notificationSoundUri: String = "", // New: Sound URI
     val avatar: FirestoreHabitAvatar = FirestoreHabitAvatar(),
     val lastCompletedDate: Long? = null, // epoch day
     val createdAt: Long = System.currentTimeMillis(),
@@ -59,7 +62,10 @@ fun DocumentSnapshot.toFirestoreHabit(): FirestoreHabit? {
             dayOfWeek = (data["dayOfWeek"] as? Long)?.toInt(),
             dayOfMonth = (data["dayOfMonth"] as? Long)?.toInt(),
             monthOfYear = (data["monthOfYear"] as? Long)?.toInt(),
-            notificationSound = data["notificationSound"] as? String ?: "DEFAULT",
+            notificationSound = data["notificationSound"] as? String ?: "DEFAULT", // Legacy field
+            notificationSoundId = data["notificationSoundId"] as? String ?: "default",
+            notificationSoundName = data["notificationSoundName"] as? String ?: "Default Notification",
+            notificationSoundUri = data["notificationSoundUri"] as? String ?: "",
             avatar = (data["avatar"] as? Map<String, Any>)?.let { avatarMap ->
                 FirestoreHabitAvatar(
                     type = avatarMap["type"] as? String ?: "DEFAULT_ICON",
