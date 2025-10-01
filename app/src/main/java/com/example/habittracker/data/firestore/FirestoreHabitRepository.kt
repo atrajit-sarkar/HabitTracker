@@ -75,15 +75,29 @@ class FirestoreHabitRepository @Inject constructor(
                     val listener = userCollection
                         .addSnapshotListener { snapshot, error ->
                             if (error != null) {
+                                android.util.Log.e("FirestoreRepo", "Error observing deleted habits", error)
                                 close(error)
                                 return@addSnapshotListener
                             }
-                            val habits = snapshot
-                                ?.toFirestoreHabits()
-                                ?.mapNotNull { runCatching { it.toHabit() }.getOrNull() }
-                                ?.filter { it.isDeleted }
-                                ?.sortedWith(compareByDescending<Habit> { it.deletedAt ?: Instant.EPOCH })
-                                ?: emptyList()
+                            android.util.Log.d("FirestoreRepo", "Deleted habits snapshot received, total docs: ${snapshot?.documents?.size}")
+                            
+                            val allHabits = snapshot?.toFirestoreHabits() ?: emptyList()
+                            android.util.Log.d("FirestoreRepo", "Converted to ${allHabits.size} FirestoreHabit objects")
+                            
+                            allHabits.forEachIndexed { index, habit ->
+                                android.util.Log.d("FirestoreRepo", "Habit $index: title='${habit.title}', isDeleted=${habit.isDeleted}")
+                            }
+                            
+                            val habits = allHabits
+                                .mapNotNull { runCatching { it.toHabit() }.getOrNull() }
+                                .filter { it.isDeleted }
+                                .sortedWith(compareByDescending<Habit> { it.deletedAt ?: Instant.EPOCH })
+                            
+                            android.util.Log.d("FirestoreRepo", "Filtered deleted habits: ${habits.size}")
+                            habits.forEach { habit ->
+                                android.util.Log.d("FirestoreRepo", "Deleted habit: ${habit.title}, deletedAt=${habit.deletedAt}")
+                            }
+                            
                             trySend(habits)
                         }
                     awaitClose { listener.remove() }
@@ -118,38 +132,65 @@ class FirestoreHabitRepository @Inject constructor(
     }
 
     override suspend fun moveToTrash(habitId: Long) {
-        findHabitDocument(habitId)?.reference?.update(
+        android.util.Log.d("FirestoreRepo", "moveToTrash called for habitId: $habitId")
+        val doc = findHabitDocument(habitId)
+        if (doc == null) {
+            android.util.Log.e("FirestoreRepo", "moveToTrash: Document not found for habitId: $habitId")
+            return
+        }
+        android.util.Log.d("FirestoreRepo", "moveToTrash: Found document ${doc.id}, updating isDeleted=true")
+        doc.reference.update(
             mapOf(
                 "isDeleted" to true,
                 "deletedAt" to System.currentTimeMillis()
             )
-        )?.await()
+        ).await()
+        android.util.Log.d("FirestoreRepo", "moveToTrash: Successfully updated document ${doc.id}")
     }
 
     override suspend fun restoreFromTrash(habitId: Long) {
-        findHabitDocument(habitId)?.reference?.update(
+        android.util.Log.d("FirestoreRepo", "restoreFromTrash called for habitId: $habitId")
+        val doc = findHabitDocument(habitId)
+        if (doc == null) {
+            android.util.Log.e("FirestoreRepo", "restoreFromTrash: Document not found for habitId: $habitId")
+            return
+        }
+        android.util.Log.d("FirestoreRepo", "restoreFromTrash: Found document ${doc.id}, updating isDeleted=false")
+        doc.reference.update(
             mapOf(
                 "isDeleted" to false,
                 "deletedAt" to null
             )
-        )?.await()
+        ).await()
+        android.util.Log.d("FirestoreRepo", "restoreFromTrash: Successfully updated document ${doc.id}")
     }
 
     override suspend fun permanentlyDeleteHabit(habitId: Long) {
+        android.util.Log.d("FirestoreRepo", "permanentlyDeleteHabit called for habitId: $habitId")
         val userCompletionsCollection = getUserCompletionsCollection() ?: throw IllegalStateException("User not authenticated")
         val habitDoc = findHabitDocument(habitId)
-        habitDoc?.reference?.delete()?.await()
-        if (habitDoc != null) {
-            val completions = userCompletionsCollection
-                .whereEqualTo("habitId", habitId.toString())
-                .get().await()
-            completions.documents.forEach { doc -> doc.reference.delete() }
-            // Legacy completions may have stored the Firestore document ID instead of numericId
-            val legacyCompletions = userCompletionsCollection
-                .whereEqualTo("habitId", habitDoc.id)
-                .get().await()
-            legacyCompletions.documents.forEach { doc -> doc.reference.delete() }
+        
+        if (habitDoc == null) {
+            android.util.Log.e("FirestoreRepo", "permanentlyDeleteHabit: Document not found for habitId: $habitId")
+            return
         }
+        
+        android.util.Log.d("FirestoreRepo", "permanentlyDeleteHabit: Found document ${habitDoc.id}, deleting...")
+        habitDoc.reference.delete().await()
+        android.util.Log.d("FirestoreRepo", "permanentlyDeleteHabit: Document ${habitDoc.id} deleted")
+        
+        val completions = userCompletionsCollection
+            .whereEqualTo("habitId", habitId.toString())
+            .get().await()
+        android.util.Log.d("FirestoreRepo", "permanentlyDeleteHabit: Deleting ${completions.documents.size} completions")
+        completions.documents.forEach { doc -> doc.reference.delete() }
+        
+        // Legacy completions may have stored the Firestore document ID instead of numericId
+        val legacyCompletions = userCompletionsCollection
+            .whereEqualTo("habitId", habitDoc.id)
+            .get().await()
+        android.util.Log.d("FirestoreRepo", "permanentlyDeleteHabit: Deleting ${legacyCompletions.documents.size} legacy completions")
+        legacyCompletions.documents.forEach { doc -> doc.reference.delete() }
     }
 
     override suspend fun emptyTrash() {
@@ -163,14 +204,20 @@ class FirestoreHabitRepository @Inject constructor(
 
     override suspend fun cleanupOldDeletedHabits() {
         val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
-        val thirtyDaysAgo = System.currentTimeMillis() - (30 * 24 * 60 * 60 * 1000)
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24L * 60L * 60L * 1000L)
+        
+        android.util.Log.d("FirestoreRepo", "cleanupOldDeletedHabits: thirtyDaysAgo=$thirtyDaysAgo (${java.util.Date(thirtyDaysAgo)})")
         
         val oldDeletedHabits = userCollection
             .whereEqualTo("isDeleted", true)
             .whereLessThan("deletedAt", thirtyDaysAgo)
             .get().await()
         
+        android.util.Log.d("FirestoreRepo", "cleanupOldDeletedHabits: Found ${oldDeletedHabits.documents.size} habits to clean up")
+        
         oldDeletedHabits.documents.forEach { doc ->
+            val deletedAt = doc.getLong("deletedAt")
+            android.util.Log.d("FirestoreRepo", "cleanupOldDeletedHabits: Deleting habit '${doc.getString("title")}', deletedAt=$deletedAt (${deletedAt?.let { java.util.Date(it) }})")
             val numericId = (doc.get("numericId") as? Long) ?: doc.id.hashCode().toLong()
             permanentlyDeleteHabit(numericId)
         }
