@@ -245,7 +245,7 @@ private fun DeletedHabitCard(
 ) {
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val deletedDate = habit.deletedAt?.let { instant ->
-        val localDate = java.time.LocalDate.ofInstant(instant, java.time.ZoneOffset.UTC)
+        val localDate = instant.atZone(java.time.ZoneOffset.UTC).toLocalDate()
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(localDate)
     }
 

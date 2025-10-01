@@ -674,7 +674,7 @@ private fun CalendarSection(
                 MonthCalendar(
                     month = currentMonth,
                     completedDates = completedDates,
-                    habitCreationDate = java.time.LocalDate.ofInstant(habit.createdAt, java.time.ZoneOffset.UTC),
+                    habitCreationDate = habit.createdAt.atZone(java.time.ZoneOffset.UTC).toLocalDate(),
                     selectedDate = selectedDate,
                     onDateSelected = { date ->
                         currentMonth = YearMonth.from(date)
@@ -895,7 +895,7 @@ private fun HabitInfoSection(habit: Habit) {
                 InfoRow(
                     label = "Created On",
                     value = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                        .format(java.time.LocalDate.ofInstant(habit.createdAt, java.time.ZoneOffset.UTC)),
+                        .format(habit.createdAt.atZone(java.time.ZoneOffset.UTC).toLocalDate()),
                     icon = Icons.Default.Today
                 )
 

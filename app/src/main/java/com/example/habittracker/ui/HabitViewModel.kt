@@ -475,7 +475,7 @@ class HabitViewModel @Inject constructor(
             
             // Calculate success rate
             val daysSinceCreation = ChronoUnit.DAYS.between(
-                LocalDate.ofInstant(habit.createdAt, ZoneOffset.UTC), 
+                habit.createdAt.atZone(ZoneOffset.UTC).toLocalDate(), 
                 LocalDate.now()
             ).toInt() + 1
             val completionRate = if (daysSinceCreation > 0) {

@@ -273,7 +273,7 @@ fun HabitDetailsRoute(
             progress = loadedProgress
             error = null
 
-            val creationDate = LocalDate.ofInstant(loadedHabit.createdAt, ZoneOffset.UTC)
+            val creationDate = loadedHabit.createdAt.atZone(ZoneOffset.UTC).toLocalDate()
             val today = LocalDate.now()
             val adjustedDate = when {
                 selectedDate.isBefore(creationDate) -> creationDate
