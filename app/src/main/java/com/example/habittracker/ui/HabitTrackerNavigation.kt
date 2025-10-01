@@ -25,6 +25,7 @@ import com.example.habittracker.auth.ui.AuthScreen
 import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.auth.ui.ProfileScreen
 import com.example.habittracker.data.local.Habit
+import com.example.habittracker.util.rememberNavigationHandler
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -92,21 +93,54 @@ fun HabitTrackerNavigation(
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             
+            // Track last navigation time for debouncing
+            var lastNavigationTime by remember { mutableLongStateOf(0L) }
+            
+            // Debounced navigation handlers to prevent rapid clicks
+            val onAddHabitClick = rememberNavigationHandler { 
+                navController.navigate("add_habit") 
+            }
+            val onTrashClick = rememberNavigationHandler { 
+                navController.navigate("trash") 
+            }
+            val onProfileClick = rememberNavigationHandler { 
+                navController.navigate("profile") 
+            }
+            
             HabitHomeRoute(
                 state = state,
-                onAddHabitClick = { navController.navigate("add_habit") },
+                onAddHabitClick = onAddHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
                 onDeleteHabit = viewModel::deleteHabit,
-                onHabitDetailsClick = { habitId -> navController.navigate("habit_details/$habitId") },
-                onTrashClick = { navController.navigate("trash") },
-                onProfileClick = { navController.navigate("profile") }
+                onHabitDetailsClick = { habitId -> 
+                    // Check debounce before navigating
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastNavigationTime >= 500L) {
+                        lastNavigationTime = currentTime
+                        navController.navigate("habit_details/$habitId")
+                    }
+                },
+                onTrashClick = onTrashClick,
+                onProfileClick = onProfileClick
             )
         }
         
         composable("add_habit") {
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                viewModel.resetAddHabitState()
+                navController.popBackStack()
+            }
+            
+            // Debounced save action
+            val onSaveHabit = rememberNavigationHandler {
+                viewModel.saveHabit()
+                navController.popBackStack()
+            }
             
             AddHabitScreen(
                 state = state.addHabitState,
@@ -120,14 +154,8 @@ fun HabitTrackerNavigation(
                 onHabitMonthOfYearChange = viewModel::onHabitMonthOfYearChange,
                 onAvatarChange = viewModel::onAvatarChange,
                 onNotificationSoundChange = viewModel::onNotificationSoundChange,
-                onBackClick = { 
-                    viewModel.resetAddHabitState()
-                    navController.popBackStack()
-                },
-                onSaveHabit = {
-                    viewModel.saveHabit()
-                    navController.popBackStack()
-                }
+                onBackClick = onBackClick,
+                onSaveHabit = onSaveHabit
             )
         }
         
@@ -135,10 +163,15 @@ fun HabitTrackerNavigation(
             val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: return@composable
             val viewModel: HabitViewModel = hiltViewModel()
             
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
             HabitDetailsRoute(
                 habitId = habitId,
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = onBackClick
             )
         }
         
@@ -146,26 +179,39 @@ fun HabitTrackerNavigation(
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
             TrashScreen(
                 deletedHabits = state.deletedHabits,
                 onRestoreHabit = viewModel::restoreHabit,
                 onPermanentlyDeleteHabit = viewModel::permanentlyDeleteHabit,
                 onEmptyTrash = viewModel::emptyTrash,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = onBackClick
             )
         }
         
         composable("profile") {
             val authViewModel: AuthViewModel = hiltViewModel()
             
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            // Debounced sign out navigation
+            val onSignedOut = rememberNavigationHandler {
+                navController.navigate("auth") {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
-                onBackClick = { navController.popBackStack() },
-                onSignedOut = {
-                    navController.navigate("auth") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
+                onBackClick = onBackClick,
+                onSignedOut = onSignedOut
             )
         }
     }

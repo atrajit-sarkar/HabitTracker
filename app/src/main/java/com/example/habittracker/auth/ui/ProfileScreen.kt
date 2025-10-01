@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.example.habittracker.util.clickableOnce
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -152,7 +153,7 @@ fun ProfileScreen(
                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                     CircleShape
                                 )
-                                .clickable { showAvatarPicker = true },
+                                .clickableOnce { showAvatarPicker = true },
                             contentAlignment = Alignment.Center
                         ) {
                             // Only show avatar content when data is loaded
@@ -558,7 +559,7 @@ private fun ProfileActionItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickableOnce(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -650,7 +651,7 @@ private fun AvatarPickerDialog(
                                     MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                                 shape = CircleShape
                             )
-                            .clickable {
+                            .clickableOnce(debounceTime = 300L) {
                                 onAvatarSelected(emoji)
                             },
                         contentAlignment = Alignment.Center

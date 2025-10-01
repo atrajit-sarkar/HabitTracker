@@ -115,6 +115,7 @@ import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import com.example.habittracker.ui.DeleteHabitConfirmationDialog
+import com.example.habittracker.util.clickableOnce
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -398,7 +399,7 @@ private fun DrawerContent(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickableOnce {
                             onCloseDrawer()
                             onProfileClick()
                         },
@@ -464,7 +465,7 @@ private fun DrawerContent(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickableOnce {
                             onCloseDrawer()
                             onTrashClick()
                         },
@@ -1345,7 +1346,7 @@ private fun EmojiItem(
                        else MaterialTheme.colorScheme.outline,
                 shape = CircleShape
             )
-            .clickable { onClick() }
+            .clickableOnce(debounceTime = 300L) { onClick() }
     ) {
         Text(
             text = emoji,
@@ -1374,7 +1375,7 @@ private fun ColorItem(
                        else MaterialTheme.colorScheme.outline,
                 shape = CircleShape
             )
-            .clickable { onClick() }
+            .clickableOnce(debounceTime = 300L) { onClick() }
     ) {
         if (isSelected) {
             Icon(
