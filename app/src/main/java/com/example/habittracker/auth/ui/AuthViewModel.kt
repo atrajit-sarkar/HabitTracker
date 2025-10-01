@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AuthUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true, // Start as loading while checking auth state
     val user: User? = null,
     val email: String = "",
     val password: String = "",
@@ -37,7 +37,7 @@ class AuthViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             authRepository.currentUser.collect { user ->
-                _uiState.update { it.copy(user = user) }
+                _uiState.update { it.copy(user = user, isLoading = false) }
             }
         }
     }

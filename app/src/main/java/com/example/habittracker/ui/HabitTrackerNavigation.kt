@@ -44,15 +44,20 @@ fun HabitTrackerNavigation(
             val authViewModel: AuthViewModel = hiltViewModel()
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
             
-            // Check authentication state and navigate accordingly
-            LaunchedEffect(Unit) {
-                if (authState.user != null) {
-                    navController.navigate("home") {
-                        popUpTo("loading") { inclusive = true }
-                    }
-                } else {
-                    navController.navigate("auth") {
-                        popUpTo("loading") { inclusive = true }
+            // Navigate based on auth state once it's loaded
+            LaunchedEffect(authState.isLoading, authState.user) {
+                if (!authState.isLoading) {
+                    // Auth state has been checked, now navigate
+                    if (authState.user != null) {
+                        // User is authenticated, go directly to home
+                        navController.navigate("home") {
+                            popUpTo("loading") { inclusive = true }
+                        }
+                    } else {
+                        // User is not authenticated, go to auth screen
+                        navController.navigate("auth") {
+                            popUpTo("loading") { inclusive = true }
+                        }
                     }
                 }
             }
