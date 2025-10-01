@@ -1,12 +1,19 @@
 package com.example.habittracker.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -18,6 +25,7 @@ import com.example.habittracker.auth.ui.AuthScreen
 import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.auth.ui.ProfileScreen
 import com.example.habittracker.data.local.Habit
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -172,16 +180,20 @@ fun HabitDetailsRoute(
     var habit by remember { mutableStateOf<Habit?>(null) }
     var progress by remember { mutableStateOf<HabitProgress?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     // Function to refresh progress data
     suspend fun refreshProgress() {
         try {
+            android.util.Log.d("HabitDetails", "Loading habit with ID: $habitId")
             val loadedHabit = viewModel.getHabitById(habitId)
+            android.util.Log.d("HabitDetails", "Habit loaded: ${loadedHabit.title}")
             val loadedProgress = viewModel.getHabitProgress(habitId)
             habit = loadedHabit
             progress = loadedProgress
+            error = null
 
             val creationDate = LocalDate.ofInstant(loadedHabit.createdAt, ZoneOffset.UTC)
             val today = LocalDate.now()
@@ -194,7 +206,10 @@ fun HabitDetailsRoute(
                 selectedDate = adjustedDate
             }
         } catch (e: Exception) {
-            // Handle error
+            android.util.Log.e("HabitDetails", "Error loading habit: ${e.message}", e)
+            error = "Failed to load habit: ${e.message}"
+            habit = null
+            progress = null
         }
     }
 
@@ -223,7 +238,38 @@ fun HabitDetailsRoute(
         val currentHabit = habit
         val currentProgress = progress
         
-        if (currentHabit != null && currentProgress != null) {
+        if (error != null) {
+            // Error state
+            val coroutineScope = rememberCoroutineScope()
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Error loading habit",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = error ?: "Unknown error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Button(onClick = {
+                        coroutineScope.launch {
+                            isLoading = true
+                            refreshProgress()
+                            isLoading = false
+                        }
+                    }) {
+                        Text("Retry")
+                    }
+                }
+            }
+        } else if (currentHabit != null && currentProgress != null) {
             val isSelectedDateCompleted = currentProgress.completedDates.contains(selectedDate)
             HabitDetailsScreen(
                 habit = currentHabit,

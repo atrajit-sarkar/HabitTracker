@@ -216,29 +216,43 @@ class FirestoreHabitRepository @Inject constructor(
     private suspend fun findHabitDocument(habitId: Long): DocumentSnapshot? {
         val userCollection = getUserCollection() ?: return null
 
+        android.util.Log.d("FirestoreRepo", "Finding habit document for ID: $habitId")
+
         // Primary lookup using the numericId field
         val numericSnapshot = userCollection.whereEqualTo("numericId", habitId).limit(1).get().await()
         val numericDoc = numericSnapshot.documents.firstOrNull()
-        if (numericDoc != null) return numericDoc
+        if (numericDoc != null) {
+            android.util.Log.d("FirestoreRepo", "Found habit by numericId: ${numericDoc.id}")
+            return numericDoc
+        }
+
+        android.util.Log.d("FirestoreRepo", "No match by numericId, scanning all documents...")
 
         // Fallback: scan existing documents and compare against legacy identifiers
         val allSnapshot = userCollection.get().await()
+        android.util.Log.d("FirestoreRepo", "Total documents in collection: ${allSnapshot.documents.size}")
+        
         val matchedDoc = allSnapshot.documents.firstOrNull { doc ->
             val docIdHash = doc.id.hashCode().toLong()
             val storedNumeric = (doc.get("numericId") as? Number)?.toLong()
             val storedIdString = doc.getString("id")
             val storedIdHash = storedIdString?.hashCode()?.toLong()
             val storedIdLong = storedIdString?.toLongOrNull()
+            
+            android.util.Log.d("FirestoreRepo", "Checking doc ${doc.id}: docIdHash=$docIdHash, storedNumeric=$storedNumeric, storedIdString=$storedIdString, storedIdHash=$storedIdHash, storedIdLong=$storedIdLong")
+            
             habitId == docIdHash || habitId == storedNumeric || habitId == storedIdHash || habitId == storedIdLong
         }
 
         matchedDoc?.let { doc ->
+            android.util.Log.d("FirestoreRepo", "Found habit by fallback match: ${doc.id}")
             // Backfill numericId for faster lookups in the future
             val currentNumeric = (doc.get("numericId") as? Number)?.toLong()
             if (currentNumeric == null) {
+                android.util.Log.d("FirestoreRepo", "Backfilling numericId=$habitId for doc ${doc.id}")
                 doc.reference.update("numericId", habitId).await()
             }
-        }
+        } ?: android.util.Log.e("FirestoreRepo", "No matching document found for habitId=$habitId")
 
         return matchedDoc
     }
