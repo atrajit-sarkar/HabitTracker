@@ -433,30 +433,28 @@ fun ProfileScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "🎯",
-                        fontSize = 36.sp
+                        fontSize = 36.sp,
+                        textAlign = TextAlign.Center
                     )
                     Text(
                         text = "Habit Tracker",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Version 1.0.0",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
                     )
                     Text(
                         text = "Build better habits, one day at a time",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp)
+                        textAlign = TextAlign.Center
                     )
                 }
             }
