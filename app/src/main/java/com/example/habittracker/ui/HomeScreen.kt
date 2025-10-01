@@ -100,6 +100,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -111,7 +112,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import coil.compose.AsyncImage
 import com.example.habittracker.R
+import com.example.habittracker.auth.User
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
@@ -126,6 +129,7 @@ import java.time.format.FormatStyle
 @Composable
 fun HabitHomeRoute(
     state: HabitScreenState,
+    user: User?,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
@@ -165,6 +169,7 @@ fun HabitHomeRoute(
 
     HabitHomeScreen(
         state = state,
+        user = user,
         snackbarHostState = snackbarHostState,
         onAddHabitClick = onAddHabitClick,
         onToggleReminder = onToggleReminder,
@@ -187,6 +192,7 @@ fun HabitHomeRoute(
 @Composable
 fun HabitHomeScreen(
     state: HabitScreenState,
+    user: User?,
     snackbarHostState: SnackbarHostState,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
@@ -235,6 +241,46 @@ fun HabitHomeScreen(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "Menu"
                         )
+                    }
+                },
+                actions = {
+                    // Profile Picture that navigates to profile screen
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(
+                                2.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                CircleShape
+                            )
+                            .clickableOnce { onProfileClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Determine if we should show profile photo or custom avatar
+                        val showProfilePhoto = user?.photoUrl != null && user.customAvatar == null
+                        val currentAvatar = user?.customAvatar ?: "👤"
+                        
+                        if (showProfilePhoto && user?.photoUrl != null) {
+                            // Load Google profile photo
+                            AsyncImage(
+                                model = user.photoUrl,
+                                contentDescription = "Profile picture",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // Show custom avatar emoji or default
+                            Text(
+                                text = currentAvatar,
+                                fontSize = 20.sp,
+                                modifier = Modifier.padding(2.dp)
+                            )
+                        }
                     }
                 }
             )

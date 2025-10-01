@@ -21,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.habittracker.auth.GoogleSignInHelper
+import com.example.habittracker.auth.User
 import com.example.habittracker.auth.ui.AuthScreen
 import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.auth.ui.ProfileScreen
@@ -99,6 +100,10 @@ fun HabitTrackerNavigation(
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             
+            // Get AuthViewModel for user data
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+            
             // Track last navigation time for debouncing
             var lastNavigationTime by remember { mutableLongStateOf(0L) }
             
@@ -115,6 +120,7 @@ fun HabitTrackerNavigation(
             
             HabitHomeRoute(
                 state = state,
+                user = authState.user,
                 onAddHabitClick = onAddHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
