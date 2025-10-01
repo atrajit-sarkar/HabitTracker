@@ -1,40 +1,75 @@
 package com.example.habittracker.auth.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.example.habittracker.ui.HabitViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    habitViewModel: HabitViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onSignedOut: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var showAvatarPicker by remember { mutableStateOf(false) }
+    var showResetAvatarDialog by remember { mutableStateOf(false) }
+    
+    // Track if avatar data has been loaded at least once to prevent flash
+    var avatarLoaded by remember { mutableStateOf(false) }
+    
+    // Update avatarLoaded when user data is available
+    LaunchedEffect(state.user) {
+        if (state.user != null) {
+            avatarLoaded = true
+        }
+    }
 
-    // Handle sign out navigation - only navigate if user explicitly signed out
-    // Don't navigate on initial load when user might still be loading
+    // Get the current avatar to display
+    val currentAvatar = state.user?.customAvatar ?: "😊"
+    
+    // Determine if we should show profile photo or custom avatar
+    val showProfilePhoto = state.user?.photoUrl != null && state.user?.customAvatar == null
+
+    // Handle sign out navigation
     var hasInitialized by remember { mutableStateOf(false) }
     
     LaunchedEffect(state.user) {
@@ -45,10 +80,17 @@ fun ProfileScreen(
         }
     }
 
+    // Calculate stats
+    val activeHabits = habitState.habits.size
+    val totalCompletions = habitState.habits.count { it.isCompletedToday }
+    val completedThisWeek = habitState.habits.count { it.isCompletedToday }
+    val completionPercentage = if (activeHabits > 0) 
+        (completedThisWeek * 100) / activeHabits else 0
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") },
+                title = { Text("Profile", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -56,7 +98,10 @@ fun ProfileScreen(
                             contentDescription = "Back"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { paddingValues ->
@@ -64,138 +109,268 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Profile Header
+            // Profile Header Card
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            Brush.verticalGradient(
+                            Brush.horizontalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.secondary
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                                 )
-                            ),
-                            shape = RoundedCornerShape(16.dp)
+                            )
                         )
-                        .padding(24.dp)
+                        .padding(28.dp)
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Profile Picture
+                        // Profile Picture with click to change
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
+                                .size(100.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
-                                .border(2.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f), CircleShape),
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(
+                                    4.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    CircleShape
+                                )
+                                .clickable { showAvatarPicker = true },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (state.user?.photoUrl != null) {
-                                // TODO: Load image from URL
-                                Icon(
-                                    imageVector = Icons.Default.AccountCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(48.dp)
-                                )
+                            // Only show avatar content when data is loaded
+                            if (avatarLoaded) {
+                                Crossfade(
+                                    targetState = Pair(showProfilePhoto, currentAvatar),
+                                    label = "avatar_crossfade"
+                                ) { (isPhoto, emoji) ->
+                                    if (isPhoto) {
+                                        // Load Google profile photo with Coil
+                                        AsyncImage(
+                                            model = state.user?.photoUrl,
+                                            contentDescription = "Profile photo",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        // Custom avatar (both Google and Email users can use this)
+                                        Text(
+                                            text = emoji,
+                                            fontSize = 48.sp,
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                }
                             } else {
-                                Icon(
-                                    imageVector = Icons.Default.AccountCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(48.dp)
+                                // Show a subtle loading indicator while fetching avatar
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                 )
                             }
                         }
 
                         // User Info
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = state.user?.displayName ?: "User",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
                                 text = state.user?.email ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                             )
+                            
+                            // Account type badge
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (state.user?.photoUrl != null) Icons.Default.Person else Icons.Default.Email,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = if (state.user?.photoUrl != null) "Google Account" else "Email Account",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Account Actions
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Account",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+            // Stats Cards
+            Text(
+                text = "Your Statistics",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
 
-                    // Sign Out Button
-                    OutlinedButton(
-                        onClick = { showSignOutDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Sign Out",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Active Habits
+                StatsCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.CheckCircle,
+                    title = "Active",
+                    value = activeHabits.toString(),
+                    subtitle = "Habits",
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+
+                // Total Completions Today
+                StatsCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Star,
+                    title = "Today",
+                    value = totalCompletions.toString(),
+                    subtitle = "Completed",
+                    color = MaterialTheme.colorScheme.secondary
+                )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Completion rate
+                StatsCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Favorite,
+                    title = "Rate",
+                    value = "$completionPercentage%",
+                    subtitle = "Completion",
+                    color = MaterialTheme.colorScheme.error
+                )
 
-            // App Info
+                // This Week
+                StatsCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.DateRange,
+                    title = "This Week",
+                    value = completedThisWeek.toString(),
+                    subtitle = "Completed",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Account Section
+            Text(
+                text = "Account Settings",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Change Avatar (all users)
+                    ProfileActionItem(
+                        icon = Icons.Default.Face,
+                        title = "Change Avatar",
+                        subtitle = "Select a custom emoji avatar",
+                        onClick = { showAvatarPicker = true }
+                    )
+                    
+                    // Reset Avatar (show only if user has custom avatar set)
+                    if (state.user?.customAvatar != null) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        ProfileActionItem(
+                            icon = Icons.Default.Refresh,
+                            title = "Reset Avatar",
+                            subtitle = if (state.user?.photoUrl != null) 
+                                "Return to Google profile picture" 
+                            else 
+                                "Return to default emoji",
+                            onClick = { showResetAvatarDialog = true },
+                            iconTint = MaterialTheme.colorScheme.secondary,
+                            titleColor = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Sign Out
+                    ProfileActionItem(
+                        icon = Icons.AutoMirrored.Filled.ExitToApp,
+                        title = "Sign Out",
+                        subtitle = "Sign out of your account",
+                        onClick = { showSignOutDialog = true },
+                        iconTint = MaterialTheme.colorScheme.error,
+                        titleColor = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // App Info Footer
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "🎯",
-                        fontSize = 32.sp
+                        fontSize = 36.sp
                     )
                     Text(
                         text = "Habit Tracker",
@@ -203,27 +378,111 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Version 1.0",
+                        text = "Version 1.0.0",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "Build better habits, one day at a time",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    // Avatar Picker Dialog
+    if (showAvatarPicker) {
+        AvatarPickerDialog(
+            currentAvatar = currentAvatar,
+            onAvatarSelected = { avatar ->
+                viewModel.updateCustomAvatar(avatar)
+                showAvatarPicker = false
+            },
+            onDismiss = { showAvatarPicker = false }
+        )
+    }
+    
+    // Reset Avatar Confirmation Dialog
+    if (showResetAvatarDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetAvatarDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            },
+            title = { 
+                Text(
+                    "Reset Avatar",
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = { 
+                Text(
+                    if (state.user?.photoUrl != null) 
+                        "Reset to your Google profile picture?" 
+                    else 
+                        "Reset to the default emoji avatar?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateCustomAvatar(null)
+                        showResetAvatarDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetAvatarDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Sign Out Confirmation Dialog
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out") },
-            text = { Text("Are you sure you want to sign out?") },
+            icon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { 
+                Text(
+                    "Sign Out",
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = { 
+                Text("Are you sure you want to sign out? You'll need to sign in again to access your habits.") 
+            },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         showSignOutDialog = false
                         viewModel.signOut()
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Sign Out")
                 }
@@ -235,4 +494,179 @@ fun ProfileScreen(
             }
         )
     }
+}
+
+@Composable
+private fun StatsCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    title: String,
+    value: String,
+    subtitle: String,
+    color: Color
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.12f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(28.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileActionItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = iconTint.copy(alpha = 0.15f),
+            modifier = Modifier.size(48.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = titleColor
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun AvatarPickerDialog(
+    currentAvatar: String,
+    onAvatarSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val avatarEmojis = listOf(
+        "😊", "😎", "🤗", "🥳", "🤓", 
+        "😇", "🤠", "🥰", "😄", "🙂",
+        "🦸", "🧑‍💼", "👨‍🎓", "👩‍🎓", "🧑‍🚀",
+        "🦊", "🐱", "🐶", "🐼", "🐨",
+        "🌟", "⭐", "✨", "💫", "🎯"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Choose Your Avatar",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(avatarEmojis) { emoji ->
+                    val isSelected = emoji == currentAvatar
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surface
+                            )
+                            .border(
+                                width = if (isSelected) 3.dp else 1.dp,
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                shape = CircleShape
+                            )
+                            .clickable {
+                                onAvatarSelected(emoji)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = emoji,
+                            fontSize = 32.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

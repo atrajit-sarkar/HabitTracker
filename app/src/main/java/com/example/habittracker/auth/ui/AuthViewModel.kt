@@ -170,6 +170,19 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun updateCustomAvatar(avatar: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = authRepository.updateCustomAvatar(avatar)
+            _uiState.update { 
+                it.copy(
+                    isLoading = false,
+                    errorMessage = if (result is AuthResult.Error) result.message else null
+                )
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }

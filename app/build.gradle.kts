@@ -79,6 +79,9 @@ dependencies {
     implementation(libs.firebase.analytics.ktx)
     implementation(libs.play.services.auth)
 
+    // Image Loading
+    implementation(libs.coil.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
