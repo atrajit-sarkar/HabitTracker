@@ -20,6 +20,7 @@ splashScreen = "1.0.1"
 firebaseBom = "33.5.1"
 playServicesAuth = "21.2.0"
 coil = "2.7.0"
+vico = "2.0.0-alpha.28"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -60,6 +61,11 @@ play-services-auth = { group = "com.google.android.gms", name = "play-services-a
 
 # Image Loading
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# Charts
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
+vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

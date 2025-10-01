@@ -46,7 +46,8 @@ fun ProfileScreen(
     viewModel: AuthViewModel = hiltViewModel(),
     habitViewModel: HabitViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
-    onSignedOut: () -> Unit
+    onSignedOut: () -> Unit,
+    onStatisticsClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -294,6 +295,73 @@ fun ProfileScreen(
                     subtitle = "Completed",
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+            
+            // View Detailed Statistics Button
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .clickableOnce { onStatisticsClick() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                )
+                            )
+                        )
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Analytics,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Detailed Analytics",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Charts, trends & comparisons",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "View",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
             // Account Section

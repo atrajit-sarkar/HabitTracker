@@ -26,6 +26,7 @@ import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.auth.ui.ProfileScreen
 import com.example.habittracker.data.local.Habit
 import com.example.habittracker.util.rememberNavigationHandler
+import com.example.habittracker.ui.statistics.StatisticsScreen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -213,10 +214,30 @@ fun HabitTrackerNavigation(
                 }
             }
             
+            // Debounced statistics navigation
+            val onStatisticsClick = rememberNavigationHandler {
+                navController.navigate("statistics")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
-                onSignedOut = onSignedOut
+                onSignedOut = onSignedOut,
+                onStatisticsClick = onStatisticsClick
+            )
+        }
+        
+        composable("statistics") {
+            val habitViewModel: HabitViewModel = hiltViewModel()
+            
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            StatisticsScreen(
+                viewModel = habitViewModel,
+                onBackClick = onBackClick
             )
         }
     }
