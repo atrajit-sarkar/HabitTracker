@@ -142,35 +142,76 @@ object HabitReminderService {
     /**
      * Sync all habit notification channels with the system
      * Ensures all active habits have their notification channels created
+     * Also removes orphaned/duplicate channels that don't match any habit
      * Call this on app startup to handle:
      * - App updates that might have cleared channels
      * - System cleanup that removed channels
      * - Database restore scenarios
-     * - Any edge cases where channels are missing
+     * - Duplicate channels from bugs or race conditions
+     * - Orphaned channels from deleted habits
      */
     fun syncAllHabitChannels(context: Context, habits: List<Habit>) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 ?: return
             
-            // Get all existing channel IDs
-            val existingChannelIds = manager.notificationChannels
+            // Get all existing habit channels
+            val existingChannels = manager.notificationChannels
+                .filter { it.id.startsWith(CHANNEL_PREFIX) }
+            
+            // Get active habit IDs (non-deleted)
+            val activeHabitIds = habits.filter { !it.isDeleted }.map { it.id }.toSet()
+            
+            var channelsCreated = 0
+            var channelsDeleted = 0
+            var channelsSkipped = 0
+            
+            // Step 1: Remove orphaned/duplicate channels
+            // Group channels by habit ID to detect duplicates
+            val channelsByHabitId = existingChannels.groupBy { channel ->
+                channel.id.removePrefix(CHANNEL_PREFIX).toLongOrNull()
+            }
+            
+            channelsByHabitId.forEach { (habitId, channels) ->
+                if (habitId == null) {
+                    // Invalid channel ID format - delete it
+                    channels.forEach { channel ->
+                        manager.deleteNotificationChannel(channel.id)
+                        channelsDeleted++
+                        android.util.Log.d("HabitReminderService", "Deleted invalid channel: ${channel.id}")
+                    }
+                } else if (habitId !in activeHabitIds) {
+                    // Orphaned channel (habit deleted or doesn't exist) - delete it
+                    channels.forEach { channel ->
+                        manager.deleteNotificationChannel(channel.id)
+                        channelsDeleted++
+                        android.util.Log.d("HabitReminderService", "Deleted orphaned channel: ${channel.id}")
+                    }
+                } else if (channels.size > 1) {
+                    // Duplicate channels for same habit - delete all and will recreate
+                    channels.forEach { channel ->
+                        manager.deleteNotificationChannel(channel.id)
+                        channelsDeleted++
+                        android.util.Log.d("HabitReminderService", "Deleted duplicate channel: ${channel.id}")
+                    }
+                }
+            }
+            
+            // Step 2: Get current state after cleanup
+            val remainingChannelIds = manager.notificationChannels
                 .map { it.id }
                 .filter { it.startsWith(CHANNEL_PREFIX) }
                 .toSet()
             
-            var channelsCreated = 0
-            var channelsSkipped = 0
-            
-            // Ensure channel exists for each active (non-deleted) habit
+            // Step 3: Ensure channel exists for each active habit
             habits.filter { !it.isDeleted }.forEach { habit ->
                 val channelId = "${CHANNEL_PREFIX}${habit.id}"
                 
-                if (channelId !in existingChannelIds) {
+                if (channelId !in remainingChannelIds) {
                     // Channel missing - create it
                     ensureHabitChannel(context, habit)
                     channelsCreated++
-                    android.util.Log.d("HabitReminderService", "Synced missing channel for habit: ${habit.title}")
+                    android.util.Log.d("HabitReminderService", "Created channel for habit: ${habit.title}")
                 } else {
                     channelsSkipped++
                 }
@@ -178,7 +219,7 @@ object HabitReminderService {
             
             android.util.Log.d(
                 "HabitReminderService",
-                "Channel sync complete: $channelsCreated created, $channelsSkipped already exist, ${habits.size} total habits"
+                "Channel sync complete: $channelsCreated created, $channelsDeleted deleted, $channelsSkipped kept, ${activeHabitIds.size} active habits"
             )
         }
     }
