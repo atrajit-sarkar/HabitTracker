@@ -95,8 +95,11 @@ class AuthRepository @Inject constructor(
     
     suspend fun signInWithGoogle(idToken: String): AuthResult {
         return try {
+            Log.d(TAG, "Starting Google sign-in with ID token")
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val authResult = firebaseAuth.signInWithCredential(credential).await()
+            
+            Log.d(TAG, "Google sign-in successful for user: ${authResult.user?.uid}")
             
             // For Google users, save their Google display name as custom name on first sign-in
             val userId = authResult.user?.uid
@@ -112,11 +115,14 @@ class AuthRepository @Inject constructor(
                         CUSTOM_DISPLAY_NAME_FIELD to googleDisplayName
                     ), com.google.firebase.firestore.SetOptions.merge()).await()
                     Log.d(TAG, "Initialized user document for Google user with name: $googleDisplayName")
+                } else {
+                    Log.d(TAG, "User document already exists for Google user")
                 }
             }
             
             AuthResult.Success
         } catch (e: Exception) {
+            Log.e(TAG, "Google sign in failed", e)
             AuthResult.Error(e.message ?: "Google sign in failed")
         }
     }

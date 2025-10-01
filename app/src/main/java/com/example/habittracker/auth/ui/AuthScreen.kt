@@ -68,12 +68,28 @@ fun AuthScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                account.idToken?.let { idToken ->
+                val idToken = account.idToken
+                if (idToken != null) {
                     viewModel.signInWithGoogle(idToken)
+                } else {
+                    android.util.Log.e("AuthScreen", "ID token is null")
+                    viewModel.setGoogleSignInError("Failed to get authentication token")
                 }
             } catch (e: ApiException) {
-                // Handle sign-in error
+                android.util.Log.e("AuthScreen", "Google sign-in failed with status code: ${e.statusCode}", e)
+                val errorMessage = when (e.statusCode) {
+                    com.google.android.gms.common.api.CommonStatusCodes.DEVELOPER_ERROR -> 
+                        "Developer error: Check SHA-1 fingerprint and Client ID configuration"
+                    com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR -> 
+                        "Network error: Please check your internet connection"
+                    com.google.android.gms.common.api.CommonStatusCodes.INTERNAL_ERROR -> 
+                        "Internal error: Please try again"
+                    else -> "Google sign-in failed: ${e.message}"
+                }
+                viewModel.setGoogleSignInError(errorMessage)
             }
+        } else {
+            android.util.Log.d("AuthScreen", "Google sign-in cancelled or failed with result code: ${result.resultCode}")
         }
     }
 

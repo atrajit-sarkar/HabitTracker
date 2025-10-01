@@ -202,4 +202,8 @@ class AuthViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
+    
+    fun setGoogleSignInError(message: String) {
+        _uiState.update { it.copy(errorMessage = message, isLoading = false) }
+    }
 }

@@ -15,7 +15,7 @@ class GoogleSignInHelper @Inject constructor(
     
     val signInClient: GoogleSignInClient by lazy {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("1056079123456-web123456789.apps.googleusercontent.com") // This should match your web client ID from google-services.json
+            .requestIdToken("328687985941-k0kg0hmcui7jlt3o31dh4a35qbe3is5d.apps.googleusercontent.com") // Web client ID from google-services.json
             .requestEmail()
             .build()
         
