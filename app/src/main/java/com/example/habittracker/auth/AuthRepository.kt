@@ -15,6 +15,7 @@ import javax.inject.Singleton
 private const val TAG = "AuthRepository"
 private const val USERS_COLLECTION = "users"
 private const val CUSTOM_AVATAR_FIELD = "customAvatar"
+private const val CUSTOM_DISPLAY_NAME_FIELD = "customDisplayName"
 
 @Singleton
 class AuthRepository @Inject constructor(
@@ -37,14 +38,15 @@ class AuthRepository @Inject constructor(
                     .document(firebaseUser.uid)
                     .addSnapshotListener { snapshot, error ->
                         if (error != null) {
-                            Log.e(TAG, "Error listening to avatar changes", error)
-                            trySend(firebaseUser.toUser(null))
+                            Log.e(TAG, "Error listening to user data changes", error)
+                            trySend(firebaseUser.toUser(null, null))
                             return@addSnapshotListener
                         }
                         
                         val customAvatar = snapshot?.getString(CUSTOM_AVATAR_FIELD)
-                        Log.d(TAG, "Avatar snapshot updated: $customAvatar")
-                        trySend(firebaseUser.toUser(customAvatar))
+                        val customDisplayName = snapshot?.getString(CUSTOM_DISPLAY_NAME_FIELD)
+                        Log.d(TAG, "User data snapshot updated - Avatar: $customAvatar, Name: $customDisplayName")
+                        trySend(firebaseUser.toUser(customAvatar, customDisplayName))
                     }
             } else {
                 trySend(null)
@@ -60,7 +62,7 @@ class AuthRepository @Inject constructor(
     }
     
     val currentUserSync: User?
-        get() = firebaseAuth.currentUser?.toUser(null)
+        get() = firebaseAuth.currentUser?.toUser(null, null)
     
     suspend fun signInWithEmail(email: String, password: String): AuthResult {
         return try {
@@ -73,7 +75,18 @@ class AuthRepository @Inject constructor(
     
     suspend fun signUpWithEmail(email: String, password: String): AuthResult {
         return try {
-            firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+            val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+            
+            // For email/password users, initialize with empty name (they'll set it later)
+            val userId = authResult.user?.uid
+            if (userId != null) {
+                val userDoc = firestore.collection(USERS_COLLECTION).document(userId)
+                userDoc.set(mapOf(
+                    CUSTOM_DISPLAY_NAME_FIELD to "" // Empty name for email users to set later
+                ), com.google.firebase.firestore.SetOptions.merge()).await()
+                Log.d(TAG, "Initialized user document for email user")
+            }
+            
             AuthResult.Success
         } catch (e: Exception) {
             AuthResult.Error(e.message ?: "Sign up failed")
@@ -83,7 +96,25 @@ class AuthRepository @Inject constructor(
     suspend fun signInWithGoogle(idToken: String): AuthResult {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
-            firebaseAuth.signInWithCredential(credential).await()
+            val authResult = firebaseAuth.signInWithCredential(credential).await()
+            
+            // For Google users, save their Google display name as custom name on first sign-in
+            val userId = authResult.user?.uid
+            val googleDisplayName = authResult.user?.displayName
+            
+            if (userId != null && googleDisplayName != null) {
+                val userDoc = firestore.collection(USERS_COLLECTION).document(userId)
+                val snapshot = userDoc.get().await()
+                
+                // Only set name if it's the first time (document doesn't exist or has no name)
+                if (!snapshot.exists() || !snapshot.contains(CUSTOM_DISPLAY_NAME_FIELD)) {
+                    userDoc.set(mapOf(
+                        CUSTOM_DISPLAY_NAME_FIELD to googleDisplayName
+                    ), com.google.firebase.firestore.SetOptions.merge()).await()
+                    Log.d(TAG, "Initialized user document for Google user with name: $googleDisplayName")
+                }
+            }
+            
             AuthResult.Success
         } catch (e: Exception) {
             AuthResult.Error(e.message ?: "Google sign in failed")
@@ -127,13 +158,35 @@ class AuthRepository @Inject constructor(
         }
     }
     
-    private fun FirebaseUser.toUser(customAvatar: String?): User {
+    suspend fun updateDisplayName(name: String): AuthResult {
+        return try {
+            val userId = firebaseAuth.currentUser?.uid 
+                ?: return AuthResult.Error("No user signed in")
+            
+            if (name.isBlank()) {
+                return AuthResult.Error("Name cannot be empty")
+            }
+            
+            val userDoc = firestore.collection(USERS_COLLECTION).document(userId)
+            userDoc.set(mapOf(CUSTOM_DISPLAY_NAME_FIELD to name.trim()), 
+                com.google.firebase.firestore.SetOptions.merge()).await()
+            Log.d(TAG, "Display name updated to: $name")
+            
+            AuthResult.Success
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update display name", e)
+            AuthResult.Error(e.message ?: "Failed to update name")
+        }
+    }
+    
+    private fun FirebaseUser.toUser(customAvatar: String?, customDisplayName: String?): User {
         return User(
             uid = uid,
             email = email,
             displayName = displayName,
             photoUrl = photoUrl?.toString(),
-            customAvatar = customAvatar
+            customAvatar = customAvatar,
+            customDisplayName = customDisplayName
         )
     }
 }

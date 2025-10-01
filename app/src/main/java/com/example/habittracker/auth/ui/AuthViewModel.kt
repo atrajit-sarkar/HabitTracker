@@ -182,6 +182,22 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+    
+    fun updateDisplayName(name: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = authRepository.updateDisplayName(name)
+            _uiState.update { 
+                it.copy(
+                    isLoading = false,
+                    errorMessage = if (result is AuthResult.Error) result.message else null
+                )
+            }
+            if (result is AuthResult.Success) {
+                onSuccess()
+            }
+        }
+    }
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }

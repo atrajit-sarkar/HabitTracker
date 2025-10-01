@@ -54,14 +54,22 @@ fun ProfileScreen(
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAvatarPicker by remember { mutableStateOf(false) }
     var showResetAvatarDialog by remember { mutableStateOf(false) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var showSetNameDialog by remember { mutableStateOf(false) }
     
     // Track if avatar data has been loaded at least once to prevent flash
     var avatarLoaded by remember { mutableStateOf(false) }
     
-    // Update avatarLoaded when user data is available
+    // Check if user needs to set name (empty customDisplayName for email users)
+    val needsToSetName = state.user?.customDisplayName?.isEmpty() == true
+    
+    // Show dialog to set name for new email users
     LaunchedEffect(state.user) {
         if (state.user != null) {
             avatarLoaded = true
+            if (needsToSetName && !showSetNameDialog) {
+                showSetNameDialog = true
+            }
         }
     }
 
@@ -198,7 +206,7 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = state.user?.displayName ?: "User",
+                                text = state.user?.effectiveDisplayName ?: "User",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -383,6 +391,16 @@ fun ProfileScreen(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Edit Name (all users)
+                    ProfileActionItem(
+                        icon = Icons.Default.Edit,
+                        title = "Edit Name",
+                        subtitle = "Change your display name",
+                        onClick = { showEditNameDialog = true }
+                    )
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    
                     // Change Avatar (all users)
                     ProfileActionItem(
                         icon = Icons.Default.Face,
@@ -557,6 +575,31 @@ fun ProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Edit Name Dialog
+    if (showEditNameDialog) {
+        EditNameDialog(
+            currentName = state.user?.effectiveDisplayName ?: "",
+            onDismiss = { showEditNameDialog = false },
+            onSave = { newName ->
+                viewModel.updateDisplayName(newName) {
+                    showEditNameDialog = false
+                }
+            }
+        )
+    }
+    
+    // Set Name Dialog (for new email users)
+    if (showSetNameDialog) {
+        SetNameDialog(
+            onDismiss = { }, // Cannot dismiss without setting name
+            onSave = { newName ->
+                viewModel.updateDisplayName(newName) {
+                    showSetNameDialog = false
                 }
             }
         )
