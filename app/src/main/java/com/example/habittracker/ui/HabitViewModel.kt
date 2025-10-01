@@ -1,5 +1,6 @@
 package com.example.habittracker.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
@@ -8,7 +9,9 @@ import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import com.example.habittracker.notification.HabitReminderScheduler
+import com.example.habittracker.notification.HabitReminderService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
@@ -25,14 +28,30 @@ import java.time.ZoneOffset
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val habitRepository: HabitRepository,
     private val reminderScheduler: HabitReminderScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HabitScreenState(isLoading = true))
     val uiState: StateFlow<HabitScreenState> = _uiState.asStateFlow()
+    
+    // Cache available sounds
+    private var availableSounds: List<NotificationSound> = emptyList()
 
     init {
+        // Load available notification sounds
+        viewModelScope.launch(Dispatchers.IO) {
+            availableSounds = NotificationSound.getAllAvailableSounds(context)
+            _uiState.update { state ->
+                state.copy(
+                    addHabitState = state.addHabitState.copy(
+                        availableSounds = availableSounds
+                    )
+                )
+            }
+        }
+        
         viewModelScope.launch {
             habitRepository.observeHabits().collectLatest { habits ->
                 _uiState.update { state ->
@@ -61,15 +80,18 @@ class HabitViewModel @Inject constructor(
     }
 
     fun showAddHabitSheet() {
-        _uiState.update { it.copy(isAddSheetVisible = true) }
+        _uiState.update { it.copy(
+            isAddSheetVisible = true,
+            addHabitState = AddHabitState(availableSounds = availableSounds)
+        ) }
     }
 
     fun hideAddHabitSheet() {
-        _uiState.update { it.copy(isAddSheetVisible = false, addHabitState = AddHabitState()) }
+        _uiState.update { it.copy(isAddSheetVisible = false, addHabitState = AddHabitState(availableSounds = availableSounds)) }
     }
 
     fun resetAddHabitState() {
-        _uiState.update { it.copy(addHabitState = AddHabitState()) }
+        _uiState.update { it.copy(addHabitState = AddHabitState(availableSounds = availableSounds)) }
     }
 
     fun onHabitNameChange(value: String) {
@@ -183,13 +205,19 @@ class HabitViewModel @Inject constructor(
                 dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
                 dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
                 monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                notificationSound = addForm.notificationSound,
+                notificationSoundId = addForm.notificationSound.id,
+                notificationSoundName = addForm.notificationSound.displayName,
+                notificationSoundUri = addForm.notificationSound.uri,
                 avatar = addForm.avatar
             )
             val savedHabit = withContext(Dispatchers.IO) {
                 val id = habitRepository.insertHabit(habit)
                 habit.copy(id = id)
             }
+            
+            // Force update notification channel with the new/changed sound
+            HabitReminderService.updateHabitChannel(context, savedHabit)
+            
             if (savedHabit.reminderEnabled) {
                 reminderScheduler.schedule(savedHabit)
             } else {
@@ -217,6 +245,10 @@ class HabitViewModel @Inject constructor(
                 habitRepository.updateHabit(newHabit)
                 newHabit
             } ?: return@launch
+            
+            // Update notification channel to ensure sound is correct
+            HabitReminderService.updateHabitChannel(context, updated)
+            
             if (enabled) {
                 reminderScheduler.schedule(updated)
             } else {

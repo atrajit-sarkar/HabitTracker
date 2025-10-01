@@ -26,17 +26,99 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 object HabitReminderService {
-    private const val CHANNEL_ID = "habit_reminder_channel"
+    private const val CHANNEL_PREFIX = "habit_reminder_channel_"
     private val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
-    fun ensureChannel(context: Context) {
+    /**
+     * Create or update a notification channel for a specific habit
+     * This allows each habit to have its own custom sound
+     */
+    private fun ensureHabitChannel(context: Context, habit: Habit): String {
+        val channelId = "${CHANNEL_PREFIX}${habit.id}"
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                ?: return channelId
+            
+            // Check if channel already exists
+            val existing = manager.getNotificationChannel(channelId)
+            
+            // Delete existing channel if sound has changed
+            if (existing != null) {
+                val currentSoundUri = existing.sound
+                val newSoundUri = NotificationSound.getActualUri(context, habit.getNotificationSound())
+                
+                // If sounds are different, delete and recreate the channel
+                if (currentSoundUri != newSoundUri) {
+                    manager.deleteNotificationChannel(channelId)
+                }
+            }
+            
+            // Create or recreate the channel
+            if (manager.getNotificationChannel(channelId) == null) {
+                val soundUri = NotificationSound.getActualUri(context, habit.getNotificationSound())
+                
+                val channel = NotificationChannel(
+                    channelId,
+                    "Reminder: ${habit.title}",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifications for ${habit.title} habit"
+                    enableLights(true)
+                    lightColor = Color.BLUE
+                    enableVibration(true)
+                    setShowBadge(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    setBypassDnd(false)
+                    
+                    // Set custom sound for this channel
+                    if (soundUri != null) {
+                        val audioAttributes = android.media.AudioAttributes.Builder()
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .build()
+                        setSound(soundUri, audioAttributes)
+                    }
+                }
+                manager.createNotificationChannel(channel)
+                android.util.Log.d("HabitReminderService", "Created channel $channelId with sound: ${soundUri}")
+            }
+        }
+        
+        return channelId
+    }
+    
+    /**
+     * Force update/recreate the notification channel for a habit
+     * Call this when the user changes the notification sound in settings
+     */
+    fun updateHabitChannel(context: Context, habit: Habit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "${CHANNEL_PREFIX}${habit.id}"
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 ?: return
-            val existing = manager.getNotificationChannel(CHANNEL_ID)
+            
+            // Always delete the existing channel to force recreation with new sound
+            manager.deleteNotificationChannel(channelId)
+            android.util.Log.d("HabitReminderService", "Deleted channel $channelId for sound update")
+            
+            // Recreate the channel with new sound
+            ensureHabitChannel(context, habit)
+        }
+    }
+    
+    /**
+     * Ensure default channel for backward compatibility
+     */
+    fun ensureDefaultChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "habit_reminder_default"
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                ?: return
+            val existing = manager.getNotificationChannel(channelId)
             if (existing == null) {
                 val channel = NotificationChannel(
-                    CHANNEL_ID,
+                    channelId,
                     context.getString(R.string.notification_channel_name),
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
@@ -44,13 +126,9 @@ object HabitReminderService {
                     enableLights(true)
                     lightColor = Color.BLUE
                     enableVibration(true)
-                    // Enable heads-up notifications and status bar icon
                     setShowBadge(true)
                     lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                    // Allow notification to bypass DND
                     setBypassDnd(false)
-                    // Note: For per-habit custom sounds, we'll set sound on individual notifications
-                    setSound(null, null)
                 }
                 manager.createNotificationChannel(channel)
             }
@@ -58,7 +136,12 @@ object HabitReminderService {
     }
 
     fun showHabitNotification(context: Context, habit: Habit) {
-        ensureChannel(context)
+        // Ensure default channel exists (for backward compatibility)
+        ensureDefaultChannel(context)
+        
+        // Create or update habit-specific channel with custom sound
+        val channelId = ensureHabitChannel(context, habit)
+        
         val notificationManager = NotificationManagerCompat.from(context)
         val contentIntent = PendingIntent.getActivity(
             context,
@@ -81,7 +164,7 @@ object HabitReminderService {
             reminderTime
         )
 
-        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_habit) // Use proper notification icon
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle(habit.title)
@@ -90,8 +173,7 @@ object HabitReminderService {
             .setContentIntent(contentIntent)
             .setAutoCancel(true) // Allow swipe to dismiss
             .setOngoing(false) // Not an ongoing notification
-            .setPriority(NotificationCompat.PRIORITY_MAX) // Maximum priority for status bar
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // Default sound, vibration, lights
+            .setPriority(NotificationCompat.PRIORITY_HIGH) // High priority for visibility
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setShowWhen(true)
@@ -103,23 +185,20 @@ object HabitReminderService {
         val avatarBitmap = createAvatarBitmap(habit.avatar)
         notificationBuilder.setLargeIcon(avatarBitmap)
 
-        // Set custom sound for the habit
-        val soundUri = habit.notificationSound.getUri(context)
-        if (soundUri != null) {
-            notificationBuilder.setSound(soundUri)
-        } else {
-            // Use default notification sound if custom sound not available
-            notificationBuilder.setDefaults(NotificationCompat.DEFAULT_SOUND)
+        // For Android versions below O, set sound directly on notification
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            val soundUri = NotificationSound.getActualUri(context, habit.getNotificationSound())
+            if (soundUri != null) {
+                notificationBuilder.setSound(soundUri)
+                android.util.Log.d("HabitReminderService", "Set sound on notification (pre-O): $soundUri")
+            } else {
+                notificationBuilder.setDefaults(NotificationCompat.DEFAULT_SOUND)
+            }
+            
+            // Add custom vibration pattern
+            val vibrationPattern = longArrayOf(0, 250, 250, 250)
+            notificationBuilder.setVibrate(vibrationPattern)
         }
-        
-        // Add custom vibration pattern based on sound type
-        val vibrationPattern = when (habit.notificationSound) {
-            NotificationSound.DEFAULT -> longArrayOf(0, 250, 250, 250)
-            NotificationSound.RINGTONE -> longArrayOf(0, 500, 200, 500)
-            NotificationSound.ALARM -> longArrayOf(0, 100, 100, 100, 100, 100)
-            NotificationSound.SYSTEM_DEFAULT -> longArrayOf(0, 300, 200, 300)
-        }
-        notificationBuilder.setVibrate(vibrationPattern)
         
         // Enable heads-up notification (appears on top of screen)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -149,6 +228,7 @@ object HabitReminderService {
             // Check if notifications are enabled before showing
             if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(habit.id.toInt(), notification)
+                android.util.Log.d("HabitReminderService", "Notification shown for habit: ${habit.title} with sound: ${habit.notificationSoundName}")
             } else {
                 android.util.Log.w("HabitNotification", "Notifications are disabled by user")
             }

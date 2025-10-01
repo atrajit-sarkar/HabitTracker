@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
@@ -889,6 +891,7 @@ private fun AddHabitSheet(
                 // Notification Sound Selection
                 NotificationSoundSelector(
                     selectedSound = state.notificationSound,
+                    availableSounds = state.availableSounds,
                     onSoundChange = onNotificationSoundChange
                 )
             }
@@ -1165,17 +1168,72 @@ private fun YearlySelector(
 @Composable
 private fun NotificationSoundSelector(
     selectedSound: NotificationSound,
+    availableSounds: List<NotificationSound>,
     onSoundChange: (NotificationSound) -> Unit
 ) {
+    val context = LocalContext.current
     var soundExpanded by remember { mutableStateOf(false) }
+    var soundPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    
+    // Cleanup media player when composable is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            soundPlayer?.release()
+            soundPlayer = null
+        }
+    }
     
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = stringResource(id = R.string.notification_sound_label),
-            style = MaterialTheme.typography.titleMedium
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(id = R.string.notification_sound_label),
+                style = MaterialTheme.typography.titleMedium
+            )
+            
+            // Preview button for selected sound
+            if (selectedSound.id != NotificationSound.DEFAULT_ID) {
+                IconButton(
+                    onClick = {
+                        try {
+                            soundPlayer?.release()
+                            soundPlayer = null
+                            
+                            val uri = NotificationSound.getActualUri(context, selectedSound)
+                            if (uri != null) {
+                                soundPlayer = android.media.MediaPlayer().apply {
+                                    setDataSource(context, uri)
+                                    setAudioAttributes(
+                                        android.media.AudioAttributes.Builder()
+                                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                                            .build()
+                                    )
+                                    prepare()
+                                    start()
+                                    setOnCompletionListener { player ->
+                                        player.release()
+                                        soundPlayer = null
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("SoundPreview", "Error playing sound: ${e.message}")
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = "Preview sound"
+                    )
+                }
+            }
+        }
         
         ExposedDropdownMenuBox(
             expanded = soundExpanded,
@@ -1195,16 +1253,82 @@ private fun NotificationSoundSelector(
             )
             ExposedDropdownMenu(
                 expanded = soundExpanded,
-                onDismissRequest = { soundExpanded = false }
+                onDismissRequest = { soundExpanded = false },
+                modifier = Modifier.heightIn(max = 400.dp)
             ) {
-                NotificationSound.values().forEach { sound ->
+                if (availableSounds.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text(sound.displayName) },
-                        onClick = {
-                            onSoundChange(sound)
-                            soundExpanded = false
-                        }
+                        text = { Text("Loading sounds...") },
+                        onClick = { }
                     )
+                } else {
+                    availableSounds.forEach { sound ->
+                        DropdownMenuItem(
+                            text = { 
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(sound.displayName)
+                                    if (sound.id == selectedSound.id) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onSoundChange(sound)
+                                soundExpanded = false
+                                
+                                // Stop any playing sound
+                                soundPlayer?.release()
+                                soundPlayer = null
+                            },
+                            trailingIcon = if (sound.id != NotificationSound.DEFAULT_ID && sound.id != NotificationSound.SYSTEM_DEFAULT_ID) {
+                                {
+                                    IconButton(
+                                        onClick = {
+                                            try {
+                                                soundPlayer?.release()
+                                                soundPlayer = null
+                                                
+                                                val uri = NotificationSound.getActualUri(context, sound)
+                                                if (uri != null) {
+                                                    soundPlayer = android.media.MediaPlayer().apply {
+                                                        setDataSource(context, uri)
+                                                        setAudioAttributes(
+                                                            android.media.AudioAttributes.Builder()
+                                                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                                                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                                                                .build()
+                                                        )
+                                                        prepare()
+                                                        start()
+                                                        setOnCompletionListener { player ->
+                                                            player.release()
+                                                            soundPlayer = null
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("SoundPreview", "Error playing sound: ${e.message}")
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                            contentDescription = "Preview",
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            } else null
+                        )
+                    }
                 }
             }
         }

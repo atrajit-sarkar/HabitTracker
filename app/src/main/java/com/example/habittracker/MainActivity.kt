@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        HabitReminderService.ensureChannel(this)
+        HabitReminderService.ensureDefaultChannel(this)
         
         // Check if opened from notification - start with loading to check auth state
         val startDestination = if (intent.getBooleanExtra("openHabitDetails", false)) {

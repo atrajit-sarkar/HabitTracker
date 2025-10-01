@@ -29,6 +29,7 @@ data class AddHabitState(
     val dayOfMonth: Int = 1,
     val monthOfYear: Int = 1, // January
     val notificationSound: NotificationSound = NotificationSound.DEFAULT,
+    val availableSounds: List<NotificationSound> = emptyList(), // List of all available sounds
     val avatar: HabitAvatar = HabitAvatar.DEFAULT,
     val nameError: String? = null,
     val isSaving: Boolean = false

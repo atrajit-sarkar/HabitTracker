@@ -709,7 +709,9 @@ private fun MonthCalendar(
 ) {
     val firstDayOfMonth = month.atDay(1)
     val lastDayOfMonth = month.atEndOfMonth()
-    val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
+    // Fix for Android 10/11 compatibility - use proper modulo calculation
+    val dayOfWeekValue = firstDayOfMonth.dayOfWeek.value
+    val firstDayOfWeek = if (dayOfWeekValue == 7) 0 else dayOfWeekValue
     val today = LocalDate.now()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -899,7 +901,7 @@ private fun HabitInfoSection(habit: Habit) {
 
                 InfoRow(
                     label = stringResource(R.string.notification_sound),
-                    value = habit.notificationSound.displayName,
+                    value = habit.notificationSoundName,
                     icon = Icons.AutoMirrored.Filled.VolumeUp
                 )
             }
