@@ -108,6 +108,82 @@ object HabitReminderService {
     }
     
     /**
+     * Delete the notification channel for a deleted habit
+     * Call this when a habit is permanently deleted to clean up system settings
+     */
+    fun deleteHabitChannel(context: Context, habitId: Long) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "${CHANNEL_PREFIX}${habitId}"
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                ?: return
+            
+            manager.deleteNotificationChannel(channelId)
+            android.util.Log.d("HabitReminderService", "Deleted channel $channelId for habit deletion")
+        }
+    }
+    
+    /**
+     * Delete multiple notification channels at once
+     * Call this when emptying trash to clean up all deleted habits' channels
+     */
+    fun deleteMultipleHabitChannels(context: Context, habitIds: List<Long>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                ?: return
+            
+            habitIds.forEach { habitId ->
+                val channelId = "${CHANNEL_PREFIX}${habitId}"
+                manager.deleteNotificationChannel(channelId)
+                android.util.Log.d("HabitReminderService", "Deleted channel $channelId for batch deletion")
+            }
+        }
+    }
+    
+    /**
+     * Sync all habit notification channels with the system
+     * Ensures all active habits have their notification channels created
+     * Call this on app startup to handle:
+     * - App updates that might have cleared channels
+     * - System cleanup that removed channels
+     * - Database restore scenarios
+     * - Any edge cases where channels are missing
+     */
+    fun syncAllHabitChannels(context: Context, habits: List<Habit>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                ?: return
+            
+            // Get all existing channel IDs
+            val existingChannelIds = manager.notificationChannels
+                .map { it.id }
+                .filter { it.startsWith(CHANNEL_PREFIX) }
+                .toSet()
+            
+            var channelsCreated = 0
+            var channelsSkipped = 0
+            
+            // Ensure channel exists for each active (non-deleted) habit
+            habits.filter { !it.isDeleted }.forEach { habit ->
+                val channelId = "${CHANNEL_PREFIX}${habit.id}"
+                
+                if (channelId !in existingChannelIds) {
+                    // Channel missing - create it
+                    ensureHabitChannel(context, habit)
+                    channelsCreated++
+                    android.util.Log.d("HabitReminderService", "Synced missing channel for habit: ${habit.title}")
+                } else {
+                    channelsSkipped++
+                }
+            }
+            
+            android.util.Log.d(
+                "HabitReminderService",
+                "Channel sync complete: $channelsCreated created, $channelsSkipped already exist, ${habits.size} total habits"
+            )
+        }
+    }
+    
+    /**
      * Ensure default channel for backward compatibility
      */
     fun ensureDefaultChannel(context: Context) {

@@ -60,6 +60,12 @@ class HabitViewModel @Inject constructor(
                         habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
                     )
                 }
+                
+                // Sync notification channels after habits are loaded
+                // This ensures all active habits have their channels in the system
+                if (habits.isNotEmpty()) {
+                    HabitReminderService.syncAllHabitChannels(context, habits)
+                }
             }
         }
         
@@ -73,8 +79,25 @@ class HabitViewModel @Inject constructor(
         
         // Schedule cleanup of old deleted habits
         viewModelScope.launch {
+            // First, get the IDs of habits that will be cleaned up
+            val deletedHabitsToCleanup = withContext(Dispatchers.IO) {
+                // Get all deleted habits older than 30 days
+                val allDeleted = _uiState.value.deletedHabits
+                val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24L * 60L * 60L * 1000L)
+                allDeleted.filter { habit ->
+                    habit.deletedAt != null && habit.deletedAt.toEpochMilli() < thirtyDaysAgo
+                }.map { it.id }
+            }
+            
+            // Cleanup from repository
             withContext(Dispatchers.IO) {
                 habitRepository.cleanupOldDeletedHabits()
+            }
+            
+            // Delete notification channels for cleaned up habits
+            if (deletedHabitsToCleanup.isNotEmpty()) {
+                HabitReminderService.deleteMultipleHabitChannels(context, deletedHabitsToCleanup)
+                android.util.Log.d("HabitViewModel", "Cleaned up ${deletedHabitsToCleanup.size} notification channels for old deleted habits")
             }
         }
     }
@@ -278,6 +301,10 @@ class HabitViewModel @Inject constructor(
                 habitRepository.moveToTrash(habitId)
             }
             reminderScheduler.cancel(habit.id)
+            
+            // Note: We don't delete the channel yet because user might restore from trash
+            // Channel will be deleted on permanent deletion
+            
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" moved to trash")
             }
@@ -310,6 +337,10 @@ class HabitViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 habitRepository.permanentlyDeleteHabit(habitId)
             }
+            
+            // Delete the notification channel to clean up system settings
+            HabitReminderService.deleteHabitChannel(context, habitId)
+            
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" permanently deleted")
             }
@@ -318,9 +349,18 @@ class HabitViewModel @Inject constructor(
 
     fun emptyTrash() {
         viewModelScope.launch {
+            // Get the IDs of deleted habits before emptying trash
+            val deletedHabitIds = _uiState.value.deletedHabits.map { it.id }
+            
             withContext(Dispatchers.IO) {
                 habitRepository.emptyTrash()
             }
+            
+            // Delete all notification channels for the deleted habits
+            if (deletedHabitIds.isNotEmpty()) {
+                HabitReminderService.deleteMultipleHabitChannels(context, deletedHabitIds)
+            }
+            
             _uiState.update { state ->
                 state.copy(snackbarMessage = "Trash emptied")
             }
