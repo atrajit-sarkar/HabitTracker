@@ -408,7 +408,7 @@ fun NotificationSetupGuideScreen(
                 Button(
                     onClick = {
                         try {
-                            // Try to open battery usage page directly
+                            // Opens app info page - user needs to navigate to Battery usage
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = Uri.parse("package:${context.packageName}")
                             }
@@ -424,7 +424,7 @@ fun NotificationSetupGuideScreen(
                 ) {
                     Icon(imageVector = Icons.Default.BatteryChargingFull, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("1. Open Battery Settings")
+                    Text("1. Open App Info (Then find Battery)")
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -485,12 +485,16 @@ fun NotificationSetupGuideScreen(
                                 color = MaterialTheme.colorScheme.secondary
                             )
                             InstructionStep(
-                                stepNumber = "•",
-                                instruction = "Tap 'Battery usage' → Find 'Allow background activity' toggle"
+                                stepNumber = "1",
+                                instruction = "Button opens App Info page"
                             )
                             InstructionStep(
-                                stepNumber = "•",
-                                instruction = "Enable the toggle (it should turn blue)"
+                                stepNumber = "2",
+                                instruction = "Scroll down and tap 'Battery usage'"
+                            )
+                            InstructionStep(
+                                stepNumber = "3",
+                                instruction = "Find and enable 'Allow background activity' toggle"
                             )
                             
                             Spacer(modifier = Modifier.height(8.dp))
@@ -502,11 +506,15 @@ fun NotificationSetupGuideScreen(
                                 color = MaterialTheme.colorScheme.tertiary
                             )
                             InstructionStep(
-                                stepNumber = "•",
-                                instruction = "Tap 'Data usage' → Enable 'Background data' toggle"
+                                stepNumber = "1",
+                                instruction = "Button opens Data usage page directly"
                             )
                             InstructionStep(
-                                stepNumber = "•",
+                                stepNumber = "2",
+                                instruction = "Enable 'Background data' toggle"
+                            )
+                            InstructionStep(
+                                stepNumber = "3",
                                 instruction = "If available, also enable 'Unrestricted data usage'"
                             )
                             
