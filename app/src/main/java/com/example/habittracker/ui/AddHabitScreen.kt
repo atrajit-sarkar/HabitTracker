@@ -1,7 +1,6 @@
 package com.example.habittracker.ui
 
 import android.text.format.DateFormat
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,8 +28,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.NotificationImportant
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,8 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -73,13 +68,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.habittracker.R
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
-import com.example.habittracker.data.local.ReminderBehavior
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +81,6 @@ fun AddHabitScreen(
     onHabitNameChange: (String) -> Unit,
     onHabitDescriptionChange: (String) -> Unit,
     onHabitReminderToggleChange: (Boolean) -> Unit,
-    onReminderBehaviorChange: (ReminderBehavior) -> Unit,
     onHabitTimeChange: (Int, Int) -> Unit,
     onHabitFrequencyChange: (HabitFrequency) -> Unit,
     onHabitDayOfWeekChange: (Int) -> Unit,
@@ -120,11 +112,7 @@ fun AddHabitScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = if (state.isEditing) {
-                            stringResource(id = R.string.edit_habit)
-                        } else {
-                            stringResource(id = R.string.create_new_habit)
-                        },
+                        text = stringResource(id = R.string.create_new_habit),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -179,12 +167,7 @@ fun AddHabitScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         } else {
-                            val buttonText = if (state.isEditing) {
-                                stringResource(id = R.string.save_changes)
-                            } else {
-                                stringResource(id = R.string.create_habit)
-                            }
-                            Text(text = buttonText)
+                            Text(text = stringResource(id = R.string.create_habit))
                         }
                     }
                 }
@@ -281,11 +264,6 @@ fun AddHabitScreen(
                             onSoundChange = onNotificationSoundChange,
                             availableSounds = state.availableSounds
                         )
-
-                        ReminderBehaviorSelector(
-                            behavior = state.reminderBehavior,
-                            onBehaviorChange = onReminderBehaviorChange
-                        )
                     }
                 }
             }
@@ -294,78 +272,6 @@ fun AddHabitScreen(
             Spacer(modifier = Modifier.height(100.dp))
         }
     }
-}
-
-@Composable
-private fun ReminderBehaviorSelector(
-    behavior: ReminderBehavior,
-    onBehaviorChange: (ReminderBehavior) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(id = R.string.reminder_type_label),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ReminderBehaviorChip(
-                title = stringResource(id = R.string.reminder_behavior_one_time),
-                description = stringResource(id = R.string.reminder_behavior_one_time_desc),
-                icon = Icons.Default.Notifications,
-                isSelected = behavior == ReminderBehavior.ONE_TIME,
-                onClick = { onBehaviorChange(ReminderBehavior.ONE_TIME) }
-            )
-
-            ReminderBehaviorChip(
-                title = stringResource(id = R.string.reminder_behavior_alarm),
-                description = stringResource(id = R.string.reminder_behavior_alarm_desc),
-                icon = Icons.Default.NotificationImportant,
-                isSelected = behavior == ReminderBehavior.ALARM,
-                onClick = { onBehaviorChange(ReminderBehavior.ALARM) }
-            )
-        }
-
-        AnimatedVisibility(visible = behavior == ReminderBehavior.ALARM) {
-            Text(
-                text = stringResource(id = R.string.reminder_behavior_alarm_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReminderBehaviorChip(
-    title: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        label = {
-            Column {
-                Text(text = title, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        leadingIcon = {
-            Icon(imageVector = icon, contentDescription = null)
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        )
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -10,10 +10,8 @@ import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
-import com.example.habittracker.data.local.ReminderBehavior
 import com.example.habittracker.notification.HabitReminderScheduler
 import com.example.habittracker.notification.HabitReminderService
-import com.example.habittracker.notification.HabitAlarmService
 import com.example.habittracker.ui.social.ProfileStatsUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -192,14 +190,6 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    fun onReminderBehaviorChange(behavior: ReminderBehavior) {
-        _uiState.update { state ->
-            state.copy(
-                addHabitState = state.addHabitState.copy(reminderBehavior = behavior)
-            )
-        }
-    }
-
     fun onHabitTimeChange(hour: Int, minute: Int) {
         _uiState.update { state ->
             state.copy(
@@ -275,142 +265,48 @@ class HabitViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
             val addForm = _uiState.value.addHabitState
-            val selectedSound = addForm.notificationSound
-
-            if (addForm.editingHabitId != null) {
-                val updatedHabit = withContext(Dispatchers.IO) {
-                    runCatching {
-                        val existing = habitRepository.getHabitById(addForm.editingHabitId)
-                        existing.copy(
-                            title = title,
-                            description = addForm.description.trim(),
-                            reminderHour = addForm.hour,
-                            reminderMinute = addForm.minute,
-                            reminderEnabled = addForm.reminderEnabled,
-                            reminderBehavior = addForm.reminderBehavior,
-                            frequency = addForm.frequency,
-                            dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
-                            dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
-                            monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                            notificationSoundId = selectedSound.id,
-                            notificationSoundName = selectedSound.displayName,
-                            notificationSoundUri = selectedSound.uri,
-                            avatar = addForm.avatar
-                        ).also { habitRepository.updateHabit(it) }
-                    }.getOrElse { error ->
-                        android.util.Log.e("HabitViewModel", "Failed to update habit", error)
-                        null
-                    }
-                }
-
-                if (updatedHabit != null) {
-                    HabitReminderService.updateHabitChannel(context, updatedHabit)
-
-                    if (updatedHabit.reminderEnabled) {
-                        reminderScheduler.schedule(updatedHabit)
-                    } else {
-                        reminderScheduler.cancel(updatedHabit.id)
-                        HabitReminderService.dismissNotification(context, updatedHabit.id)
-                        HabitAlarmService.stop(context)
-                    }
-
-                    _uiState.update { state ->
-                        state.copy(
-                            snackbarMessage = state.habitUpdatedMessage(),
-                            addHabitState = AddHabitState(availableSounds = availableSounds),
-                            isAddSheetVisible = false
-                        )
-                    }
-                } else {
-                    _uiState.update { state ->
-                        state.copy(
-                            addHabitState = state.addHabitState.copy(isSaving = false),
-                            snackbarMessage = "Couldn't update habit. Please try again."
-                        )
-                    }
-                }
+            
+            // Log the notification sound being saved
+            android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
+            
+            val habit = Habit(
+                title = title,
+                description = addForm.description.trim(),
+                reminderHour = addForm.hour,
+                reminderMinute = addForm.minute,
+                reminderEnabled = addForm.reminderEnabled,
+                frequency = addForm.frequency,
+                dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                notificationSoundId = addForm.notificationSound.id,
+                notificationSoundName = addForm.notificationSound.displayName,
+                notificationSoundUri = addForm.notificationSound.uri,
+                avatar = addForm.avatar
+            )
+            
+            android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
+            
+            val savedHabit = withContext(Dispatchers.IO) {
+                val id = habitRepository.insertHabit(habit)
+                habit.copy(id = id)
+            }
+            
+            android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
+            
+            // Force update notification channel with the new/changed sound
+            HabitReminderService.updateHabitChannel(context, savedHabit)
+            
+            if (savedHabit.reminderEnabled) {
+                reminderScheduler.schedule(savedHabit)
             } else {
-                val habit = Habit(
-                    title = title,
-                    description = addForm.description.trim(),
-                    reminderHour = addForm.hour,
-                    reminderMinute = addForm.minute,
-                    reminderEnabled = addForm.reminderEnabled,
-                    reminderBehavior = addForm.reminderBehavior,
-                    frequency = addForm.frequency,
-                    dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
-                    dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
-                    monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                    notificationSoundId = selectedSound.id,
-                    notificationSoundName = selectedSound.displayName,
-                    notificationSoundUri = selectedSound.uri,
-                    avatar = addForm.avatar
-                )
-
-                val savedHabit = withContext(Dispatchers.IO) {
-                    val id = habitRepository.insertHabit(habit)
-                    habit.copy(id = id)
-                }
-
-                HabitReminderService.updateHabitChannel(context, savedHabit)
-
-                if (savedHabit.reminderEnabled) {
-                    reminderScheduler.schedule(savedHabit)
-                } else {
-                    reminderScheduler.cancel(savedHabit.id)
-                }
-
-                _uiState.update { state ->
-                    state.copy(
-                        snackbarMessage = state.habitSavedMessage(),
-                        addHabitState = AddHabitState(availableSounds = availableSounds),
-                        isAddSheetVisible = false
-                    )
-                }
+                reminderScheduler.cancel(savedHabit.id)
             }
-        }
-    }
-
-    fun startEditingHabit(habitId: Long) {
-        viewModelScope.launch {
-            val habit = withContext(Dispatchers.IO) {
-                runCatching { habitRepository.getHabitById(habitId) }.getOrNull()
-            } ?: return@launch
-
-            if (availableSounds.isEmpty()) {
-                availableSounds = withContext(Dispatchers.IO) {
-                    NotificationSound.getAllAvailableSounds(context)
-                }
-            }
-
-            val soundChoices = availableSounds.ifEmpty { listOf(NotificationSound.DEFAULT) }
-            val selectedSound = soundChoices.find { it.id == habit.notificationSoundId }
-                ?: NotificationSound(
-                    id = habit.notificationSoundId,
-                    displayName = habit.notificationSoundName,
-                    uri = habit.notificationSoundUri
-                )
-
             _uiState.update { state ->
                 state.copy(
-                    addHabitState = state.addHabitState.copy(
-                        title = habit.title,
-                        description = habit.description,
-                        hour = habit.reminderHour,
-                        minute = habit.reminderMinute,
-                        reminderEnabled = habit.reminderEnabled,
-                        reminderBehavior = habit.reminderBehavior,
-                        frequency = habit.frequency,
-                        dayOfWeek = habit.dayOfWeek ?: state.addHabitState.dayOfWeek,
-                        dayOfMonth = habit.dayOfMonth ?: state.addHabitState.dayOfMonth,
-                        monthOfYear = habit.monthOfYear ?: state.addHabitState.monthOfYear,
-                        notificationSound = selectedSound,
-                        availableSounds = soundChoices,
-                        avatar = habit.avatar,
-                        nameError = null,
-                        isSaving = false,
-                        editingHabitId = habit.id
-                    )
+                    snackbarMessage = state.habitSavedMessage(),
+                    addHabitState = AddHabitState(),
+                    isAddSheetVisible = false
                 )
             }
         }
@@ -441,25 +337,17 @@ class HabitViewModel @Inject constructor(
     }
 
     fun markHabitCompleted(habitId: Long) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                habitRepository.markCompletedToday(habitId)
-            }
-            HabitReminderService.dismissNotification(context, habitId)
-            HabitAlarmService.stop(context)
+        viewModelScope.launch(Dispatchers.IO) {
+            habitRepository.markCompletedToday(habitId)
+            // Update stats after completion
             updateUserStatsAsync()
         }
     }
 
     fun markHabitCompletedForDate(habitId: Long, date: java.time.LocalDate) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                habitRepository.markCompletedForDate(habitId, date)
-            }
-            if (date == java.time.LocalDate.now()) {
-                HabitReminderService.dismissNotification(context, habitId)
-                HabitAlarmService.stop(context)
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            habitRepository.markCompletedForDate(habitId, date)
+            // Update stats after completion
             updateUserStatsAsync()
         }
     }
@@ -565,9 +453,6 @@ class HabitViewModel @Inject constructor(
     private fun HabitScreenState.habitSavedMessage(): String =
         "Habit saved"
 
-    private fun HabitScreenState.habitUpdatedMessage(): String =
-        "Habit updated"
-
     private fun HabitScreenState.habitDeletedMessage(title: String): String =
         "Removed \"$title\""
 
@@ -588,7 +473,6 @@ class HabitViewModel @Inject constructor(
             reminderTime = reminderTime,
             isReminderEnabled = habit.reminderEnabled,
             isCompletedToday = isCompleted,
-            reminderBehavior = habit.reminderBehavior,
             frequency = habit.frequency,
             frequencyText = frequencyText,
             avatar = habit.avatar

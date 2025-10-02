@@ -186,44 +186,6 @@ fun HabitTrackerNavigation(
                 onHabitNameChange = viewModel::onHabitNameChange,
                 onHabitDescriptionChange = viewModel::onHabitDescriptionChange,
                 onHabitReminderToggleChange = viewModel::onHabitReminderToggle,
-                onReminderBehaviorChange = viewModel::onReminderBehaviorChange,
-                onHabitTimeChange = viewModel::onHabitTimeChange,
-                onHabitFrequencyChange = viewModel::onHabitFrequencyChange,
-                onHabitDayOfWeekChange = viewModel::onHabitDayOfWeekChange,
-                onHabitDayOfMonthChange = viewModel::onHabitDayOfMonthChange,
-                onHabitMonthOfYearChange = viewModel::onHabitMonthOfYearChange,
-                onAvatarChange = viewModel::onAvatarChange,
-                onNotificationSoundChange = viewModel::onNotificationSoundChange,
-                onBackClick = onBackClick,
-                onSaveHabit = onSaveHabit
-            )
-        }
-
-        composable("edit_habit/{habitId}") { backStackEntry ->
-            val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: return@composable
-            val viewModel: HabitViewModel = hiltViewModel()
-            val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-            LaunchedEffect(habitId) {
-                viewModel.startEditingHabit(habitId)
-            }
-
-            val onBackClick = rememberNavigationHandler {
-                viewModel.resetAddHabitState()
-                navController.popBackStack()
-            }
-
-            val onSaveHabit = rememberNavigationHandler {
-                viewModel.saveHabit()
-                navController.popBackStack()
-            }
-
-            AddHabitScreen(
-                state = state.addHabitState,
-                onHabitNameChange = viewModel::onHabitNameChange,
-                onHabitDescriptionChange = viewModel::onHabitDescriptionChange,
-                onHabitReminderToggleChange = viewModel::onHabitReminderToggle,
-                onReminderBehaviorChange = viewModel::onReminderBehaviorChange,
                 onHabitTimeChange = viewModel::onHabitTimeChange,
                 onHabitFrequencyChange = viewModel::onHabitFrequencyChange,
                 onHabitDayOfWeekChange = viewModel::onHabitDayOfWeekChange,
@@ -244,22 +206,11 @@ fun HabitTrackerNavigation(
             val onBackClick = rememberNavigationHandler {
                 navController.popBackStack()
             }
-
-            var lastEditClick by remember { mutableLongStateOf(0L) }
-            val onEditHabit: (Long) -> Unit = { targetHabitId ->
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastEditClick >= 500L) {
-                    lastEditClick = currentTime
-                    viewModel.startEditingHabit(targetHabitId)
-                    navController.navigate("edit_habit/$targetHabitId")
-                }
-            }
             
             HabitDetailsRoute(
                 habitId = habitId,
                 viewModel = viewModel,
-                onBackClick = onBackClick,
-                onEditHabit = onEditHabit
+                onBackClick = onBackClick
             )
         }
         
@@ -490,8 +441,7 @@ fun HabitTrackerNavigation(
 fun HabitDetailsRoute(
     habitId: Long,
     viewModel: HabitViewModel,
-    onBackClick: () -> Unit,
-    onEditHabit: (Long) -> Unit
+    onBackClick: () -> Unit
 ) {
     var habit by remember { mutableStateOf<Habit?>(null) }
     var progress by remember { mutableStateOf<HabitProgress?>(null) }
@@ -600,8 +550,7 @@ fun HabitDetailsRoute(
                     viewModel.markHabitCompletedForDate(habitId, selectedDate)
                     // Trigger a lightweight refresh without showing the full-screen loader
                     refreshTrigger++
-                },
-                onEditHabit = onEditHabit
+                }
             )
         } else {
             // Error state
