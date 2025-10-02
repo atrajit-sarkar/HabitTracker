@@ -120,6 +120,7 @@ import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import com.example.habittracker.ui.DeleteHabitConfirmationDialog
+import com.example.habittracker.ui.dialogs.FirstLaunchNotificationDialog
 import com.example.habittracker.util.clickableOnce
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -136,12 +137,19 @@ fun HabitHomeRoute(
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onNotificationGuideClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
     var notificationCardDismissed by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    
+    // First launch dialog state
+    val prefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    var showFirstLaunchDialog by rememberSaveable { 
+        mutableStateOf(!prefs.getBoolean("notification_guide_shown", false)) 
+    }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -166,6 +174,28 @@ fun HabitHomeRoute(
         state.habits.any { it.isReminderEnabled } &&
         !notificationPermissionState.value &&
         !notificationCardDismissed
+
+    // Show first launch dialog after a short delay
+    LaunchedEffect(Unit) {
+        if (showFirstLaunchDialog) {
+            kotlinx.coroutines.delay(2000) // Wait 2 seconds after app opens
+        }
+    }
+
+    // First launch dialog
+    if (showFirstLaunchDialog) {
+        FirstLaunchNotificationDialog(
+            onDismiss = {
+                showFirstLaunchDialog = false
+                prefs.edit().putBoolean("notification_guide_shown", true).apply()
+            },
+            onOpenGuide = {
+                showFirstLaunchDialog = false
+                prefs.edit().putBoolean("notification_guide_shown", true).apply()
+                onNotificationGuideClick()
+            }
+        )
+    }
 
     HabitHomeScreen(
         state = state,

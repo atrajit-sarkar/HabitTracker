@@ -34,6 +34,7 @@ import com.example.habittracker.ui.social.LeaderboardScreen
 import com.example.habittracker.ui.social.FriendProfileScreen
 import com.example.habittracker.ui.chat.ChatListScreen
 import com.example.habittracker.ui.chat.ChatScreen
+import com.example.habittracker.ui.settings.NotificationSetupGuideScreen
 import com.example.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -124,6 +125,9 @@ fun HabitTrackerNavigation(
             val onProfileClick = rememberNavigationHandler { 
                 navController.navigate("profile") 
             }
+            val onNotificationGuideClick = rememberNavigationHandler {
+                navController.navigate("notification_setup_guide")
+            }
             
             HabitHomeRoute(
                 state = state,
@@ -141,7 +145,8 @@ fun HabitTrackerNavigation(
                     }
                 },
                 onTrashClick = onTrashClick,
-                onProfileClick = onProfileClick
+                onProfileClick = onProfileClick,
+                onNotificationGuideClick = onNotificationGuideClick
             )
         }
         
@@ -245,6 +250,10 @@ fun HabitTrackerNavigation(
                 navController.navigate("leaderboard")
             }
             
+            val onNotificationGuideClick = rememberNavigationHandler {
+                navController.navigate("notification_setup_guide")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -252,7 +261,8 @@ fun HabitTrackerNavigation(
                 onStatisticsClick = onStatisticsClick,
                 onSearchUsersClick = onSearchUsersClick,
                 onFriendsListClick = onFriendsListClick,
-                onLeaderboardClick = onLeaderboardClick
+                onLeaderboardClick = onLeaderboardClick,
+                onNotificationGuideClick = onNotificationGuideClick
             )
         }
         
@@ -267,6 +277,16 @@ fun HabitTrackerNavigation(
             StatisticsScreen(
                 viewModel = habitViewModel,
                 onBackClick = onBackClick
+            )
+        }
+        
+        composable("notification_setup_guide") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            NotificationSetupGuideScreen(
+                onNavigateBack = onBackClick
             )
         }
         

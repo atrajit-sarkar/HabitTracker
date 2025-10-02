@@ -50,7 +50,8 @@ fun ProfileScreen(
     onStatisticsClick: () -> Unit = {},
     onSearchUsersClick: () -> Unit = {},
     onFriendsListClick: () -> Unit = {},
-    onLeaderboardClick: () -> Unit = {}
+    onLeaderboardClick: () -> Unit = {},
+    onNotificationGuideClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -467,6 +468,73 @@ fun ProfileScreen(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "View",
                         tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+
+            // Notification Setup Guide Card - Highlighted
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .clickableOnce { onNotificationGuideClick() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                )
+                            )
+                        )
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Notification Setup Guide",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "Ensure reliable reminders",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Open Guide",
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
