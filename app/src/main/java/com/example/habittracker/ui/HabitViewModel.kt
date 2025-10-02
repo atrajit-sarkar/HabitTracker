@@ -459,13 +459,20 @@ class HabitViewModel @Inject constructor(
     private fun mapToUi(habit: Habit): HabitCardUi {
         val reminderTime = LocalTime.of(habit.reminderHour, habit.reminderMinute)
         val frequencyText = buildFrequencyText(habit)
+        val today = LocalDate.now()
+        val isCompleted = habit.lastCompletedDate == today
+        
+        // Debug logging for completion status
+        android.util.Log.d("HabitViewModel", 
+            "Habit: ${habit.title}, lastCompletedDate: ${habit.lastCompletedDate}, today: $today, isCompleted: $isCompleted")
+        
         return HabitCardUi(
             id = habit.id,
             title = habit.title,
             description = habit.description,
             reminderTime = reminderTime,
             isReminderEnabled = habit.reminderEnabled,
-            isCompletedToday = habit.lastCompletedDate == LocalDate.now(),
+            isCompletedToday = isCompleted,
             frequency = habit.frequency,
             frequencyText = frequencyText,
             avatar = habit.avatar

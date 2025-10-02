@@ -245,11 +245,17 @@ class FirestoreHabitRepository @Inject constructor(
         val userCollection = getUserCollection() ?: throw IllegalStateException("User not authenticated")
         val userCompletionsCollection = getUserCompletionsCollection() ?: throw IllegalStateException("User not authenticated")
         
-        val completionId = "${habitId}_${date.toEpochDay()}"
+        val epochDay = date.toEpochDay()
+        val completionId = "${habitId}_${epochDay}"
+        
+        // Debug logging
+        android.util.Log.d("FirestoreRepo", 
+            "Marking habit $habitId complete for date: $date (epochDay: $epochDay)")
+        
         val completion = FirestoreHabitCompletion(
             id = completionId,
             habitId = habitId.toString(),
-            completedDate = date.toEpochDay(),
+            completedDate = epochDay,
             completedAt = System.currentTimeMillis()
         )
         
@@ -258,8 +264,13 @@ class FirestoreHabitRepository @Inject constructor(
         // Update lastCompletedDate in habit if this is more recent
         val habit = getHabitById(habitId)
         val shouldUpdate = habit.lastCompletedDate == null || date.isAfter(habit.lastCompletedDate)
+        
+        android.util.Log.d("FirestoreRepo", 
+            "Current lastCompletedDate: ${habit.lastCompletedDate}, shouldUpdate: $shouldUpdate")
+        
         if (shouldUpdate) {
-            findHabitDocument(habitId)?.reference?.update("lastCompletedDate", date.toEpochDay())?.await()
+            findHabitDocument(habitId)?.reference?.update("lastCompletedDate", epochDay)?.await()
+            android.util.Log.d("FirestoreRepo", "Updated lastCompletedDate to $epochDay for habit $habitId")
         }
     }
 
@@ -350,6 +361,12 @@ private fun Habit.toFirestoreHabit(docId: String, numericId: Long? = null): Fire
 }
 
 private fun FirestoreHabit.toHabit(): Habit {
+    val convertedLastCompletedDate = lastCompletedDate?.let { LocalDate.ofEpochDay(it) }
+    
+    // Debug logging for date conversion
+    android.util.Log.d("FirestoreRepo", 
+        "Converting habit '${title}': lastCompletedDate epochDay=$lastCompletedDate -> LocalDate=$convertedLastCompletedDate")
+    
     return Habit(
         id = numericId ?: id.hashCode().toLong(),
         title = title,
@@ -369,7 +386,7 @@ private fun FirestoreHabit.toHabit(): Habit {
             value = avatar.value,
             backgroundColor = avatar.backgroundColor
         ),
-        lastCompletedDate = lastCompletedDate?.let { LocalDate.ofEpochDay(it) },
+        lastCompletedDate = convertedLastCompletedDate,
         createdAt = Instant.ofEpochMilli(createdAt),
         isDeleted = isDeleted,
         deletedAt = deletedAt?.let { Instant.ofEpochMilli(it) }
