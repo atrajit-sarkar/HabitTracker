@@ -182,6 +182,11 @@ class ChatRepository @Inject constructor(
                         )
                     )
                     .await()
+                
+                // NOTE: FCM notifications are sent automatically via Firebase Cloud Functions
+                // When this message is written to Firestore, a trigger will fire and send
+                // the notification to the recipient. No client-side action needed.
+                Log.d(TAG, "Message sent successfully. Cloud Function will send notification.")
             }
 
             Result.success(Unit)

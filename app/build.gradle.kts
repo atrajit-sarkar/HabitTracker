@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.analytics.ktx)
+    implementation(libs.firebase.messaging.ktx)
     implementation(libs.play.services.auth)
 
     // Image Loading

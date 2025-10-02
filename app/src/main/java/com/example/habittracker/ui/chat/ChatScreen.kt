@@ -40,9 +40,11 @@ import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.data.firestore.ChatMessage
 import com.example.habittracker.data.firestore.MessageType
 import com.example.habittracker.data.firestore.StickerPacks
+import com.example.habittracker.data.firestore.UserPresenceManager
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Inject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -63,6 +65,10 @@ fun ChatScreen(
     var showEmojiPicker by remember { mutableStateOf(false) }
     var selectedStickerPack by remember { mutableStateOf("Reactions") }
     
+    // Online status tracking
+    var isOnline by remember { mutableStateOf(false) }
+    var lastSeenTimestamp by remember { mutableStateOf<Long?>(null) }
+    
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -75,6 +81,17 @@ fun ChatScreen(
                 friendAvatar = friendAvatar,
                 friendPhotoUrl = friendPhotoUrl
             )
+        }
+    }
+    
+    // Observe friend's online status
+    DisposableEffect(friendId) {
+        UserPresenceManager.observeUserOnlineStatus(friendId) { online, lastSeen ->
+            isOnline = online
+            lastSeenTimestamp = lastSeen
+        }
+        onDispose {
+            // Cleanup if needed
         }
     }
 
@@ -144,7 +161,22 @@ fun ChatScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = "Online", // Could implement real presence
+                            text = if (isOnline) {
+                                "Online"
+                            } else {
+                                lastSeenTimestamp?.let {
+                                    val minutes = (System.currentTimeMillis() - it) / 60000
+                                    when {
+                                        minutes < 1 -> "Last seen just now"
+                                        minutes < 60 -> "Last seen ${minutes}m ago"
+                                        else -> {
+                                            val hours = minutes / 60
+                                            if (hours < 24) "Last seen ${hours}h ago"
+                                            else "Last seen ${hours / 24}d ago"
+                                        }
+                                    }
+                                } ?: "Offline"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                         )
