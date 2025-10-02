@@ -15,9 +15,11 @@ import com.example.habittracker.notification.HabitReminderService
 import com.example.habittracker.notification.NotificationReliabilityHelper
 import com.example.habittracker.ui.HabitTrackerNavigation
 import com.example.habittracker.ui.theme.HabitTrackerTheme
+import com.example.habittracker.update.CheckingUpdatesDialog
 import com.example.habittracker.update.UpdateDialog
 import com.example.habittracker.update.UpdateInfo
 import com.example.habittracker.update.UpdateManager
+import com.example.habittracker.update.UpdateResultDialog
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -90,6 +92,45 @@ class MainActivity : ComponentActivity() {
                 var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
                 var isDownloading by remember { mutableStateOf(false) }
                 var downloadProgress by remember { mutableIntStateOf(0) }
+                var isCheckingForUpdates by remember { mutableStateOf(false) }
+                var showUpToDateDialog by remember { mutableStateOf(false) }
+                var showUpdateCheckError by remember { mutableStateOf(false) }
+                var updateCheckErrorMessage by remember { mutableStateOf("") }
+                
+                // Manual check for updates function
+                val checkForUpdatesManually: () -> Unit = {
+                    if (!isCheckingForUpdates) {
+                        isCheckingForUpdates = true
+                        MainScope().launch {
+                            try {
+                                val update = updateManager.checkForUpdate()
+                                if (update != null) {
+                                    if (update.isUpdateAvailable) {
+                                        // Clear skipped version on manual check
+                                        updateManager.clearSkippedVersion()
+                                        updateInfo = update
+                                        showUpdateDialog = true
+                                    } else {
+                                        // Show "Already up to date" message
+                                        showUpToDateDialog = true
+                                        Log.d("MainActivity", "App is up to date: ${update.currentVersion}")
+                                    }
+                                } else {
+                                    // Show error dialog
+                                    showUpdateCheckError = true
+                                    updateCheckErrorMessage = "Unable to check for updates"
+                                    Log.e("MainActivity", "Failed to check for updates")
+                                }
+                            } catch (e: Exception) {
+                                showUpdateCheckError = true
+                                updateCheckErrorMessage = e.message ?: "Unknown error occurred"
+                                Log.e("MainActivity", "Error checking for updates: ${e.message}")
+                            } finally {
+                                isCheckingForUpdates = false
+                            }
+                        }
+                    }
+                }
                 
                 // Check for updates on app start
                 LaunchedEffect(Unit) {
@@ -108,7 +149,8 @@ class MainActivity : ComponentActivity() {
                 // Navigation
                 HabitTrackerNavigation(
                     startDestination = startDestination,
-                    googleSignInHelper = googleSignInHelper
+                    googleSignInHelper = googleSignInHelper,
+                    onCheckForUpdates = checkForUpdatesManually
                 )
                 
                 // Update dialog
@@ -148,6 +190,30 @@ class MainActivity : ComponentActivity() {
                         isDownloading = isDownloading,
                         downloadProgress = downloadProgress,
                         isMandatory = false // Set to true for critical updates
+                    )
+                }
+                
+                // Checking for updates dialog
+                if (isCheckingForUpdates) {
+                    CheckingUpdatesDialog()
+                }
+                
+                // Up to date dialog
+                if (showUpToDateDialog) {
+                    UpdateResultDialog(
+                        isUpToDate = true,
+                        currentVersion = updateManager.getCurrentVersion(),
+                        onDismiss = { showUpToDateDialog = false }
+                    )
+                }
+                
+                // Update check error dialog
+                if (showUpdateCheckError) {
+                    UpdateResultDialog(
+                        isUpToDate = false,
+                        currentVersion = updateManager.getCurrentVersion(),
+                        onDismiss = { showUpdateCheckError = false },
+                        error = updateCheckErrorMessage
                     )
                 }
             }

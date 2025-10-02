@@ -44,7 +44,8 @@ import java.time.ZoneOffset
 fun HabitTrackerNavigation(
     navController: NavHostController = rememberNavController(),
     startDestination: String = "loading",
-    googleSignInHelper: GoogleSignInHelper
+    googleSignInHelper: GoogleSignInHelper,
+    onCheckForUpdates: () -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -262,7 +263,8 @@ fun HabitTrackerNavigation(
                 onSearchUsersClick = onSearchUsersClick,
                 onFriendsListClick = onFriendsListClick,
                 onLeaderboardClick = onLeaderboardClick,
-                onNotificationGuideClick = onNotificationGuideClick
+                onNotificationGuideClick = onNotificationGuideClick,
+                onCheckForUpdates = onCheckForUpdates
             )
         }
         
