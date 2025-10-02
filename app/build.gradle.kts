@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.splashscreen)
@@ -82,6 +84,9 @@ dependencies {
 
     // Image Loading
     implementation(libs.coil.compose)
+
+    // WorkManager for reliable background tasks
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Charts
     implementation(libs.vico.compose)

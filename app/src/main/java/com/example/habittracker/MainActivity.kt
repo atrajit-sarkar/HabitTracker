@@ -8,8 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import com.example.habittracker.auth.GoogleSignInHelper
+import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.firestore.UserPresenceManager
 import com.example.habittracker.notification.HabitReminderService
+import com.example.habittracker.notification.NotificationReliabilityHelper
 import com.example.habittracker.ui.HabitTrackerNavigation
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 import com.google.firebase.messaging.FirebaseMessaging
@@ -22,6 +24,11 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var googleSignInHelper: GoogleSignInHelper
+    
+    @Inject
+    lateinit var habitRepository: HabitRepository
+    
+    private var hasCheckedBatteryOptimization = false
     
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
@@ -83,6 +90,32 @@ class MainActivity : ComponentActivity() {
         // Set user online when app comes to foreground
         MainScope().launch {
             UserPresenceManager.setOnlineStatus(true)
+        }
+        
+        // Check battery optimization only once per app session
+        // and only if user has reminders enabled
+        if (!hasCheckedBatteryOptimization) {
+            hasCheckedBatteryOptimization = true
+            MainScope().launch {
+                try {
+                    val habits = habitRepository.getAllHabits()
+                    val hasReminders = habits.any { !it.isDeleted && it.reminderEnabled }
+                    
+                    if (hasReminders && !NotificationReliabilityHelper.isIgnoringBatteryOptimizations(this@MainActivity)) {
+                        // Delay to avoid showing dialog immediately on app start
+                        kotlinx.coroutines.delay(1500)
+                        NotificationReliabilityHelper.requestBatteryOptimizationExemption(this@MainActivity)
+                        
+                        // Show manufacturer-specific instructions if needed
+                        if (NotificationReliabilityHelper.isAggressiveBatteryManagement()) {
+                            kotlinx.coroutines.delay(1000)
+                            NotificationReliabilityHelper.showManufacturerInstructions(this@MainActivity)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error checking battery optimization: ${e.message}")
+                }
+            }
         }
     }
     
