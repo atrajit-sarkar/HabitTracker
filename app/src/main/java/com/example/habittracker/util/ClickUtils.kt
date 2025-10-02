@@ -67,7 +67,6 @@ fun Modifier.clickableOnce(
     this.clickable(
         enabled = enabled,
         onClickLabel = onClickLabel,
-        interactionSource = interactionSource,
         onClick = { clickFlow.tryEmit(Unit) }
     )
 }
