@@ -473,6 +473,14 @@ fun ProfileScreen(
                 }
             }
 
+            // Account Section
+            Text(
+                text = "Account Settings",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+
             // Notification Setup Guide Card - Highlighted
             Card(
                 modifier = Modifier
@@ -540,13 +548,7 @@ fun ProfileScreen(
                 }
             }
 
-            // Account Section
-            Text(
-                text = "Account Settings",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
