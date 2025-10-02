@@ -19,6 +19,7 @@ data class HabitCardUi(
 )
 
 data class AddHabitState(
+    val editingHabitId: Long? = null, // null means creating new habit, non-null means editing
     val title: String = "",
     val description: String = "",
     val hour: Int = 8,
@@ -32,9 +33,11 @@ data class AddHabitState(
     val availableSounds: List<NotificationSound> = emptyList(), // List of all available sounds
     val avatar: HabitAvatar = HabitAvatar.DEFAULT,
     val nameError: String? = null,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val isAlarmType: Boolean = false // New: Whether to use alarm-type notification
 ) {
     val time: LocalTime get() = LocalTime.of(hour, minute)
+    val isEditMode: Boolean get() = editingHabitId != null
 }
 
 data class HabitScreenState(

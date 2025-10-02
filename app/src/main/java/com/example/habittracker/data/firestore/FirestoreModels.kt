@@ -28,7 +28,8 @@ data class FirestoreHabit(
     val lastCompletedDate: Long? = null, // epoch day
     val createdAt: Long = System.currentTimeMillis(),
     val isDeleted: Boolean = false,
-    val deletedAt: Long? = null
+    val deletedAt: Long? = null,
+    val isAlarmType: Boolean = false // New: Whether to use alarm-type notification
 )
 
 @Serializable
@@ -76,7 +77,8 @@ fun DocumentSnapshot.toFirestoreHabit(): FirestoreHabit? {
             lastCompletedDate = data["lastCompletedDate"] as? Long,
             createdAt = data["createdAt"] as? Long ?: System.currentTimeMillis(),
             isDeleted = data["isDeleted"] as? Boolean ?: false,
-            deletedAt = data["deletedAt"] as? Long
+            deletedAt = data["deletedAt"] as? Long,
+            isAlarmType = data["isAlarmType"] as? Boolean ?: false
         )
     } catch (e: Exception) {
         null

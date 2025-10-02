@@ -247,6 +247,41 @@ class HabitViewModel @Inject constructor(
         }
     }
 
+    fun onAlarmTypeToggle(isAlarmType: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(isAlarmType = isAlarmType)
+            )
+        }
+    }
+
+    fun showEditHabitSheet(habitId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val habit = habitRepository.getHabitById(habitId) ?: return@launch
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(
+                    isAddSheetVisible = true,
+                    addHabitState = AddHabitState(
+                        editingHabitId = habit.id,
+                        title = habit.title,
+                        description = habit.description,
+                        hour = habit.reminderHour,
+                        minute = habit.reminderMinute,
+                        reminderEnabled = habit.reminderEnabled,
+                        frequency = habit.frequency,
+                        dayOfWeek = habit.dayOfWeek ?: 1,
+                        dayOfMonth = habit.dayOfMonth ?: 1,
+                        monthOfYear = habit.monthOfYear ?: 1,
+                        notificationSound = habit.getNotificationSound(),
+                        availableSounds = availableSounds,
+                        avatar = habit.avatar,
+                        isAlarmType = habit.isAlarmType
+                    )
+                ) }
+            }
+        }
+    }
+
     fun saveHabit() {
         val currentState = _uiState.value
         if (currentState.addHabitState.isSaving) return
@@ -270,6 +305,7 @@ class HabitViewModel @Inject constructor(
             android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
             
             val habit = Habit(
+                id = addForm.editingHabitId ?: 0L, // Use existing ID if editing
                 title = title,
                 description = addForm.description.trim(),
                 reminderHour = addForm.hour,
@@ -282,17 +318,25 @@ class HabitViewModel @Inject constructor(
                 notificationSoundId = addForm.notificationSound.id,
                 notificationSoundName = addForm.notificationSound.displayName,
                 notificationSoundUri = addForm.notificationSound.uri,
-                avatar = addForm.avatar
+                avatar = addForm.avatar,
+                isAlarmType = addForm.isAlarmType
             )
             
-            android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
+            android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}, isAlarmType=${habit.isAlarmType}")
             
             val savedHabit = withContext(Dispatchers.IO) {
-                val id = habitRepository.insertHabit(habit)
-                habit.copy(id = id)
+                if (addForm.isEditMode) {
+                    // Update existing habit
+                    habitRepository.updateHabit(habit)
+                    habit
+                } else {
+                    // Create new habit
+                    val id = habitRepository.insertHabit(habit)
+                    habit.copy(id = id)
+                }
             }
             
-            android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
+            android.util.Log.d("HabitViewModel", "Habit ${if (addForm.isEditMode) "updated" else "saved"} with ID: ${savedHabit.id}, calling updateHabitChannel...")
             
             // Force update notification channel with the new/changed sound
             HabitReminderService.updateHabitChannel(context, savedHabit)
@@ -304,8 +348,8 @@ class HabitViewModel @Inject constructor(
             }
             _uiState.update { state ->
                 state.copy(
-                    snackbarMessage = state.habitSavedMessage(),
-                    addHabitState = AddHabitState(),
+                    snackbarMessage = if (addForm.isEditMode) state.habitUpdatedMessage() else state.habitSavedMessage(),
+                    addHabitState = AddHabitState(availableSounds = availableSounds),
                     isAddSheetVisible = false
                 )
             }
@@ -452,6 +496,9 @@ class HabitViewModel @Inject constructor(
 
     private fun HabitScreenState.habitSavedMessage(): String =
         "Habit saved"
+
+    private fun HabitScreenState.habitUpdatedMessage(): String =
+        "Habit updated"
 
     private fun HabitScreenState.habitDeletedMessage(title: String): String =
         "Removed \"$title\""
