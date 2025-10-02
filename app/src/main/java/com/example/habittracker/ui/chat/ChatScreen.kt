@@ -65,9 +65,11 @@ fun ChatScreen(
     var showStickerPicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var selectedStickerPack by remember { mutableStateOf("Reactions") }
+    var isKeyboardVisible by remember { mutableStateOf(false) }
     
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(authState.user) {
         authState.user?.let { 
@@ -85,6 +87,17 @@ fun ChatScreen(
     LaunchedEffect(chatState.messages.size) {
         if (chatState.messages.isNotEmpty()) {
             coroutineScope.launch {
+                listState.animateScrollToItem(chatState.messages.size - 1)
+            }
+        }
+    }
+
+    // Auto-scroll when keyboard opens
+    LaunchedEffect(isKeyboardVisible) {
+        if (isKeyboardVisible && chatState.messages.isNotEmpty()) {
+            coroutineScope.launch {
+                // Delay slightly to let layout adjust
+                kotlinx.coroutines.delay(100)
                 listState.animateScrollToItem(chatState.messages.size - 1)
             }
         }
@@ -234,6 +247,14 @@ fun ChatScreen(
                     onStickerClick = { sticker ->
                         chatViewModel.sendMessage(sticker, MessageType.STICKER)
                         showStickerPicker = false
+                        
+                        // Scroll to bottom after sending sticker
+                        coroutineScope.launch {
+                            kotlinx.coroutines.delay(100)
+                            if (chatState.messages.isNotEmpty()) {
+                                listState.animateScrollToItem(chatState.messages.size - 1)
+                            }
+                        }
                     }
                 )
             }
@@ -302,7 +323,12 @@ fun ChatScreen(
                             BasicTextField(
                                 value = messageText,
                                 onValueChange = { messageText = it },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { focusState ->
+                                        isKeyboardVisible = focusState.isFocused
+                                    },
                                 textStyle = TextStyle(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp
@@ -345,6 +371,14 @@ fun ChatScreen(
                                 messageText = ""
                                 showEmojiPicker = false
                                 showStickerPicker = false
+                                
+                                // Scroll to bottom after sending
+                                coroutineScope.launch {
+                                    kotlinx.coroutines.delay(100)
+                                    if (chatState.messages.isNotEmpty()) {
+                                        listState.animateScrollToItem(chatState.messages.size - 1)
+                                    }
+                                }
                             }
                         },
                         modifier = Modifier.size(48.dp),
