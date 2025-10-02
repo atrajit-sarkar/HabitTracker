@@ -221,6 +221,58 @@ fun NotificationSetupGuideScreen(
                 }
             }
 
+            // Step 4: Allow Background Activity
+            GuideSection(
+                icon = Icons.Default.Autorenew,
+                title = "Step 4: Allow Background Activity",
+                iconColor = MaterialTheme.colorScheme.primary
+            ) {
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Ignore
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open App Settings")
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Enable background activity to ensure reminders work even when the app is closed.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                InstructionStep(
+                    stepNumber = "1",
+                    instruction = "Tap the button above to open app settings"
+                )
+                InstructionStep(
+                    stepNumber = "2",
+                    instruction = "Look for 'Battery' or 'Mobile data & Wi-Fi' sections"
+                )
+                InstructionStep(
+                    stepNumber = "3",
+                    instruction = "Enable 'Allow background activity' or 'Background data'"
+                )
+                InstructionStep(
+                    stepNumber = "4",
+                    instruction = "On some devices, also enable 'Unrestricted data usage'"
+                )
+            }
+
             // Manufacturer-Specific Instructions
             if (isAggressiveDevice) {
                 val manufacturerInstructions = NotificationReliabilityHelper.getManufacturerSpecificInstructions()
