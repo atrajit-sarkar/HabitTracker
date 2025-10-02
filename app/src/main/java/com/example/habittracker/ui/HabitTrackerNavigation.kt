@@ -28,6 +28,11 @@ import com.example.habittracker.auth.ui.ProfileScreen
 import com.example.habittracker.data.local.Habit
 import com.example.habittracker.util.rememberNavigationHandler
 import com.example.habittracker.ui.statistics.StatisticsScreen
+import com.example.habittracker.ui.social.SearchUsersScreen
+import com.example.habittracker.ui.social.FriendsListScreen
+import com.example.habittracker.ui.social.LeaderboardScreen
+import com.example.habittracker.ui.social.FriendProfileScreen
+import com.example.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -225,11 +230,27 @@ fun HabitTrackerNavigation(
                 navController.navigate("statistics")
             }
             
+            // Social features navigation
+            val onSearchUsersClick = rememberNavigationHandler {
+                navController.navigate("searchUsers")
+            }
+            
+            val onFriendsListClick = rememberNavigationHandler {
+                navController.navigate("friendsList")
+            }
+            
+            val onLeaderboardClick = rememberNavigationHandler {
+                navController.navigate("leaderboard")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
                 onSignedOut = onSignedOut,
-                onStatisticsClick = onStatisticsClick
+                onStatisticsClick = onStatisticsClick,
+                onSearchUsersClick = onSearchUsersClick,
+                onFriendsListClick = onFriendsListClick,
+                onLeaderboardClick = onLeaderboardClick
             )
         }
         
@@ -243,6 +264,72 @@ fun HabitTrackerNavigation(
             
             StatisticsScreen(
                 viewModel = habitViewModel,
+                onBackClick = onBackClick
+            )
+        }
+        
+        composable("searchUsers") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            SearchUsersScreen(
+                authViewModel = authViewModel,
+                onBackClick = onBackClick
+            )
+        }
+        
+        composable("friendsList") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            FriendsListScreen(
+                authViewModel = authViewModel,
+                onBackClick = onBackClick,
+                onFriendClick = { friendId ->
+                    navController.navigate("friendProfile/$friendId")
+                }
+            )
+        }
+        
+        composable("leaderboard") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            LeaderboardScreen(
+                authViewModel = authViewModel,
+                onBackClick = onBackClick
+            )
+        }
+        
+        composable("friendProfile/{friendId}") { backStackEntry ->
+            val friendId = backStackEntry.arguments?.getString("friendId") ?: ""
+            val habitViewModel: HabitViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            // Get FriendRepository from DI
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val repository = remember {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance().let { firestore ->
+                    FriendRepository(firestore)
+                }
+            }
+            
+            FriendProfileScreen(
+                friendId = friendId,
+                friendRepository = repository,
+                habitViewModel = habitViewModel,
                 onBackClick = onBackClick
             )
         }

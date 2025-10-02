@@ -3,6 +3,8 @@ package com.example.habittracker.ui
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.habittracker.auth.AuthRepository
+import com.example.habittracker.auth.User
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
@@ -10,6 +12,7 @@ import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
 import com.example.habittracker.notification.HabitReminderScheduler
 import com.example.habittracker.notification.HabitReminderService
+import com.example.habittracker.ui.social.ProfileStatsUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
@@ -30,7 +33,9 @@ import java.time.ZoneOffset
 class HabitViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val habitRepository: HabitRepository,
-    private val reminderScheduler: HabitReminderScheduler
+    private val reminderScheduler: HabitReminderScheduler,
+    private val authRepository: AuthRepository,
+    private val profileStatsUpdater: ProfileStatsUpdater
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HabitScreenState(isLoading = true))
@@ -38,8 +43,18 @@ class HabitViewModel @Inject constructor(
     
     // Cache available sounds
     private var availableSounds: List<NotificationSound> = emptyList()
+    
+    // Track current user for stats updates
+    private var currentUser: User? = null
 
     init {
+        // Observe current user for stats updates
+        viewModelScope.launch {
+            authRepository.currentUser.collectLatest { user ->
+                currentUser = user
+            }
+        }
+        
         // Load available notification sounds
         viewModelScope.launch(Dispatchers.IO) {
             availableSounds = NotificationSound.getAllAvailableSounds(context)
@@ -293,13 +308,31 @@ class HabitViewModel @Inject constructor(
     fun markHabitCompleted(habitId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedToday(habitId)
+            // Update stats after completion
+            updateUserStatsAsync()
         }
     }
 
     fun markHabitCompletedForDate(habitId: Long, date: java.time.LocalDate) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedForDate(habitId, date)
+            // Update stats after completion
+            updateUserStatsAsync()
         }
+    }
+    
+    /**
+     * Update user's public profile stats based on current habits
+     */
+    private suspend fun updateUserStatsAsync() {
+        val user = currentUser ?: return
+        // Get current habits from the UI state
+        val habits = _uiState.value.habits.map { ui ->
+            // Convert UiHabit back to Habit for stats calculation
+            // This is safe because ProfileStatsUpdater only needs basic habit info
+            getHabitById(ui.id)
+        }
+        profileStatsUpdater.updateUserStats(user, habits)
     }
 
     fun deleteHabit(habitId: Long) {
@@ -556,6 +589,16 @@ class HabitViewModel @Inject constructor(
     suspend fun getHabitById(habitId: Long): Habit {
         return withContext(Dispatchers.IO) {
             habitRepository.getHabitById(habitId)
+        }
+    }
+    
+    /**
+     * Manually trigger user stats update.
+     * Call this when viewing profile or when you want to refresh stats.
+     */
+    fun refreshUserStats() {
+        viewModelScope.launch(Dispatchers.IO) {
+            updateUserStatsAsync()
         }
     }
 }
