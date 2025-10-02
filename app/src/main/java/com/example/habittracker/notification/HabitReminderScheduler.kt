@@ -28,11 +28,23 @@ class HabitReminderSchedulerImpl @Inject constructor(
         val pendingIntent = habit.createPendingIntent(context)
         if (!habit.reminderEnabled) {
             alarmManager?.cancel(pendingIntent)
+            android.util.Log.d("HabitReminderScheduler", "Cancelled reminder for habit: ${habit.title}")
             return
         }
         val nextTriggerAt = nextTriggerAtMillis(habit)
+        val triggerDateTime = java.time.Instant.ofEpochMilli(nextTriggerAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+        
+        android.util.Log.d("HabitReminderScheduler", 
+            "Scheduling reminder for habit: ${habit.title} (ID: ${habit.id})")
+        android.util.Log.d("HabitReminderScheduler", 
+            "Next trigger at: $triggerDateTime (${nextTriggerAt}ms)")
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager?.canScheduleExactAlarms() == false) {
+                android.util.Log.w("HabitReminderScheduler", 
+                    "Exact alarm permission not granted, using setAndAllowWhileIdle")
                 // Fallback to inexact alarm if exact permission not granted
                 alarmManager?.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
@@ -42,11 +54,15 @@ class HabitReminderSchedulerImpl @Inject constructor(
                 return
             }
         }
+        
+        android.util.Log.d("HabitReminderScheduler", 
+            "Using setExactAndAllowWhileIdle for reliable delivery")
         alarmManager?.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             nextTriggerAt,
             pendingIntent
         )
+        android.util.Log.d("HabitReminderScheduler", "Alarm scheduled successfully")
     }
 
     override fun cancel(habitId: Long) {
