@@ -150,15 +150,6 @@ fun HabitTrackerNavigation(
                 onAddHabitClick = onAddHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
-                onEditHabit = { habitId ->
-                    // Load habit for editing and navigate to add_habit screen
-                    viewModel.showEditHabitSheet(habitId)
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastNavigationTime >= 500L) {
-                        lastNavigationTime = currentTime
-                        navController.navigate("add_habit")
-                    }
-                },
                 onDeleteHabit = viewModel::deleteHabit,
                 onHabitDetailsClick = { habitId -> 
                     // Check debounce before navigating
@@ -202,7 +193,6 @@ fun HabitTrackerNavigation(
                 onHabitMonthOfYearChange = viewModel::onHabitMonthOfYearChange,
                 onAvatarChange = viewModel::onAvatarChange,
                 onNotificationSoundChange = viewModel::onNotificationSoundChange,
-                onAlarmTypeToggle = viewModel::onAlarmTypeToggle,
                 onBackClick = onBackClick,
                 onSaveHabit = onSaveHabit
             )

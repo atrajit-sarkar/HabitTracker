@@ -88,7 +88,6 @@ fun AddHabitScreen(
     onHabitMonthOfYearChange: (Int) -> Unit,
     onAvatarChange: (HabitAvatar) -> Unit,
     onNotificationSoundChange: (NotificationSound) -> Unit,
-    onAlarmTypeToggle: (Boolean) -> Unit = {}, // NEW: Alarm type toggle
     onBackClick: () -> Unit,
     onSaveHabit: () -> Unit
 ) {
@@ -113,7 +112,7 @@ fun AddHabitScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = if (state.isEditMode) "Edit Habit" else stringResource(id = R.string.create_new_habit),
+                        text = stringResource(id = R.string.create_new_habit),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -168,7 +167,7 @@ fun AddHabitScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         } else {
-                            Text(text = if (state.isEditMode) "Update Habit" else stringResource(id = R.string.create_habit))
+                            Text(text = stringResource(id = R.string.create_habit))
                         }
                     }
                 }
@@ -265,42 +264,6 @@ fun AddHabitScreen(
                             onSoundChange = onNotificationSoundChange,
                             availableSounds = state.availableSounds
                         )
-                        
-                        // Alarm-type Notification Toggle
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "⏰ Alarm-type Notification",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Ring continuously until marked as done",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Switch(
-                                    checked = state.isAlarmType,
-                                    onCheckedChange = onAlarmTypeToggle
-                                )
-                            }
-                        }
                     }
                 }
             }

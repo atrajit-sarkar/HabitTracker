@@ -34,29 +34,9 @@ class HabitReminderReceiver : BroadcastReceiver() {
     private suspend fun handleReminder(context: Context, habit: Habit) {
         reminderScheduler.schedule(habit)
         val shouldNotify = !habit.isCompletedToday()
-        
-        android.util.Log.d("HabitReminderReceiver", 
-            "Habit: ${habit.title}, Completed today: ${habit.isCompletedToday()}, Should notify: $shouldNotify, IsAlarmType: ${habit.isAlarmType}")
-        
         if (shouldNotify) {
-            // Check if this is an alarm-type notification
-            if (habit.isAlarmType) {
-                // Start alarm service for continuous ringing
-                withContext(Dispatchers.Main) {
-                    AlarmNotificationService.start(
-                        context,
-                        habit.id,
-                        habit.title,
-                        habit.notificationSoundUri.ifEmpty { null }
-                    )
-                }
-                android.util.Log.d("HabitReminderReceiver", "Started alarm service for: ${habit.title}")
-            } else {
-                // Show regular notification
-                withContext(Dispatchers.Main) {
-                    HabitReminderService.showHabitNotification(context, habit)
-                }
-                android.util.Log.d("HabitReminderReceiver", "Showed regular notification for: ${habit.title}")
+            withContext(Dispatchers.Main) {
+                HabitReminderService.showHabitNotification(context, habit)
             }
         }
     }

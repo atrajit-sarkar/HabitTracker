@@ -21,8 +21,7 @@ data class Habit(
     val lastCompletedDate: LocalDate? = null,
     val createdAt: Instant = Instant.now(),
     val isDeleted: Boolean = false,
-    val deletedAt: Instant? = null,
-    val isAlarmType: Boolean = false // New: Whether to use alarm-type notification
+    val deletedAt: Instant? = null
 ) {
     // Helper function to get NotificationSound object
     fun getNotificationSound(): NotificationSound {

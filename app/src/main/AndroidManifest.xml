@@ -91,13 +91,6 @@
             </intent-filter>
         </service>
         
-        <!-- Alarm-style notification service for continuous ringing -->
-        <service
-            android:name=".notification.AlarmNotificationService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
-        
         <!-- FileProvider for APK installation -->
         <provider
             android:name="androidx.core.content.FileProvider"
