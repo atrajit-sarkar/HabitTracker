@@ -1,9 +1,11 @@
 package com.example.habittracker.notification
 
 import android.app.AlertDialog
+import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
@@ -16,6 +18,7 @@ object NotificationReliabilityHelper {
 
     private const val ALARM_VERIFICATION_WORK = "alarm_verification_work"
     private const val BATTERY_OPTIMIZATION_PREF = "battery_optimization_requested"
+    private const val EXACT_ALARM_PREF = "exact_alarm_permission_requested"
 
     /**
      * Checks if the app is exempt from battery optimization
@@ -75,6 +78,76 @@ object NotificationReliabilityHelper {
             }
             .setCancelable(true)
             .show()
+    }
+
+    /**
+     * Check if the app currently has permission to schedule exact alarms (Android 12+)
+     */
+    fun hasExactAlarmPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return true
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    /**
+     * Request exact alarm permission (Android 12+) if not already granted.
+     * We only prompt the user once; subsequent calls will no-op if previously declined.
+     */
+    fun requestExactAlarmPermission(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        if (hasExactAlarmPermission(context)) return
+
+        val prefs = context.getSharedPreferences("notification_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(EXACT_ALARM_PREF, false)) {
+            Log.d("NotificationReliability", "User already prompted for exact alarm permission")
+            return
+        }
+
+        try {
+            // Show lightweight rationale dialog first for better UX
+            AlertDialog.Builder(context)
+                .setTitle("Enable Precise Reminders")
+                .setMessage(
+                    "To fire reminders exactly on time while your device is idle, " +
+                    "please allow 'Exact alarms'. Without it Android may delay notifications." )
+                .setPositiveButton("Open Settings") { _, _ ->
+                    try {
+                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("NotificationReliability", "Cannot open exact alarm settings: ${e.message}")
+                    } finally {
+                        prefs.edit().putBoolean(EXACT_ALARM_PREF, true).apply()
+                    }
+                }
+                .setNegativeButton("Not Now") { _, _ ->
+                    prefs.edit().putBoolean(EXACT_ALARM_PREF, true).apply()
+                }
+                .setNeutralButton("Learn More") { _, _ ->
+                    AlertDialog.Builder(context)
+                        .setTitle("Why Exact Alarms?")
+                        .setMessage("Exact alarms let HabitTracker wake up at the precise minute you set. Without it, the system may batch or delay your habit reminders—especially after long idle periods or at night.")
+                        .setPositiveButton("Enable Now") { _, _ ->
+                            try {
+                                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("NotificationReliability", "Cannot open exact alarm settings (nested): ${e.message}")
+                            } finally {
+                                prefs.edit().putBoolean(EXACT_ALARM_PREF, true).apply()
+                            }
+                        }
+                        .setNegativeButton("Close", null)
+                        .show()
+                }
+                .show()
+        } catch (e: Exception) {
+            Log.e("NotificationReliability", "Error requesting exact alarm permission: ${e.message}", e)
+        }
     }
 
     private fun showDetailedExplanation(context: Context) {

@@ -247,6 +247,13 @@ class MainActivity : ComponentActivity() {
                             NotificationReliabilityHelper.showManufacturerInstructions(this@MainActivity)
                         }
                     }
+
+                    // Prompt for exact alarm permission separately (Android 12+) if missing
+                    if (hasReminders && !NotificationReliabilityHelper.hasExactAlarmPermission(this@MainActivity)) {
+                        // Slight additional delay so dialogs don't stack abruptly
+                        kotlinx.coroutines.delay(400)
+                        NotificationReliabilityHelper.requestExactAlarmPermission(this@MainActivity)
+                    }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "Error checking battery optimization: ${e.message}")
                 }

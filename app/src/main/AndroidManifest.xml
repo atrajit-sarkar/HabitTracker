@@ -70,6 +70,18 @@
         <receiver
             android:name=".notification.ChatReplyReceiver"
             android:exported="false" />
+
+        <!-- Reschedule reminders on time / timezone / date changes -->
+        <receiver
+            android:name=".notification.TimeChangeReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+        </receiver>
         
         <service
             android:name=".notification.ChatMessagingService"
