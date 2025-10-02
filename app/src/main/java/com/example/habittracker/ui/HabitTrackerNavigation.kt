@@ -113,6 +113,20 @@ fun HabitTrackerNavigation(
             val authViewModel: AuthViewModel = hiltViewModel()
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
             
+            // Refresh habits when screen becomes visible to recalculate completion states
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        viewModel.refreshHabitsUI()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
+            
             // Track last navigation time for debouncing
             var lastNavigationTime by remember { mutableLongStateOf(0L) }
             

@@ -24,14 +24,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.temporal.ChronoUnit
 import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.time.Duration
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
@@ -44,9 +40,6 @@ class HabitViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(HabitScreenState(isLoading = true))
     val uiState: StateFlow<HabitScreenState> = _uiState.asStateFlow()
-
-    // Current date flow (emits at midnight) so home screen completion state refreshes without app restart
-    private val currentDate = MutableStateFlow(LocalDate.now())
     
     // Cache available sounds
     private var availableSounds: List<NotificationSound> = emptyList()
@@ -74,38 +67,30 @@ class HabitViewModel @Inject constructor(
             }
         }
         
-        // Emit new date at midnight (local device time) so UI refreshes completion chips automatically
+        // Track current date to detect day changes
+        var lastKnownDate = LocalDate.now()
+        
         viewModelScope.launch {
-            while (true) {
-                try {
-                    val now = ZonedDateTime.now()
-                    val nextMidnight = now.plusDays(1).toLocalDate().atStartOfDay(now.zone)
-                    val delayMillis = Duration.between(now, nextMidnight).toMillis()
-                    delay(delayMillis + 1000) // small buffer after midnight rollover
-                    val newDate = LocalDate.now()
-                    if (currentDate.value != newDate) {
-                        currentDate.value = newDate
-                        android.util.Log.d("HabitViewModel", "Midnight rollover detected. Date updated to $newDate")
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("HabitViewModel", "Error in midnight date updater: ${e.message}")
-                    delay(60_000) // backoff 1 min on failure
-                }
-            }
-        }
-
-        // Combine habits with currentDate so isCompletedToday recalculates when date changes
-        viewModelScope.launch {
-            combine(habitRepository.observeHabits(), currentDate) { habits, today ->
-                habits to today
-            }.collectLatest { (habits, today) ->
+            habitRepository.observeHabits().collectLatest { habits ->
+                // Check if date has changed since last update
+                val currentDate = LocalDate.now()
+                val dateChanged = currentDate != lastKnownDate
+                lastKnownDate = currentDate
+                
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
-                        habits = habits.map { mapToUi(it, today) }.sortedBy { it.reminderTime }
+                        habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
                     )
                 }
-
+                
+                // If date changed, log it for debugging
+                if (dateChanged) {
+                    android.util.Log.d("HabitViewModel", "Date changed detected, refreshing habit completion states")
+                }
+                
+                // Sync notification channels after habits are loaded
+                // This ensures all active habits have their channels in the system
                 if (habits.isNotEmpty()) {
                     HabitReminderService.syncAllHabitChannels(context, habits)
                 }
@@ -142,6 +127,24 @@ class HabitViewModel @Inject constructor(
                 HabitReminderService.deleteMultipleHabitChannels(context, deletedHabitsToCleanup)
                 android.util.Log.d("HabitViewModel", "Cleaned up ${deletedHabitsToCleanup.size} notification channels for old deleted habits")
             }
+        }
+    }
+
+    /**
+     * Refresh habits UI to recalculate completion states.
+     * Call this when the app resumes or when date might have changed.
+     */
+    fun refreshHabitsUI() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val habits = habitRepository.getAllHabits()
+            withContext(Dispatchers.Main) {
+                _uiState.update { state ->
+                    state.copy(
+                        habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
+                    )
+                }
+            }
+            android.util.Log.d("HabitViewModel", "Habits UI refreshed - completion states recalculated")
         }
     }
 
@@ -453,7 +456,7 @@ class HabitViewModel @Inject constructor(
     private fun HabitScreenState.habitDeletedMessage(title: String): String =
         "Removed \"$title\""
 
-    private fun mapToUi(habit: Habit, today: LocalDate = LocalDate.now()): HabitCardUi {
+    private fun mapToUi(habit: Habit): HabitCardUi {
         val reminderTime = LocalTime.of(habit.reminderHour, habit.reminderMinute)
         val frequencyText = buildFrequencyText(habit)
         return HabitCardUi(
@@ -462,7 +465,7 @@ class HabitViewModel @Inject constructor(
             description = habit.description,
             reminderTime = reminderTime,
             isReminderEnabled = habit.reminderEnabled,
-            isCompletedToday = habit.lastCompletedDate == today,
+            isCompletedToday = habit.lastCompletedDate == LocalDate.now(),
             frequency = habit.frequency,
             frequencyText = frequencyText,
             avatar = habit.avatar
