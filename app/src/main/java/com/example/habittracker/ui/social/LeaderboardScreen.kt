@@ -47,6 +47,7 @@ fun LeaderboardScreen(
     
     var previousRank by remember { mutableStateOf<Int?>(null) }
     var showRankImproved by remember { mutableStateOf(false) }
+    var showRulesDialog by remember { mutableStateOf(false) }
 
     // Set current user and load leaderboard
     LaunchedEffect(authState.user) {
@@ -101,6 +102,12 @@ fun LeaderboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showRulesDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "View Rules"
+                        )
+                    }
                     IconButton(
                         onClick = { socialViewModel.loadLeaderboard() },
                         enabled = !socialState.isLoadingLeaderboard
@@ -225,6 +232,13 @@ fun LeaderboardScreen(
                 RankImprovedBanner()
             }
         }
+        
+        // Leaderboard Rules Dialog
+        if (showRulesDialog) {
+            LeaderboardRulesDialog(
+                onDismiss = { showRulesDialog = false }
+            )
+        }
     }
 }
 
@@ -245,12 +259,12 @@ fun LeaderboardHeader() {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Info,
+                imageVector = Icons.Default.EmojiEvents,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Rankings are based on your habit success rate. Complete more habits to climb up!",
+                text = "Rankings are based on a comprehensive score combining your success rate, total habits, current streak, and completions. Tap ℹ️ to view the scoring formula!",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -402,12 +416,19 @@ fun TopThreeCard(
                 maxLines = 1
             )
 
-            // Success rate
+            // Leaderboard score (main metric)
             Text(
-                text = "${entry.profile.successRate}%",
-                style = MaterialTheme.typography.titleMedium,
+                text = "${entry.profile.leaderboardScore}",
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
+            )
+            
+            // Success rate (smaller, secondary)
+            Text(
+                text = "${entry.profile.successRate}% rate",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -558,13 +579,23 @@ fun LeaderboardEntryCard(
                 }
             }
 
-            // Success rate
-            Text(
-                text = "${entry.profile.successRate}%",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Leaderboard score and success rate
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "${entry.profile.leaderboardScore}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "${entry.profile.successRate}% rate",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -629,6 +660,189 @@ fun RankImprovedBanner() {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun LeaderboardRulesDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Leaderboard Scoring",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Your leaderboard rank is determined by a comprehensive score that combines multiple factors:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                HorizontalDivider()
+                
+                // Scoring Formula
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "📊 Scoring Formula",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        ScoringRuleItem(
+                            emoji = "🎯",
+                            title = "Success Rate",
+                            description = "Your daily completion percentage",
+                            points = "× 5 points",
+                            example = "80% = 400 pts"
+                        )
+                        
+                        ScoringRuleItem(
+                            emoji = "📝",
+                            title = "Total Habits",
+                            description = "Number of active habits you maintain",
+                            points = "× 3 points",
+                            example = "7 habits = 21 pts"
+                        )
+                        
+                        ScoringRuleItem(
+                            emoji = "🔥",
+                            title = "Current Streak",
+                            description = "Consecutive days of completing habits",
+                            points = "× 10 points",
+                            example = "5 days = 50 pts",
+                            highlight = true
+                        )
+                        
+                        ScoringRuleItem(
+                            emoji = "✅",
+                            title = "Total Completions",
+                            description = "Habits completed today",
+                            points = "× 2 points",
+                            example = "5 done = 10 pts"
+                        )
+                    }
+                }
+                
+                // Example Calculation
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "💡 Example Score",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Text(
+                            text = "(80% × 5) + (7 habits × 3) + (5 streak × 10) + (5 done × 2)",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "= 400 + 21 + 50 + 10 = 481 points",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Text(
+                    text = "💪 Pro Tip: Maintaining a long streak has the biggest impact on your score! Stay consistent to climb the ranks.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Got It!")
+            }
+        }
+    )
+}
+
+@Composable
+fun ScoringRuleItem(
+    emoji: String,
+    title: String,
+    description: String,
+    points: String,
+    example: String,
+    highlight: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (highlight) Modifier.background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    RoundedCornerShape(8.dp)
+                ).padding(8.dp)
+                else Modifier.padding(vertical = 4.dp)
+            ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = emoji,
+            style = MaterialTheme.typography.titleMedium
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = points,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = example,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }

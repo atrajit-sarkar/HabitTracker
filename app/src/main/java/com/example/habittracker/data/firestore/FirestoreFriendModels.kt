@@ -32,10 +32,11 @@ data class UserPublicProfile(
     val displayName: String = "",
     val photoUrl: String? = null, // Google profile picture URL
     val customAvatar: String = "😊",
-    val successRate: Int = 0, // Completion percentage for leaderboard
+    val successRate: Int = 0, // Completion percentage
     val totalHabits: Int = 0,
     val totalCompletions: Int = 0,
     val currentStreak: Int = 0,
+    val leaderboardScore: Int = 0, // Cumulative score for ranking (higher is better)
     val updatedAt: Long = System.currentTimeMillis()
 )
 
@@ -87,6 +88,7 @@ fun DocumentSnapshot.toUserPublicProfile(): UserPublicProfile? {
             totalHabits = (data["totalHabits"] as? Long)?.toInt() ?: 0,
             totalCompletions = (data["totalCompletions"] as? Long)?.toInt() ?: 0,
             currentStreak = (data["currentStreak"] as? Long)?.toInt() ?: 0,
+            leaderboardScore = (data["leaderboardScore"] as? Long)?.toInt() ?: 0,
             updatedAt = data["updatedAt"] as? Long ?: System.currentTimeMillis()
         )
     } catch (e: Exception) {

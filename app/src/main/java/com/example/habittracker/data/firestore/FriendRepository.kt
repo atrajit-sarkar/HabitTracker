@@ -303,7 +303,8 @@ class FriendRepository @Inject constructor(
         successRate: Int,
         totalHabits: Int,
         totalCompletions: Int,
-        currentStreak: Int
+        currentStreak: Int,
+        leaderboardScore: Int
     ): Result<Unit> {
         return try {
             val profile = UserPublicProfile(
@@ -315,7 +316,8 @@ class FriendRepository @Inject constructor(
                 successRate = successRate,
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,
-                currentStreak = currentStreak
+                currentStreak = currentStreak,
+                leaderboardScore = leaderboardScore
             )
 
             firestore.collection(USER_PROFILES_COLLECTION)
@@ -397,7 +399,7 @@ class FriendRepository @Inject constructor(
                 return emptyList()
             }
 
-            // Get profiles and sort by success rate
+            // Get profiles and sort by leaderboard score (higher is better)
             val profiles = mutableListOf<UserPublicProfile>()
             
             // Firestore has a limit of 10 for whereIn, so we batch
@@ -410,7 +412,7 @@ class FriendRepository @Inject constructor(
                 profiles.addAll(snapshot.documents.mapNotNull { it.toUserPublicProfile() })
             }
 
-            profiles.sortedByDescending { it.successRate }
+            profiles.sortedByDescending { it.leaderboardScore }
         } catch (e: Exception) {
             Log.e(TAG, "Error getting leaderboard: ${e.message}", e)
             emptyList()
@@ -471,8 +473,8 @@ class FriendRepository @Inject constructor(
                                         
                                         profileDoc?.toUserPublicProfile()?.let { profile ->
                                             profiles[leaderboardUserId] = profile
-                                            // Send sorted list whenever any profile changes
-                                            val sortedProfiles = profiles.values.sortedByDescending { it.successRate }
+                                            // Send sorted list whenever any profile changes (sorted by leaderboard score)
+                                            val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
                                             trySend(sortedProfiles)
                                         }
                                     }
@@ -490,7 +492,7 @@ class FriendRepository @Inject constructor(
                                             profiles[profile.userId] = profile
                                         }
                                     }
-                                    val sortedProfiles = profiles.values.sortedByDescending { it.successRate }
+                                    val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
                                     trySend(sortedProfiles)
                                 }
                         }

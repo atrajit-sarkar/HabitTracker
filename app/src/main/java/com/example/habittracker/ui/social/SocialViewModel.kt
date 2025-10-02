@@ -68,7 +68,7 @@ class SocialViewModel @Inject constructor(
             val existingProfile = friendRepository.getFriendProfile(user.uid)
             
             if (existingProfile != null) {
-                Log.d(TAG, "updatePublicProfile: Found existing profile - SR: ${existingProfile.successRate}%, Habits: ${existingProfile.totalHabits}")
+                Log.d(TAG, "updatePublicProfile: Found existing profile - SR: ${existingProfile.successRate}%, Habits: ${existingProfile.totalHabits}, Score: ${existingProfile.leaderboardScore}")
             } else {
                 Log.d(TAG, "updatePublicProfile: No existing profile found, will create new one")
             }
@@ -84,14 +84,15 @@ class SocialViewModel @Inject constructor(
                 successRate = existingProfile?.successRate ?: 0,
                 totalHabits = existingProfile?.totalHabits ?: 0,
                 totalCompletions = existingProfile?.totalCompletions ?: 0,
-                currentStreak = existingProfile?.currentStreak ?: 0
+                currentStreak = existingProfile?.currentStreak ?: 0,
+                leaderboardScore = existingProfile?.leaderboardScore ?: 0
             )
             
             Log.d(TAG, "updatePublicProfile: Profile updated in Firestore")
         }
     }
 
-    fun updateUserStats(successRate: Int, totalHabits: Int, totalCompletions: Int, currentStreak: Int) {
+    fun updateUserStats(successRate: Int, totalHabits: Int, totalCompletions: Int, currentStreak: Int, leaderboardScore: Int) {
         viewModelScope.launch {
             val user = _uiState.value.currentUser ?: return@launch
             
@@ -104,7 +105,8 @@ class SocialViewModel @Inject constructor(
                 successRate = successRate,
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,
-                currentStreak = currentStreak
+                currentStreak = currentStreak,
+                leaderboardScore = leaderboardScore
             )
         }
     }

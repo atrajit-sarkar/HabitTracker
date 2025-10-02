@@ -49,7 +49,7 @@ class ProfileStatsUpdater @Inject constructor(
         
         val stats = calculateStats(habits)
         
-        Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}")
+        Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
         
         friendRepository.updateUserPublicProfile(
             userId = user.uid,
@@ -60,7 +60,8 @@ class ProfileStatsUpdater @Inject constructor(
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
-            currentStreak = stats.currentStreak
+            currentStreak = stats.currentStreak,
+            leaderboardScore = stats.leaderboardScore
         )
         
         Log.d(TAG, "updateUserStats: Profile updated in Firestore")
@@ -77,7 +78,7 @@ class ProfileStatsUpdater @Inject constructor(
         
         val stats = calculateStats(habits)
         
-        Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}")
+        Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
         
         friendRepository.updateUserPublicProfile(
             userId = user.uid,
@@ -88,7 +89,8 @@ class ProfileStatsUpdater @Inject constructor(
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
-            currentStreak = stats.currentStreak
+            currentStreak = stats.currentStreak,
+            leaderboardScore = stats.leaderboardScore
         )
         
         Log.d(TAG, "updateUserStats (legacy): Profile updated in Firestore")
@@ -116,11 +118,20 @@ class ProfileStatsUpdater @Inject constructor(
         // Calculate current streak (longest consecutive days)
         val currentStreak = calculateCurrentStreak(activeHabits, today)
         
+        // Calculate leaderboard score (weighted cumulative score)
+        // Formula: (Success Rate × 5) + (Total Habits × 3) + (Current Streak × 10) + (Total Completions × 2)
+        // - Success Rate (0-100) × 5 = 0-500 points (consistency is very important)
+        // - Total Habits × 3 = encourages maintaining multiple habits
+        // - Current Streak × 10 = heavily rewards daily consistency (most important)
+        // - Total Completions × 2 = rewards overall dedication
+        val leaderboardScore = (successRate * 5) + (totalHabits * 3) + (currentStreak * 10) + (totalCompletions * 2)
+        
         return UserStats(
             totalHabits = totalHabits,
             totalCompletions = totalCompletions,
             successRate = successRate,
-            currentStreak = currentStreak
+            currentStreak = currentStreak,
+            leaderboardScore = leaderboardScore
         )
     }
 
@@ -157,6 +168,7 @@ class ProfileStatsUpdater @Inject constructor(
         val totalHabits: Int,
         val totalCompletions: Int,
         val successRate: Int,
-        val currentStreak: Int
+        val currentStreak: Int,
+        val leaderboardScore: Int
     )
 }
