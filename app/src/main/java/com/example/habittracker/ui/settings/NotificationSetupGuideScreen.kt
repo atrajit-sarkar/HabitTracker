@@ -396,6 +396,40 @@ fun NotificationSetupGuideScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 
+                Text(
+                    text = "Enable both battery and data permissions for maximum reliability:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Button 1: Battery Usage (Background Activity)
+                Button(
+                    onClick = {
+                        try {
+                            // Try to open battery usage page directly
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Ignore
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Icon(imageVector = Icons.Default.BatteryChargingFull, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("1. Open Battery Settings")
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Button 2: Data Usage (Background Data)
                 Button(
                     onClick = {
                         try {
@@ -421,32 +455,81 @@ fun NotificationSetupGuideScreen(
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    )
                 ) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = null)
+                    Icon(imageVector = Icons.Default.DataUsage, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Allow Background Activity")
+                    Text("2. Open Data Usage Settings")
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 if (!isBackgroundDataEnabled) {
-                    InstructionStep(
-                        stepNumber = "1",
-                        instruction = "Tap the button - you'll see HabitTracker's data usage page"
-                    )
-                    InstructionStep(
-                        stepNumber = "2",
-                        instruction = "Toggle 'Background data' or 'Allow background activity' to ON"
-                    )
-                    InstructionStep(
-                        stepNumber = "3",
-                        instruction = "If available, also enable 'Unrestricted data usage'"
-                    )
-                    InstructionStep(
-                        stepNumber = "4",
-                        instruction = "Return here to see the checkmark"
-                    )
+                    // Instructions Card
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Battery Settings:",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            InstructionStep(
+                                stepNumber = "•",
+                                instruction = "Tap 'Battery usage' → Find 'Allow background activity' toggle"
+                            )
+                            InstructionStep(
+                                stepNumber = "•",
+                                instruction = "Enable the toggle (it should turn blue)"
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "Data Usage Settings:",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            InstructionStep(
+                                stepNumber = "•",
+                                instruction = "Tap 'Data usage' → Enable 'Background data' toggle"
+                            )
+                            InstructionStep(
+                                stepNumber = "•",
+                                instruction = "If available, also enable 'Unrestricted data usage'"
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "On some phones (Realme, Oppo, etc.), these settings are in different places. Enable both!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
                 } else {
                     Text(
                         text = "Background activity is enabled. Reminders will work even when the app is closed.",
