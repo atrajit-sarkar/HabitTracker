@@ -41,13 +41,15 @@ fun UpdateDialog(
         onDismissRequest = { if (!isMandatory && !isDownloading) onDismiss() },
         properties = DialogProperties(
             dismissOnBackPress = !isMandatory && !isDownloading,
-            dismissOnClickOutside = !isMandatory && !isDownloading
+            dismissOnClickOutside = !isMandatory && !isDownloading,
+            usePlatformDefaultWidth = false
         )
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f)
+                .padding(horizontal = 16.dp, vertical = 32.dp),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -56,7 +58,8 @@ fun UpdateDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
                 // Header with gradient
@@ -316,7 +319,7 @@ private fun DownloadProgressCard(progress: Int) {
 
 @Composable
 private fun ChangelogSection(releaseNotes: String) {
-    Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "What's New",
             style = MaterialTheme.typography.titleMedium,
@@ -324,28 +327,23 @@ private fun ChangelogSection(releaseNotes: String) {
             color = MaterialTheme.colorScheme.primary
         )
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 200.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
                 if (releaseNotes.isNotEmpty()) {
-                    Text(
-                        text = releaseNotes,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.verticalScroll(rememberScrollState())
-                    )
+                    // Parse and render Markdown-like content
+                    ParsedMarkdownContent(releaseNotes)
                 } else {
                     Text(
                         text = "• Bug fixes and performance improvements\n• Enhanced stability\n• UI refinements",
@@ -419,6 +417,123 @@ private fun ActionButtons(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Later")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Parse and render Markdown-like content
+ */
+@Composable
+private fun ParsedMarkdownContent(markdown: String) {
+    val lines = markdown.lines()
+    
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        var currentSection: String? = null
+        
+        lines.forEach { line ->
+            val trimmedLine = line.trim()
+            
+            when {
+                // Main headers (# Header)
+                trimmedLine.startsWith("# ") -> {
+                    val text = trimmedLine.removePrefix("# ").trim()
+                    if (text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = text.replace("✨", "").replace("🎉", "").trim(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+                
+                // Sub headers (## Header or ### Header)
+                trimmedLine.startsWith("## ") || trimmedLine.startsWith("### ") -> {
+                    val text = trimmedLine.removePrefix("## ").removePrefix("### ").trim()
+                    if (text.isNotEmpty()) {
+                        currentSection = text
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+                
+                // Bullet points (- Item or * Item)
+                trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") -> {
+                    val text = trimmedLine.removePrefix("- ").removePrefix("* ").trim()
+                    if (text.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+                
+                // Horizontal rule (---)
+                trimmedLine == "---" -> {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                
+                // Bold text (**text**)
+                trimmedLine.contains("**") -> {
+                    val text = trimmedLine.replace("**", "").trim()
+                    if (text.isNotEmpty() && !text.startsWith("#") && !text.startsWith("-")) {
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                
+                // Regular paragraph
+                trimmedLine.isNotEmpty() && 
+                !trimmedLine.startsWith("#") && 
+                !trimmedLine.startsWith("-") && 
+                !trimmedLine.startsWith("*") &&
+                !trimmedLine.startsWith(">") &&
+                trimmedLine != "---" -> {
+                    Text(
+                        text = trimmedLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
