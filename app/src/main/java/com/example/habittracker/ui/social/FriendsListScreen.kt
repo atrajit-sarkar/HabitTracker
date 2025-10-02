@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.habittracker.auth.ui.AuthViewModel
+import com.example.habittracker.ui.HabitViewModel
 import com.example.habittracker.data.firestore.FriendRequest
 import com.example.habittracker.data.firestore.UserPublicProfile
 import kotlinx.coroutines.launch
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 fun FriendsListScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     socialViewModel: SocialViewModel = hiltViewModel(),
+    habitViewModel: HabitViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onFriendClick: (String) -> Unit
 ) {
@@ -46,9 +48,13 @@ fun FriendsListScreen(
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
 
-    // Set current user
+    // Set current user and refresh stats
     LaunchedEffect(authState.user) {
-        authState.user?.let { socialViewModel.setCurrentUser(it) }
+        authState.user?.let { 
+            socialViewModel.setCurrentUser(it)
+            // Refresh user stats to show accurate data
+            habitViewModel.refreshUserStats()
+        }
     }
 
     // Show snackbar for messages

@@ -322,17 +322,23 @@ class HabitViewModel @Inject constructor(
     }
     
     /**
-     * Update user's public profile stats based on current habits
+     * Update user's public profile stats based on current habits.
+     * Now fetches habits directly from Firestore for accurate stats.
      */
     private suspend fun updateUserStatsAsync() {
-        val user = currentUser ?: return
-        // Get current habits from the UI state
-        val habits = _uiState.value.habits.map { ui ->
-            // Convert UiHabit back to Habit for stats calculation
-            // This is safe because ProfileStatsUpdater only needs basic habit info
-            getHabitById(ui.id)
+        val user = currentUser ?: run {
+            android.util.Log.d("HabitViewModel", "updateUserStatsAsync: No current user")
+            return
         }
-        profileStatsUpdater.updateUserStats(user, habits)
+        
+        android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Starting for user ${user.uid}")
+        android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Fetching fresh habits from Firestore")
+        
+        // Use the new method that fetches habits directly from Firestore
+        // This ensures we always have the latest data, even if UI state isn't loaded yet
+        profileStatsUpdater.updateUserStats(user)
+        
+        android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Stats update complete")
     }
 
     fun deleteHabit(habitId: Long) {

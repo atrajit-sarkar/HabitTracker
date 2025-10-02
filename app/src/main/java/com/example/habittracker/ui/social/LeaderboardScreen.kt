@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.habittracker.ui.HabitViewModel
 import coil.compose.AsyncImage
 import com.example.habittracker.auth.ui.AuthViewModel
 import kotlinx.coroutines.delay
@@ -37,6 +38,7 @@ import kotlinx.coroutines.delay
 fun LeaderboardScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     socialViewModel: SocialViewModel = hiltViewModel(),
+    habitViewModel: HabitViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
@@ -50,6 +52,8 @@ fun LeaderboardScreen(
     LaunchedEffect(authState.user) {
         authState.user?.let { 
             socialViewModel.setCurrentUser(it)
+            // Refresh user stats before loading leaderboard
+            habitViewModel.refreshUserStats()
             socialViewModel.loadLeaderboard()
         }
     }

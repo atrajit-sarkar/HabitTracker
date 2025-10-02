@@ -1,10 +1,13 @@
 package com.example.habittracker.ui.social
 
+import android.util.Log
 import com.example.habittracker.auth.User
+import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.firestore.FriendRepository
 import com.example.habittracker.data.local.Habit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -16,21 +19,37 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProfileStatsUpdater @Inject constructor(
-    private val friendRepository: FriendRepository
+    private val friendRepository: FriendRepository,
+    private val habitRepository: HabitRepository
 ) {
+    companion object {
+        private const val TAG = "ProfileStatsUpdater"
+    }
 
     /**
      * Update user's public profile with current stats.
+     * Fetches habits directly from Firestore to ensure fresh data.
      * Should be called:
      * - When a habit is completed
      * - When viewing the profile screen
      * - After loading the dashboard
      */
-    suspend fun updateUserStats(
-        user: User,
-        habits: List<Habit>
-    ) {
+    suspend fun updateUserStats(user: User) {
+        Log.d(TAG, "updateUserStats: Starting for user ${user.uid}")
+        
+        // Fetch habits directly from Firestore to ensure we have the latest data
+        val habits = try {
+            habitRepository.observeHabits().first()
+        } catch (e: Exception) {
+            Log.e(TAG, "updateUserStats: Error fetching habits from Firestore", e)
+            emptyList()
+        }
+        
+        Log.d(TAG, "updateUserStats: Fetched ${habits.size} habits from Firestore")
+        
         val stats = calculateStats(habits)
+        
+        Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}")
         
         friendRepository.updateUserPublicProfile(
             userId = user.uid,
@@ -43,6 +62,36 @@ class ProfileStatsUpdater @Inject constructor(
             totalCompletions = stats.totalCompletions,
             currentStreak = stats.currentStreak
         )
+        
+        Log.d(TAG, "updateUserStats: Profile updated in Firestore")
+    }
+    
+    /**
+     * Legacy method for backward compatibility when habits are already available.
+     */
+    suspend fun updateUserStats(
+        user: User,
+        habits: List<Habit>
+    ) {
+        Log.d(TAG, "updateUserStats (legacy): Starting for user ${user.uid}, ${habits.size} habits provided")
+        
+        val stats = calculateStats(habits)
+        
+        Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}")
+        
+        friendRepository.updateUserPublicProfile(
+            userId = user.uid,
+            email = user.email ?: "",
+            displayName = user.effectiveDisplayName,
+            photoUrl = user.photoUrl,
+            customAvatar = user.customAvatar ?: "😊",
+            successRate = stats.successRate,
+            totalHabits = stats.totalHabits,
+            totalCompletions = stats.totalCompletions,
+            currentStreak = stats.currentStreak
+        )
+        
+        Log.d(TAG, "updateUserStats (legacy): Profile updated in Firestore")
     }
 
     private fun calculateStats(habits: List<Habit>): UserStats {

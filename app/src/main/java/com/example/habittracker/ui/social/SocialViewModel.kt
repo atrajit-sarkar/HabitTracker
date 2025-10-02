@@ -62,19 +62,32 @@ class SocialViewModel @Inject constructor(
         viewModelScope.launch {
             val currentUser = _uiState.value.currentUser ?: return@launch
             
-            // Calculate success rate (this should be updated periodically)
-            // For now, we'll use a placeholder - you should calculate this from habits
+            Log.d(TAG, "updatePublicProfile: Fetching existing profile for ${user.uid}")
+            
+            // Get existing profile to preserve stats
+            val existingProfile = friendRepository.getFriendProfile(user.uid)
+            
+            if (existingProfile != null) {
+                Log.d(TAG, "updatePublicProfile: Found existing profile - SR: ${existingProfile.successRate}%, Habits: ${existingProfile.totalHabits}")
+            } else {
+                Log.d(TAG, "updatePublicProfile: No existing profile found, will create new one")
+            }
+            
+            // Update user's public profile, preserving existing stats
             friendRepository.updateUserPublicProfile(
                 userId = user.uid,
                 email = user.email ?: "",
                 displayName = user.effectiveDisplayName,
                 photoUrl = user.photoUrl,
                 customAvatar = user.customAvatar ?: "😊",
-                successRate = 0, // Should be calculated from habits
-                totalHabits = 0,
-                totalCompletions = 0,
-                currentStreak = 0
+                // Preserve existing stats or use 0 if profile doesn't exist yet
+                successRate = existingProfile?.successRate ?: 0,
+                totalHabits = existingProfile?.totalHabits ?: 0,
+                totalCompletions = existingProfile?.totalCompletions ?: 0,
+                currentStreak = existingProfile?.currentStreak ?: 0
             )
+            
+            Log.d(TAG, "updatePublicProfile: Profile updated in Firestore")
         }
     }
 
