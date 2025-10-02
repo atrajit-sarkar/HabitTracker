@@ -358,11 +358,16 @@ private fun DrawerContent(
     onProfileClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
-    // Limit drawer width to 60% of screen width
+    // Responsive drawer width: max 280dp or 75% of screen width (whichever is smaller)
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val maxDrawerWidth = 280.dp
+    val drawerWidth = minOf(maxDrawerWidth, screenWidthDp * 0.75f)
+    
     Box(
         modifier = Modifier
             .fillMaxHeight()
-            .fillMaxWidth(0.6f) // Only 60% width
+            .width(drawerWidth) // Responsive width
             .clip(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
             .background(MaterialTheme.colorScheme.surface)
     ) {
@@ -383,7 +388,7 @@ private fun DrawerContent(
                             )
                         )
                     )
-                    .padding(24.dp)
+                    .padding(horizontal = 16.dp, vertical = 20.dp) // Reduced padding
             ) {
                 Column {
                     Row(
@@ -394,16 +399,18 @@ private fun DrawerContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Menu",
-                                style = MaterialTheme.typography.headlineMedium.copy(
+                                style = MaterialTheme.typography.headlineSmall.copy( // Smaller heading
                                     fontWeight = FontWeight.Bold
                                 ),
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                maxLines = 1
                             )
                             Text(
                                 text = "Manage your habits",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall, // Smaller subtitle
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(top = 4.dp)
+                                modifier = Modifier.padding(top = 2.dp), // Reduced spacing
+                                maxLines = 1
                             )
                         }
                         
@@ -431,7 +438,7 @@ private fun DrawerContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(12.dp) // Reduced from 16dp
             ) {
                 Text(
                     text = "ACTIONS",
@@ -440,7 +447,7 @@ private fun DrawerContent(
                         letterSpacing = 1.2.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp) // Reduced padding
                 )
                 
                 // Profile Card
@@ -459,12 +466,12 @@ private fun DrawerContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp), // Reduced from 16dp
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(36.dp) // Reduced from 40dp
                                 .background(
                                     MaterialTheme.colorScheme.primaryContainer,
                                     CircleShape
@@ -475,39 +482,39 @@ private fun DrawerContent(
                                 imageVector = Icons.Default.AccountCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp) // Reduced from 20dp
                             )
                         }
                         
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
                         
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) { // Added weight to prevent overflow
                             Text(
                                 text = "Profile",
-                                style = MaterialTheme.typography.titleMedium.copy(
+                                style = MaterialTheme.typography.titleSmall.copy( // Smaller size
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
                             )
                             Text(
                                 text = "Account settings",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.weight(1f))
                         
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp) // Reduced from 20dp
                         )
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp)) // Reduced from 8dp
                 
                 // Trash Card
                 Card(
@@ -525,12 +532,12 @@ private fun DrawerContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp), // Reduced from 16dp
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(36.dp) // Reduced from 40dp
                                 .background(
                                     MaterialTheme.colorScheme.errorContainer,
                                     CircleShape
@@ -541,34 +548,34 @@ private fun DrawerContent(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp) // Reduced from 20dp
                             )
                         }
                         
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
                         
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) { // Added weight to prevent overflow
                             Text(
                                 text = "Trash",
-                                style = MaterialTheme.typography.titleMedium.copy(
+                                style = MaterialTheme.typography.titleSmall.copy( // Smaller size
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
                             )
                             Text(
                                 text = "View deleted habits",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.weight(1f))
                         
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp) // Reduced from 20dp
                         )
                     }
                 }
