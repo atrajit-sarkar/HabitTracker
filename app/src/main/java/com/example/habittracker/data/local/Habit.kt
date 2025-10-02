@@ -10,6 +10,7 @@ data class Habit(
     val reminderHour: Int,
     val reminderMinute: Int,
     val reminderEnabled: Boolean,
+    val reminderBehavior: ReminderBehavior = ReminderBehavior.ONE_TIME,
     val frequency: HabitFrequency = HabitFrequency.DAILY,
     val dayOfWeek: Int? = null, // 1-7 for weekly habits (1 = Monday)
     val dayOfMonth: Int? = null, // 1-31 for monthly habits

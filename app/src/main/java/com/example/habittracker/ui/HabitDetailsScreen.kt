@@ -40,6 +40,7 @@ import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
+import com.example.habittracker.data.local.ReminderBehavior
 import androidx.core.graphics.toColorInt
 import java.time.LocalDate
 import java.time.YearMonth
@@ -65,6 +66,7 @@ fun HabitDetailsScreen(
     onBackClick: () -> Unit,
     onSelectDate: (LocalDate) -> Unit = { _ -> },
     onMarkCompleted: () -> Unit,
+    onEditHabit: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -85,6 +87,14 @@ fun HabitDetailsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(id = R.string.back)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEditHabit(habit.id) }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit_habit)
                         )
                     }
                 },
@@ -886,11 +896,32 @@ private fun HabitInfoSection(habit: Habit) {
 
                 if (habit.reminderHour >= 0) {
                     InfoRow(
-                        label = "Reminder Time",
+                        label = stringResource(R.string.reminder_time_label),
                         value = String.format("%02d:%02d", habit.reminderHour, habit.reminderMinute),
                         icon = Icons.Default.Alarm
                     )
                 }
+
+                val reminderTypeValue = if (habit.reminderEnabled) {
+                    when (habit.reminderBehavior) {
+                        ReminderBehavior.ALARM -> stringResource(R.string.reminder_behavior_alarm)
+                        ReminderBehavior.ONE_TIME -> stringResource(R.string.reminder_behavior_one_time)
+                    }
+                } else {
+                    stringResource(R.string.reminder_disabled)
+                }
+
+                val reminderIcon = if (habit.reminderBehavior == ReminderBehavior.ALARM) {
+                    Icons.Default.NotificationImportant
+                } else {
+                    Icons.Default.Notifications
+                }
+
+                InfoRow(
+                    label = stringResource(R.string.reminder_type_label),
+                    value = reminderTypeValue,
+                    icon = reminderIcon
+                )
 
                 InfoRow(
                     label = "Created On",

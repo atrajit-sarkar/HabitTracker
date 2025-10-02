@@ -48,6 +48,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NotificationImportant
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
@@ -64,6 +66,8 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,6 +105,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +124,7 @@ import com.example.habittracker.data.local.HabitAvatar
 import com.example.habittracker.data.local.HabitAvatarType
 import com.example.habittracker.data.local.HabitFrequency
 import com.example.habittracker.data.local.NotificationSound
+import com.example.habittracker.data.local.ReminderBehavior
 import com.example.habittracker.ui.DeleteHabitConfirmationDialog
 import com.example.habittracker.ui.dialogs.FirstLaunchNotificationDialog
 import com.example.habittracker.util.clickableOnce
@@ -871,6 +877,7 @@ private fun AddHabitSheet(
     onHabitNameChange: (String) -> Unit,
     onHabitDescriptionChange: (String) -> Unit,
     onHabitReminderToggleChange: (Boolean) -> Unit,
+    onReminderBehaviorChange: (ReminderBehavior) -> Unit,
     onHabitTimeChange: (Int, Int) -> Unit,
     onHabitFrequencyChange: (HabitFrequency) -> Unit,
     onHabitDayOfWeekChange: (Int) -> Unit,
@@ -902,7 +909,7 @@ private fun AddHabitSheet(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = stringResource(id = R.string.add_habit),
+            text = if (state.isEditing) stringResource(id = R.string.edit_habit) else stringResource(id = R.string.add_habit),
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
@@ -977,6 +984,11 @@ private fun AddHabitSheet(
                     availableSounds = state.availableSounds,
                     onSoundChange = onNotificationSoundChange
                 )
+
+                ReminderBehaviorSelectorSheet(
+                    behavior = state.reminderBehavior,
+                    onBehaviorChange = onReminderBehaviorChange
+                )
             }
         }
         
@@ -1000,13 +1012,85 @@ private fun AddHabitSheet(
                 if (state.isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp))
                 } else {
-                    Text(text = stringResource(id = R.string.save))
+                    Text(
+                        text = if (state.isEditing) stringResource(id = R.string.save_changes) else stringResource(id = R.string.save)
+                    )
                 }
             }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun ReminderBehaviorSelectorSheet(
+    behavior: ReminderBehavior,
+    onBehaviorChange: (ReminderBehavior) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(id = R.string.reminder_type_label),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ReminderBehaviorChip(
+                title = stringResource(id = R.string.reminder_behavior_one_time),
+                description = stringResource(id = R.string.reminder_behavior_one_time_desc),
+                icon = Icons.Default.Notifications,
+                isSelected = behavior == ReminderBehavior.ONE_TIME,
+                onClick = { onBehaviorChange(ReminderBehavior.ONE_TIME) }
+            )
+
+            ReminderBehaviorChip(
+                title = stringResource(id = R.string.reminder_behavior_alarm),
+                description = stringResource(id = R.string.reminder_behavior_alarm_desc),
+                icon = Icons.Default.NotificationImportant,
+                isSelected = behavior == ReminderBehavior.ALARM,
+                onClick = { onBehaviorChange(ReminderBehavior.ALARM) }
+            )
+        }
+
+        AnimatedVisibility(visible = behavior == ReminderBehavior.ALARM) {
+            Text(
+                text = stringResource(id = R.string.reminder_behavior_alarm_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReminderBehaviorChip(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = {
+            Column {
+                Text(text = title, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        leadingIcon = { Icon(imageVector = icon, contentDescription = null) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        )
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
