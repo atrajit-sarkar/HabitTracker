@@ -150,16 +150,26 @@ fun NotificationSetupGuideScreen(
                     Button(
                         onClick = {
                             try {
+                                // Direct intent to request battery optimization exemption
                                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                                     data = Uri.parse("package:${context.packageName}")
                                 }
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 try {
+                                    // Fallback to battery optimization list
                                     val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                     context.startActivity(fallbackIntent)
                                 } catch (e2: Exception) {
-                                    // Ignore
+                                    // Final fallback to app details
+                                    try {
+                                        val detailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.parse("package:${context.packageName}")
+                                        }
+                                        context.startActivity(detailsIntent)
+                                    } catch (e3: Exception) {
+                                        // Ignore
+                                    }
                                 }
                             }
                         },
@@ -167,22 +177,22 @@ fun NotificationSetupGuideScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Settings, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Battery Settings")
+                        Text("Allow Battery Optimization")
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     InstructionStep(
                         stepNumber = "1",
-                        instruction = "Tap the button above to open battery settings"
+                        instruction = "Tap the button - a permission dialog will appear"
                     )
                     InstructionStep(
                         stepNumber = "2",
-                        instruction = "Find 'HabitTracker' in the list"
+                        instruction = "Select 'Allow' or 'Don't optimize' in the popup"
                     )
                     InstructionStep(
                         stepNumber = "3",
-                        instruction = "Select 'Don't optimize' or 'Allow'"
+                        instruction = "Return to this screen to see the checkmark"
                     )
                 }
             }
@@ -218,10 +228,23 @@ fun NotificationSetupGuideScreen(
                 
                 Button(
                     onClick = {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        try {
+                            // Direct to app's notification settings page
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            try {
+                                // Fallback to app details
+                                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(fallbackIntent)
+                            } catch (e2: Exception) {
+                                // Ignore
+                            }
                         }
-                        context.startActivity(intent)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -232,10 +255,26 @@ fun NotificationSetupGuideScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = "Make sure notifications are enabled for HabitTracker and notification channels for your habits are turned on.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (!areNotificationsEnabled) {
+                    InstructionStep(
+                        stepNumber = "1",
+                        instruction = "Tap the button - you'll be on HabitTracker's notification page"
+                    )
+                    InstructionStep(
+                        stepNumber = "2",
+                        instruction = "Toggle 'Show notifications' or 'Allow notifications' to ON"
+                    )
+                    InstructionStep(
+                        stepNumber = "3",
+                        instruction = "Ensure all notification categories are enabled"
+                    )
+                } else {
+                    Text(
+                        text = "You can still open settings to customize notification channels and sounds.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
 
             // Step 3: Exact Alarm Permission (Android 12+)
@@ -271,19 +310,28 @@ fun NotificationSetupGuideScreen(
                     Button(
                         onClick = {
                             try {
+                                // Direct intent to request exact alarm permission (Android 12+)
                                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                                     data = Uri.parse("package:${context.packageName}")
                                 }
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                // Fallback
                                 try {
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.parse("package:${context.packageName}")
+                                    // Fallback to alarms & reminders settings
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        val fallbackIntent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                        context.startActivity(fallbackIntent)
                                     }
-                                    context.startActivity(intent)
                                 } catch (e2: Exception) {
-                                    // Ignore
+                                    try {
+                                        // Final fallback to app details
+                                        val detailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.parse("package:${context.packageName}")
+                                        }
+                                        context.startActivity(detailsIntent)
+                                    } catch (e3: Exception) {
+                                        // Ignore
+                                    }
                                 }
                             }
                         },
@@ -291,15 +339,31 @@ fun NotificationSetupGuideScreen(
                     ) {
                         Icon(imageVector = Icons.Default.AlarmOn, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Alarm Settings")
+                        Text("Allow Exact Alarms")
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    Text(
-                        text = "Allow HabitTracker to schedule exact alarms for precise reminder timing.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    if (!canScheduleExactAlarms) {
+                        InstructionStep(
+                            stepNumber = "1",
+                            instruction = "Tap the button - you'll be on the Alarms & reminders page"
+                        )
+                        InstructionStep(
+                            stepNumber = "2",
+                            instruction = "Find HabitTracker and toggle 'Allow setting alarms and reminders' to ON"
+                        )
+                        InstructionStep(
+                            stepNumber = "3",
+                            instruction = "Return to see the checkmark appear"
+                        )
+                    } else {
+                        Text(
+                            text = "Exact alarm scheduling is enabled for precise reminder timing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
 
@@ -335,47 +399,59 @@ fun NotificationSetupGuideScreen(
                 Button(
                     onClick = {
                         try {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.parse("package:${context.packageName}")
+                            // Try to open data usage settings directly (Android 7+)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                val intent = Intent(Settings.ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                // Fallback for older versions
+                                throw Exception("Not supported on this version")
                             }
-                            context.startActivity(intent)
                         } catch (e: Exception) {
-                            // Ignore
+                            try {
+                                // Fallback to app details page
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            } catch (e2: Exception) {
+                                // Ignore
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(imageVector = Icons.Default.Settings, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open App Settings")
+                    Text("Allow Background Activity")
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 if (!isBackgroundDataEnabled) {
-                    Text(
-                        text = "Enable background activity to ensure reminders work even when the app is closed.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
                     InstructionStep(
                         stepNumber = "1",
-                        instruction = "Tap the button above to open app settings"
+                        instruction = "Tap the button - you'll see HabitTracker's data usage page"
                     )
                     InstructionStep(
                         stepNumber = "2",
-                        instruction = "Look for 'Battery' or 'Mobile data & Wi-Fi' sections"
+                        instruction = "Toggle 'Background data' or 'Allow background activity' to ON"
                     )
                     InstructionStep(
                         stepNumber = "3",
-                        instruction = "Enable 'Allow background activity' or 'Background data'"
+                        instruction = "If available, also enable 'Unrestricted data usage'"
                     )
                     InstructionStep(
                         stepNumber = "4",
-                        instruction = "On some devices, also enable 'Unrestricted data usage'"
+                        instruction = "Return here to see the checkmark"
+                    )
+                } else {
+                    Text(
+                        text = "Background activity is enabled. Reminders will work even when the app is closed.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
             }
