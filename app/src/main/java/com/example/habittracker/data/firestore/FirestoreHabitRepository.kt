@@ -105,6 +105,20 @@ class FirestoreHabitRepository @Inject constructor(
             }
         }
 
+    override suspend fun getAllHabits(): List<Habit> {
+        val userCollection = getUserCollection() ?: return emptyList()
+        return try {
+            val snapshot = userCollection.get().await()
+            snapshot.toFirestoreHabits()
+                .mapNotNull { runCatching { it.toHabit() }.getOrNull() }
+                .filterNot { it.isDeleted }
+                .sortedWith(compareBy({ it.reminderHour }, { it.reminderMinute }))
+        } catch (e: Exception) {
+            android.util.Log.e("FirestoreRepo", "Error getting all habits", e)
+            emptyList()
+        }
+    }
+
     override suspend fun getHabitById(id: Long): Habit {
         val doc = findHabitDocument(id) ?: throw NoSuchElementException("Habit not found")
         return doc.toFirestoreHabit()?.toHabit() ?: throw NoSuchElementException("Habit not found")

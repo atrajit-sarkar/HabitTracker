@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface HabitRepository {
     fun observeHabits(): Flow<List<Habit>>
     fun observeDeletedHabits(): Flow<List<Habit>>
+    suspend fun getAllHabits(): List<Habit>
     suspend fun getHabitById(id: Long): Habit
     suspend fun insertHabit(habit: Habit): Long
     suspend fun updateHabit(habit: Habit)
