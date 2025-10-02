@@ -98,8 +98,22 @@ fun NotificationSetupGuideScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Status Card
-            StatusCard(isExemptFromBatteryOptimization)
+            // Status Card - Check all 4 settings
+            val allSettingsComplete = isExemptFromBatteryOptimization && 
+                                     areNotificationsEnabled && 
+                                     canScheduleExactAlarms && 
+                                     isBackgroundDataEnabled
+            
+            StatusCard(
+                allComplete = allSettingsComplete,
+                completedCount = listOf(
+                    isExemptFromBatteryOptimization,
+                    areNotificationsEnabled,
+                    canScheduleExactAlarms,
+                    isBackgroundDataEnabled
+                ).count { it },
+                totalCount = 4
+            )
 
             // Why This Matters Section
             GuideSection(
@@ -729,43 +743,70 @@ fun NotificationSetupGuideScreen(
 }
 
 @Composable
-private fun StatusCard(isExempt: Boolean) {
+private fun StatusCard(
+    allComplete: Boolean,
+    completedCount: Int,
+    totalCount: Int
+) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isExempt) 
+            containerColor = if (allComplete) 
                 MaterialTheme.colorScheme.tertiaryContainer 
             else 
                 MaterialTheme.colorScheme.errorContainer
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = if (isExempt) Icons.Default.CheckCircle else Icons.Default.Warning,
-                contentDescription = null,
-                tint = if (isExempt) 
-                    MaterialTheme.colorScheme.onTertiaryContainer 
-                else 
-                    MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(32.dp)
-            )
-            Column {
-                Text(
-                    text = if (isExempt) "All Set! ✓" else "Action Required",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (isExempt) 
-                        "Your notifications are configured for maximum reliability" 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (allComplete) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = if (allComplete) 
+                        MaterialTheme.colorScheme.onTertiaryContainer 
                     else 
-                        "Please follow the steps below to enable reliable notifications",
-                    style = MaterialTheme.typography.bodyMedium
+                        MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(32.dp)
                 )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (allComplete) "All Set! ✓" else "Action Required",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (allComplete) 
+                            "Your notifications are configured for maximum reliability" 
+                        else 
+                            "Complete the steps below for reliable notifications",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            
+            // Progress indicator
+            if (!allComplete) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LinearProgressIndicator(
+                        progress = { completedCount.toFloat() / totalCount },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "$completedCount/$totalCount",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
