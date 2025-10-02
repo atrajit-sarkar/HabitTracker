@@ -28,9 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -65,11 +62,9 @@ fun ChatScreen(
     var showStickerPicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var selectedStickerPack by remember { mutableStateOf("Reactions") }
-    var isKeyboardVisible by remember { mutableStateOf(false) }
     
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(authState.user) {
         authState.user?.let { 
@@ -87,18 +82,8 @@ fun ChatScreen(
     LaunchedEffect(chatState.messages.size) {
         if (chatState.messages.isNotEmpty()) {
             coroutineScope.launch {
-                listState.animateScrollToItem(chatState.messages.size - 1)
-            }
-        }
-    }
-
-    // Auto-scroll when keyboard opens
-    LaunchedEffect(isKeyboardVisible) {
-        if (isKeyboardVisible && chatState.messages.isNotEmpty()) {
-            coroutineScope.launch {
-                // Delay slightly to let layout adjust
-                kotlinx.coroutines.delay(100)
-                listState.animateScrollToItem(chatState.messages.size - 1)
+                kotlinx.coroutines.delay(150) // Slight delay for message to render
+                listState.scrollToItem(chatState.messages.size - 1)
             }
         }
     }
@@ -250,9 +235,9 @@ fun ChatScreen(
                         
                         // Scroll to bottom after sending sticker
                         coroutineScope.launch {
-                            kotlinx.coroutines.delay(100)
+                            kotlinx.coroutines.delay(150)
                             if (chatState.messages.isNotEmpty()) {
-                                listState.animateScrollToItem(chatState.messages.size - 1)
+                                listState.scrollToItem(chatState.messages.size - 1)
                             }
                         }
                     }
@@ -323,12 +308,7 @@ fun ChatScreen(
                             BasicTextField(
                                 value = messageText,
                                 onValueChange = { messageText = it },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged { focusState ->
-                                        isKeyboardVisible = focusState.isFocused
-                                    },
+                                modifier = Modifier.weight(1f),
                                 textStyle = TextStyle(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp
@@ -374,9 +354,9 @@ fun ChatScreen(
                                 
                                 // Scroll to bottom after sending
                                 coroutineScope.launch {
-                                    kotlinx.coroutines.delay(100)
+                                    kotlinx.coroutines.delay(150)
                                     if (chatState.messages.isNotEmpty()) {
-                                        listState.animateScrollToItem(chatState.messages.size - 1)
+                                        listState.scrollToItem(chatState.messages.size - 1)
                                     }
                                 }
                             }
@@ -418,7 +398,9 @@ fun MessageBubble(
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
         horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start
     ) {
         Column(
@@ -428,14 +410,20 @@ fun MessageBubble(
             when (message.type) {
                 MessageType.STICKER, MessageType.EMOJI -> {
                     // Large sticker/emoji display
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color.Transparent
+                    Column(
+                        horizontalAlignment = if (isOwnMessage) Alignment.End else Alignment.Start
                     ) {
                         Text(
                             text = message.content,
                             fontSize = 64.sp,
                             modifier = Modifier.padding(8.dp)
+                        )
+                        // Timestamp
+                        Text(
+                            text = formatMessageTime(message.timestamp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
                 }
@@ -451,26 +439,22 @@ fun MessageBubble(
                         color = bubbleColor,
                         shadowElevation = 1.dp
                     ) {
-                        Column(
+                        Text(
+                            text = message.content,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = textColor,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = message.content,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = textColor
-                            )
-                        }
+                        )
                     }
+                    // Timestamp
+                    Text(
+                        text = formatMessageTime(message.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
                 }
             }
-            
-            // Timestamp
-            Text(
-                text = formatMessageTime(message.timestamp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-            )
         }
     }
 }
