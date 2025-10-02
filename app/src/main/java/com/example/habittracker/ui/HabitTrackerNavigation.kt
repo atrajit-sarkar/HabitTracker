@@ -32,6 +32,8 @@ import com.example.habittracker.ui.social.SearchUsersScreen
 import com.example.habittracker.ui.social.FriendsListScreen
 import com.example.habittracker.ui.social.LeaderboardScreen
 import com.example.habittracker.ui.social.FriendProfileScreen
+import com.example.habittracker.ui.chat.ChatListScreen
+import com.example.habittracker.ui.chat.ChatScreen
 import com.example.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -318,6 +320,14 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
+            val onMessageClick: (String, String, String, String?) -> Unit = { id, name, avatar, photoUrl ->
+                // Navigate to chat screen
+                val photoUrlEncoded = photoUrl?.let { 
+                    java.net.URLEncoder.encode(it, "UTF-8") 
+                } ?: "null"
+                navController.navigate("chat/$id/$name/$avatar/$photoUrlEncoded")
+            }
+            
             // Get FriendRepository from DI
             val context = androidx.compose.ui.platform.LocalContext.current
             val repository = remember {
@@ -330,6 +340,61 @@ fun HabitTrackerNavigation(
                 friendId = friendId,
                 friendRepository = repository,
                 habitViewModel = habitViewModel,
+                onBackClick = onBackClick,
+                onMessageClick = onMessageClick
+            )
+        }
+
+        // Chat List Screen
+        composable("chatList") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onChatClick: (com.example.habittracker.data.firestore.Chat) -> Unit = { chat ->
+                // Get the other participant's info
+                val currentUserId = authViewModel.uiState.value.user?.uid ?: ""
+                val friendId = chat.participants.firstOrNull { it != currentUserId } ?: ""
+                val friendName = chat.participantNames[friendId] ?: "Unknown"
+                val friendAvatar = chat.participantAvatars[friendId] ?: "😊"
+                val friendPhotoUrl = chat.participantPhotoUrls[friendId]
+                
+                val photoUrlEncoded = friendPhotoUrl?.let { 
+                    java.net.URLEncoder.encode(it, "UTF-8") 
+                } ?: "null"
+                
+                navController.navigate("chat/$friendId/$friendName/$friendAvatar/$photoUrlEncoded")
+            }
+            
+            ChatListScreen(
+                onBackClick = onBackClick,
+                onChatClick = onChatClick
+            )
+        }
+
+        // Individual Chat Screen
+        composable("chat/{friendId}/{friendName}/{friendAvatar}/{friendPhotoUrl}") { backStackEntry ->
+            val friendId = backStackEntry.arguments?.getString("friendId") ?: ""
+            val friendName = backStackEntry.arguments?.getString("friendName") ?: ""
+            val friendAvatar = backStackEntry.arguments?.getString("friendAvatar") ?: "😊"
+            val friendPhotoUrlEncoded = backStackEntry.arguments?.getString("friendPhotoUrl")
+            val friendPhotoUrl = if (friendPhotoUrlEncoded != null && friendPhotoUrlEncoded != "null") {
+                java.net.URLDecoder.decode(friendPhotoUrlEncoded, "UTF-8")
+            } else {
+                null
+            }
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            ChatScreen(
+                friendId = friendId,
+                friendName = friendName,
+                friendAvatar = friendAvatar,
+                friendPhotoUrl = friendPhotoUrl,
                 onBackClick = onBackClick
             )
         }

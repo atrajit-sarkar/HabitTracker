@@ -34,7 +34,8 @@ fun FriendProfileScreen(
     friendId: String,
     friendRepository: FriendRepository,
     habitViewModel: HabitViewModel = hiltViewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onMessageClick: (String, String, String, String?) -> Unit = { _, _, _, _ -> }
 ) {
     var friendProfile by remember { mutableStateOf<UserPublicProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -106,7 +107,8 @@ fun FriendProfileScreen(
         } else {
             FriendProfileContent(
                 profile = friendProfile!!,
-                paddingValues = paddingValues
+                paddingValues = paddingValues,
+                onMessageClick = onMessageClick
             )
         }
     }
@@ -115,7 +117,8 @@ fun FriendProfileScreen(
 @Composable
 fun FriendProfileContent(
     profile: UserPublicProfile,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onMessageClick: (String, String, String, String?) -> Unit = { _, _, _, _ -> }
 ) {
     Column(
         modifier = Modifier
@@ -184,6 +187,30 @@ fun FriendProfileContent(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                // Message Button
+                Button(
+                    onClick = { 
+                        onMessageClick(
+                            profile.userId,
+                            profile.displayName,
+                            profile.customAvatar,
+                            profile.photoUrl
+                        )
+                    },
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Chat,
+                        contentDescription = "Message",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Message", fontWeight = FontWeight.Bold)
+                }
             }
         }
 
