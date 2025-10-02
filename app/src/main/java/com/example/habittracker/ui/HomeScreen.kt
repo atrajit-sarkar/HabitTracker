@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
@@ -134,6 +135,7 @@ fun HabitHomeRoute(
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
+    onEditHabit: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit = {},
@@ -369,6 +371,7 @@ fun HabitHomeScreen(
                     habit = habit,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
                     onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                    onEdit = { onEditHabit(habit.id) },
                     onDelete = { onDeleteHabit(habit.id) },
                     onSeeDetails = { onHabitDetailsClick(habit.id) }
                 )
@@ -627,6 +630,7 @@ private fun HabitCard(
     habit: HabitCardUi, // Assuming HabitCardUi contains all necessary fields like reminderTime
     onToggleReminder: (Boolean) -> Unit,
     onMarkCompleted: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onSeeDetails: () -> Unit,
     modifier: Modifier = Modifier
@@ -679,12 +683,21 @@ private fun HabitCard(
                             )
                         }
                     }
-                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.delete),
-                            tint = Color.White
-                        )
+                    Row {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = Color.White
+                            )
+                        }
+                        IconButton(onClick = { showDeleteConfirmation = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(id = R.string.delete),
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
 

@@ -383,8 +383,16 @@ class HabitViewModel @Inject constructor(
     fun markHabitCompleted(habitId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedToday(habitId)
+            
+            // Stop alarm service if running
+            withContext(Dispatchers.Main) {
+                AlarmNotificationService.stop(context)
+            }
+            
             // Update stats after completion
             updateUserStatsAsync()
+            
+            android.util.Log.d("HabitViewModel", "Habit marked complete, alarm service stopped")
         }
     }
 
