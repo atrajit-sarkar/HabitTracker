@@ -1,7 +1,10 @@
 package com.example.habittracker.ui.settings
 
+import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -18,8 +21,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.habittracker.notification.NotificationReliabilityHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,12 +34,42 @@ fun NotificationSetupGuideScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scrollState = rememberScrollState()
-    val isExemptFromBatteryOptimization = remember {
-        NotificationReliabilityHelper.isIgnoringBatteryOptimizations(context)
+    
+    // State variables that update on resume
+    var isExemptFromBatteryOptimization by remember { 
+        mutableStateOf(NotificationReliabilityHelper.isIgnoringBatteryOptimizations(context))
     }
+    var areNotificationsEnabled by remember {
+        mutableStateOf(checkNotificationsEnabled(context))
+    }
+    var canScheduleExactAlarms by remember {
+        mutableStateOf(checkExactAlarmPermission(context))
+    }
+    var isBackgroundDataEnabled by remember {
+        mutableStateOf(checkBackgroundDataEnabled(context))
+    }
+    
     val manufacturer = remember { Build.MANUFACTURER.lowercase() }
     val isAggressiveDevice = remember { NotificationReliabilityHelper.isAggressiveBatteryManagement() }
+
+    // Listen to lifecycle events to refresh status when user returns from settings
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh all status checks when returning to the screen
+                isExemptFromBatteryOptimization = NotificationReliabilityHelper.isIgnoringBatteryOptimizations(context)
+                areNotificationsEnabled = checkNotificationsEnabled(context)
+                canScheduleExactAlarms = checkExactAlarmPermission(context)
+                isBackgroundDataEnabled = checkBackgroundDataEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -155,8 +191,31 @@ fun NotificationSetupGuideScreen(
             GuideSection(
                 icon = Icons.Default.Notifications,
                 title = "Step 2: Enable Notifications",
-                iconColor = MaterialTheme.colorScheme.secondary
+                iconColor = if (areNotificationsEnabled)
+                    MaterialTheme.colorScheme.tertiary
+                else
+                    MaterialTheme.colorScheme.secondary
             ) {
+                if (areNotificationsEnabled) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Text(
+                            text = "Notifications are enabled ✓",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
                 Button(
                     onClick = {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
@@ -184,8 +243,31 @@ fun NotificationSetupGuideScreen(
                 GuideSection(
                     icon = Icons.Default.Schedule,
                     title = "Step 3: Allow Exact Alarms (Android 12+)",
-                    iconColor = MaterialTheme.colorScheme.tertiary
+                    iconColor = if (canScheduleExactAlarms)
+                        MaterialTheme.colorScheme.tertiary
+                    else
+                        MaterialTheme.colorScheme.secondary
                 ) {
+                    if (canScheduleExactAlarms) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                            Text(
+                                text = "Exact alarms are allowed ✓",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    
                     Button(
                         onClick = {
                             try {
@@ -225,8 +307,31 @@ fun NotificationSetupGuideScreen(
             GuideSection(
                 icon = Icons.Default.Autorenew,
                 title = "Step 4: Allow Background Activity",
-                iconColor = MaterialTheme.colorScheme.primary
+                iconColor = if (isBackgroundDataEnabled)
+                    MaterialTheme.colorScheme.tertiary
+                else
+                    MaterialTheme.colorScheme.primary
             ) {
+                if (isBackgroundDataEnabled) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Text(
+                            text = "Background activity is enabled ✓",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
                 Button(
                     onClick = {
                         try {
@@ -247,30 +352,32 @@ fun NotificationSetupGuideScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = "Enable background activity to ensure reminders work even when the app is closed.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                InstructionStep(
-                    stepNumber = "1",
-                    instruction = "Tap the button above to open app settings"
-                )
-                InstructionStep(
-                    stepNumber = "2",
-                    instruction = "Look for 'Battery' or 'Mobile data & Wi-Fi' sections"
-                )
-                InstructionStep(
-                    stepNumber = "3",
-                    instruction = "Enable 'Allow background activity' or 'Background data'"
-                )
-                InstructionStep(
-                    stepNumber = "4",
-                    instruction = "On some devices, also enable 'Unrestricted data usage'"
-                )
+                if (!isBackgroundDataEnabled) {
+                    Text(
+                        text = "Enable background activity to ensure reminders work even when the app is closed.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    InstructionStep(
+                        stepNumber = "1",
+                        instruction = "Tap the button above to open app settings"
+                    )
+                    InstructionStep(
+                        stepNumber = "2",
+                        instruction = "Look for 'Battery' or 'Mobile data & Wi-Fi' sections"
+                    )
+                    InstructionStep(
+                        stepNumber = "3",
+                        instruction = "Enable 'Allow background activity' or 'Background data'"
+                    )
+                    InstructionStep(
+                        stepNumber = "4",
+                        instruction = "On some devices, also enable 'Unrestricted data usage'"
+                    )
+                }
             }
 
             // Manufacturer-Specific Instructions
@@ -609,5 +716,45 @@ private fun BenefitItem(text: String) {
             text = text,
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+// Helper functions to check permission status
+private fun checkNotificationsEnabled(context: Context): Boolean {
+    return try {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.areNotificationsEnabled()
+    } catch (e: Exception) {
+        false
+    }
+}
+
+private fun checkExactAlarmPermission(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        try {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.canScheduleExactAlarms()
+        } catch (e: Exception) {
+            false
+        }
+    } else {
+        true // Not required on older versions
+    }
+}
+
+private fun checkBackgroundDataEnabled(context: Context): Boolean {
+    return try {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val restrictBackgroundStatus = connectivityManager.restrictBackgroundStatus
+            // RESTRICT_BACKGROUND_STATUS_DISABLED means background data is NOT restricted (i.e., it's enabled)
+            restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED
+        } else {
+            // On older versions, assume it's enabled if we can't check
+            true
+        }
+    } catch (e: Exception) {
+        // If we can't check, assume it's enabled to avoid false negatives
+        true
     }
 }
