@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.airbnb.lottie.compose.*
 import com.example.habittracker.R
 import com.example.habittracker.ui.HabitViewModel
 import kotlin.math.cos
@@ -279,6 +281,12 @@ fun ProfileScreen(
     var showResetAvatarDialog by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showSetNameDialog by remember { mutableStateOf(false) }
+    var showAnimationPicker by remember { mutableStateOf(false) }
+    
+    // Profile card animation preference (stored in SharedPreferences)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
+    var selectedAnimation by remember { mutableStateOf(prefs.getString("profile_animation", "none") ?: "none") }
     
     // Track if avatar data has been loaded at least once to prevent flash
     var avatarLoaded by remember { mutableStateOf(false) }
@@ -359,20 +367,66 @@ fun ProfileScreen(
                 )
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Background gradient layer (bottom)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .matchParentSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                    )
                                 )
                             )
-                        )
-                        .padding(28.dp)
-                ) {
+                    )
+                    
+                    // Animation overlay layer (middle) - fills entire card
+                    if (selectedAnimation != "none") {
+                        val animationFile = when (selectedAnimation) {
+                            "sakura" -> "sakura_fall.json"
+                            "worldwide" -> "worldwide.json"
+                            "cute_anime_girl" -> "cute_anime_girl.json"
+                            else -> null
+                        }
+                        
+                        // Set alpha based on animation type for better text visibility
+                        val animationAlpha = when (selectedAnimation) {
+                            "cute_anime_girl" -> 0.5f // Dimmed for better text readability
+                            else -> 1f // Full opacity for other animations
+                        }
+                        
+                        animationFile?.let { file ->
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Asset(file)
+                            )
+                            
+                            val progress by animateLottieCompositionAsState(
+                                composition = composition,
+                                iterations = LottieConstants.IterateForever,
+                                isPlaying = true,
+                                speed = 0.5f,
+                                restartOnPlay = true
+                            )
+                            
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { progress },
+                                modifier = Modifier
+                                    .matchParentSize() // Fills entire card
+                                    .alpha(animationAlpha)
+                            )
+                        }
+                    }
+                    
+                    // Profile content layer (top) - rendered above animation
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
@@ -899,6 +953,22 @@ fun ProfileScreen(
                         onClick = { showAvatarPicker = true }
                     )
                     
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    
+                    // Profile Animation (new feature)
+                    ProfileActionItem(
+                        icon = Icons.Default.Animation,
+                        title = "Profile Animation",
+                        subtitle = when (selectedAnimation) {
+                            "none" -> "None selected"
+                            "sakura" -> "Sakura Fall"
+                            "worldwide" -> "Worldwide"
+                            "cute_anime_girl" -> "Cute Anime Girl"
+                            else -> "None selected"
+                        },
+                        onClick = { showAnimationPicker = true }
+                    )
+                    
                     // Reset Avatar (show only if user has custom avatar set)
                     if (state.user?.customAvatar != null) {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1091,6 +1161,19 @@ fun ProfileScreen(
                 viewModel.updateDisplayName(newName) {
                     showSetNameDialog = false
                 }
+            }
+        )
+    }
+    
+    // Animation Picker Dialog
+    if (showAnimationPicker) {
+        AnimationPickerDialog(
+            currentSelection = selectedAnimation,
+            onDismiss = { showAnimationPicker = false },
+            onSelect = { animation ->
+                selectedAnimation = animation
+                prefs.edit().putString("profile_animation", animation).apply()
+                showAnimationPicker = false
             }
         )
     }
@@ -1323,6 +1406,145 @@ private fun SocialFeatureCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimationPickerDialog(
+    currentSelection: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Profile Animation",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Choose an animation overlay for your profile card",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                // None option
+                AnimationOption(
+                    title = "None",
+                    subtitle = "No animation",
+                    icon = Icons.Default.Close,
+                    isSelected = currentSelection == "none",
+                    onClick = { onSelect("none") }
+                )
+                
+                // Sakura Fall option
+                AnimationOption(
+                    title = "Sakura Fall",
+                    subtitle = "Falling cherry blossoms",
+                    icon = Icons.Default.FilterVintage,
+                    isSelected = currentSelection == "sakura",
+                    onClick = { onSelect("sakura") }
+                )
+                
+                // Worldwide option
+                AnimationOption(
+                    title = "Worldwide",
+                    subtitle = "Global connectivity",
+                    icon = Icons.Default.Public,
+                    isSelected = currentSelection == "worldwide",
+                    onClick = { onSelect("worldwide") }
+                )
+                
+                // Cute Anime Girl option
+                AnimationOption(
+                    title = "Cute Anime Girl",
+                    subtitle = "Animated character",
+                    icon = Icons.Default.EmojiEmotions,
+                    isSelected = currentSelection == "cute_anime_girl",
+                    onClick = { onSelect("cute_anime_girl") }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+@Composable
+private fun AnimationOption(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = if (isSelected) 
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary) 
+        else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
