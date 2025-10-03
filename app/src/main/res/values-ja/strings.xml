@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">習慣トラッカー</string>
+    
+    <!-- Common Actions -->
+    <string name="save">保存</string>
+    <string name="cancel">キャンセル</string>
+    <string name="delete">削除</string>
+    <string name="back">戻る</string>
+    <string name="close">閉じる</string>
+    <string name="dismiss">却下</string>
+    <string name="done">完了</string>
+    <string name="edit">編集</string>
+    <string name="reset">リセット</string>
+    <string name="confirm">確認</string>
+    
+    <!-- Home/Dashboard -->
+    <string name="home_title">あなたの習慣</string>
+    <string name="add_habit">習慣を追加</string>
+    <string name="details">詳細</string>
+    <string name="see_details">詳細を見る</string>
+    <string name="empty_state_title">完璧なルーティンを設計しましょう</string>
+    <string name="empty_state_message">毎日、毎週、毎月、または毎年のリマインダーを使用して最初の習慣を追加します。</string>
+    <string name="menu">メニュー</string>
+    
+    <!-- Habit Form -->
+    <string name="habit_name_label">習慣名</string>
+    <string name="habit_description_label">なぜこれが重要なのか？</string>
+    <string name="reminder_time_label">リマインダー時刻</string>
+    <string name="reminder_toggle_label">リマインダーを有効にする</string>
+    <string name="create_new_habit">新しい習慣を作成</string>
+    <string name="create_habit">習慣を作成</string>
+    <string name="notification_sound_label">通知音</string>
+    <string name="notification_sound_hint">サウンドを選択</string>
+    <string name="avatar_label">アバターを選択</string>
+    <string name="choose_emoji_label">絵文字を選択</string>
+    <string name="background_color_label">背景色</string>
+    <string name="loading_sounds">サウンドを読み込んでいます…</string>
+    <string name="preview">プレビュー</string>
+    <string name="selected">選択済み</string>
+    
+    <!-- Frequency -->
+    <string name="frequency_label">頻度</string>
+    <string name="frequency">頻度</string>
+    <string name="frequency_daily">毎日</string>
+    <string name="frequency_weekly">毎週</string>
+    <string name="frequency_monthly">毎月</string>
+    <string name="frequency_yearly">毎年</string>
+    <string name="daily">毎日</string>
+    <string name="weekly">毎週</string>
+    <string name="monthly">毎月</string>
+    <string name="yearly">毎年</string>
+    <string name="day_of_week_label">曜日</string>
+    <string name="day_of_month_label">日付</string>
+    <string name="month_of_year_label">月</string>
+    
+    <!-- Days of Week -->
+    <string name="monday">月曜日</string>
+    <string name="tuesday">火曜日</string>
+    <string name="wednesday">水曜日</string>
+    <string name="thursday">木曜日</string>
+    <string name="friday">金曜日</string>
+    <string name="saturday">土曜日</string>
+    <string name="sunday">日曜日</string>
+    
+    <!-- Habit Status -->
+    <string name="habit_completed_today">今日完了</string>
+    <string name="mark_as_done">完了にする</string>
+    <string name="mark_as_completed">完了にする</string>
+    <string name="completed_today">今日完了</string>
+    <string name="completed">完了</string>
+    <string name="completed_on">%1$sに完了</string>
+    <string name="reminder_off">リマインダー無効</string>
+    <string name="reminder_on">%1$sにリマインダー設定済み</string>
+    
+    <!-- Statistics -->
+    <string name="current_streak">現在の連続記録</string>
+    <string name="current_streak_days">現在の連続記録：%1$d日</string>
+    <string name="longest_streak">最長連続記録</string>
+    <string name="total_completions">合計完了数</string>
+    <string name="success_rate">成功率</string>
+    <string name="days">日</string>
+    <string name="times">回</string>
+    <string name="progress_overview">進捗概要</string>
+    <string name="statistics">統計</string>
+    <string name="total">合計</string>
+    <string name="habits">習慣</string>
+    <string name="active">アクティブ</string>
+    <string name="today">今日</string>
+    <string name="this_week">今週</string>
+    <string name="rate">率</string>
+    <string name="completion">完了</string>
+    
+    <!-- Calendar -->
+    <string name="calendar_view">カレンダー表示</string>
+    <string name="selected_date">選択した日付：%1$s</string>
+    <string name="calendar_helper_text">過去の任意の日付（作成前でも）をタップして表示します。上のボタンを使用して完了を埋めます。</string>
+    <string name="previous_month">前月</string>
+    <string name="next_month">翌月</string>
+    
+    <!-- Habit Details -->
+    <string name="habit_details">習慣の詳細</string>
+    <string name="reminder_time">リマインダー時刻</string>
+    <string name="created_on">作成日</string>
+    <string name="notification_sound">通知音</string>
+    
+    <!-- Notifications -->
+    <string name="notification_channel_name">習慣リマインダー</string>
+    <string name="notification_channel_description">習慣を継続するための適時の通知。</string>
+    <string name="notification_default_description">チェックインの時間</string>
+    <string name="notification_body">%1$s • %2$s</string>
+    <string name="notification_permission_rationale">選択した習慣についてリマインドするために通知を使用します。</string>
+    <string name="notification_permission_allow">通知を許可</string>
+    <string name="notification_permission_not_now">今はしない</string>
+    
+    <!-- Profile -->
+    <string name="profile">プロフィール</string>
+    <string name="profile_picture">プロフィール画像</string>
+    <string name="edit_name">名前を編集</string>
+    <string name="change_display_name">表示名を変更</string>
+    <string name="change_avatar">アバターを変更</string>
+    <string name="select_emoji_avatar">カスタム絵文字アバターを選択</string>
+    <string name="reset_avatar">アバターをリセット</string>
+    <string name="sign_out">サインアウト</string>
+    <string name="sign_out_confirmation">アカウントからサインアウト</string>
+    <string name="sign_out_message">本当にサインアウトしますか？習慣にアクセスするには再度サインインする必要があります。</string>
+    
+    <!-- Social Features -->
+    <string name="friends">友達</string>
+    <string name="leaderboard">リーダーボード</string>
+    <string name="search">検索</string>
+    <string name="find_friends">友達を探す</string>
+    <string name="view_list">リストを表示</string>
+    <string name="chats">チャット</string>
+    <string name="messages">メッセージ</string>
+    <string name="message">メッセージ</string>
+    <string name="leaderboard_score">リーダーボードスコア</string>
+    <string name="total_habits">合計習慣</string>
+    
+    <!-- Trash -->
+    <string name="trash">ゴミ箱</string>
+    <string name="restore">復元</string>
+    <string name="empty_trash">ゴミ箱を空にする</string>
+    <string name="empty_trash_confirmation">ゴミ箱を空にしますか？</string>
+    <string name="empty_trash_message">これによりゴミ箱内のすべての習慣が完全に削除されます。この操作は元に戻せません。</string>
+    <string name="delete_permanently">完全に削除しますか？</string>
+    <string name="delete_permanently_message">この習慣は完全に削除され、復元できません。よろしいですか？</string>
+    <string name="delete_forever">完全に削除</string>
+    
+    <!-- Settings -->
+    <string name="settings">設定</string>
+    <string name="check_updates">更新を確認</string>
+    <string name="open_guide">ガイドを開く</string>
+    <string name="view">表示</string>
+    
+    <!-- Auth -->
+    <string name="sign_in">サインイン</string>
+    <string name="google_sign_in">Googleでサインイン</string>
+</resources>

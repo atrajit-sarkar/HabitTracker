@@ -1,35 +1,60 @@
 <resources>
+    <!-- App Name -->
     <string name="app_name">Habit Tracker</string>
-    <string name="home_title">Your habits</string>
-    <string name="add_habit">Add habit</string>
+    
+    <!-- Common Actions -->
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="done">Done</string>
+    <string name="edit">Edit</string>
+    <string name="reset">Reset</string>
+    <string name="confirm">Confirm</string>
+    
+    <!-- Home/Dashboard -->
+    <string name="home_title">Your habits</string>
+    <string name="add_habit">Add habit</string>
+    <string name="details">Details</string>
+    <string name="see_details">See Details</string>
+    <string name="empty_state_title">Design your perfect routine</string>
+    <string name="empty_state_message">Add your first habit with custom scheduling - daily, weekly, monthly, or yearly reminders.</string>
+    <string name="menu">Menu</string>
+    
+    <!-- Habit Form -->
     <string name="habit_name_label">Habit name</string>
     <string name="habit_description_label">Why this matters?</string>
     <string name="reminder_time_label">Reminder time</string>
     <string name="reminder_toggle_label">Enable reminders</string>
-    <string name="habit_completed_today">Completed today</string>
-    <string name="mark_as_done">Mark as done</string>
-    <string name="reminder_off">Reminder disabled</string>
-    <string name="reminder_on">Reminder set for %1$s</string>
-    <string name="empty_state_title">Design your perfect routine</string>
-    <string name="empty_state_message">Add your first habit with custom scheduling - daily, weekly, monthly, or yearly reminders.</string>
-    <string name="notification_channel_name">Habit reminders</string>
-    <string name="notification_channel_description">Timely nudges to keep your habits on track.</string>
-    <string name="notification_default_description">Time to check-in</string>
-    <string name="notification_body">%1$s • %2$s</string>
-    <string name="notification_permission_rationale">We use notifications to remind you about habits you choose.</string>
-    <string name="notification_permission_allow">Allow notifications</string>
-    <string name="notification_permission_not_now">Not now</string>
-    <string name="delete">Delete</string>
+    <string name="create_new_habit">Create New Habit</string>
+    <string name="create_habit">Create Habit</string>
+    <string name="notification_sound_label">Notification Sound</string>
+    <string name="notification_sound_hint">Choose sound</string>
+    <string name="avatar_label">Choose Avatar</string>
+    <string name="choose_emoji_label">Pick an emoji</string>
+    <string name="background_color_label">Background color</string>
+    <string name="loading_sounds">Loading sounds…</string>
+    <string name="preview">Preview</string>
+    <string name="selected">Selected</string>
+    
+    <!-- Frequency -->
     <string name="frequency_label">Frequency</string>
+    <string name="frequency">Frequency</string>
     <string name="frequency_daily">Daily</string>
     <string name="frequency_weekly">Weekly</string>
     <string name="frequency_monthly">Monthly</string>
     <string name="frequency_yearly">Yearly</string>
+    <string name="daily">Daily</string>
+    <string name="weekly">Weekly</string>
+    <string name="monthly">Monthly</string>
+    <string name="yearly">Yearly</string>
     <string name="day_of_week_label">Day of Week</string>
     <string name="day_of_month_label">Day of Month</string>
     <string name="month_of_year_label">Month</string>
+    
+    <!-- Days of Week -->
     <string name="monday">Monday</string>
     <string name="tuesday">Tuesday</string>
     <string name="wednesday">Wednesday</string>
@@ -37,18 +62,18 @@
     <string name="friday">Friday</string>
     <string name="saturday">Saturday</string>
     <string name="sunday">Sunday</string>
-    <string name="notification_sound_label">Notification Sound</string>
-    <string name="notification_sound_hint">Choose sound</string>
-    <string name="avatar_label">Choose Avatar</string>
-    <string name="choose_emoji_label">Pick an emoji</string>
-    <string name="background_color_label">Background color</string>
-    <string name="create_new_habit">Create New Habit</string>
-    <string name="create_habit">Create Habit</string>
-    <string name="back">Back</string>
-    <string name="details">Details</string>
-    <string name="see_details">See Details</string>
+    
+    <!-- Habit Status -->
+    <string name="habit_completed_today">Completed today</string>
+    <string name="mark_as_done">Mark as done</string>
     <string name="mark_as_completed">Mark as Completed</string>
     <string name="completed_today">Completed Today</string>
+    <string name="completed">completed</string>
+    <string name="completed_on">Completed on %1$s</string>
+    <string name="reminder_off">Reminder disabled</string>
+    <string name="reminder_on">Reminder set for %1$s</string>
+    
+    <!-- Statistics -->
     <string name="current_streak">Current Streak</string>
     <string name="current_streak_days">Current streak: %1$d days</string>
     <string name="longest_streak">Longest Streak</string>
@@ -56,22 +81,79 @@
     <string name="success_rate">Success Rate</string>
     <string name="days">days</string>
     <string name="times">times</string>
-    <string name="completed">completed</string>
     <string name="progress_overview">Progress Overview</string>
+    <string name="statistics">Statistics</string>
+    <string name="total">Total</string>
+    <string name="habits">Habits</string>
+    <string name="active">Active</string>
+    <string name="today">Today</string>
+    <string name="this_week">This Week</string>
+    <string name="rate">Rate</string>
+    <string name="completion">Completion</string>
+    
+    <!-- Calendar -->
     <string name="calendar_view">Calendar View</string>
     <string name="selected_date">Selected date: %1$s</string>
-    <string name="completed_on">Completed on %1$s</string>
     <string name="calendar_helper_text">Tap any previous date (even before creation) to view it. Use the button above to backfill completion.</string>
+    <string name="previous_month">Previous Month</string>
+    <string name="next_month">Next Month</string>
+    
+    <!-- Habit Details -->
     <string name="habit_details">Habit Details</string>
-    <string name="frequency">Frequency</string>
-    <string name="daily">Daily</string>
-    <string name="weekly">Weekly</string>
-    <string name="monthly">Monthly</string>
-    <string name="yearly">Yearly</string>
     <string name="reminder_time">Reminder Time</string>
     <string name="created_on">Created On</string>
     <string name="notification_sound">Notification Sound</string>
-    <string name="previous_month">Previous Month</string>
-    <string name="next_month">Next Month</string>
-    <string name="dismiss">Dismiss</string>
+    
+    <!-- Notifications -->
+    <string name="notification_channel_name">Habit reminders</string>
+    <string name="notification_channel_description">Timely nudges to keep your habits on track.</string>
+    <string name="notification_default_description">Time to check-in</string>
+    <string name="notification_body">%1$s • %2$s</string>
+    <string name="notification_permission_rationale">We use notifications to remind you about habits you choose.</string>
+    <string name="notification_permission_allow">Allow notifications</string>
+    <string name="notification_permission_not_now">Not now</string>
+    
+    <!-- Profile -->
+    <string name="profile">Profile</string>
+    <string name="profile_picture">Profile picture</string>
+    <string name="edit_name">Edit Name</string>
+    <string name="change_display_name">Change your display name</string>
+    <string name="change_avatar">Change Avatar</string>
+    <string name="select_emoji_avatar">Select a custom emoji avatar</string>
+    <string name="reset_avatar">Reset Avatar</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="sign_out_confirmation">Sign out of your account</string>
+    <string name="sign_out_message">Are you sure you want to sign out? You\'ll need to sign in again to access your habits.</string>
+    
+    <!-- Social Features -->
+    <string name="friends">Friends</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="search">Search</string>
+    <string name="find_friends">Find friends</string>
+    <string name="view_list">View list</string>
+    <string name="chats">Chats</string>
+    <string name="messages">Messages</string>
+    <string name="message">Message</string>
+    <string name="leaderboard_score">Leaderboard Score</string>
+    <string name="total_habits">Total Habits</string>
+    
+    <!-- Trash -->
+    <string name="trash">Trash</string>
+    <string name="restore">Restore</string>
+    <string name="empty_trash">Empty Trash</string>
+    <string name="empty_trash_confirmation">Empty Trash?</string>
+    <string name="empty_trash_message">This will permanently delete all habits in trash. This action cannot be undone.</string>
+    <string name="delete_permanently">Delete Permanently?</string>
+    <string name="delete_permanently_message">This habit will be permanently deleted and cannot be recovered. Are you sure?</string>
+    <string name="delete_forever">Delete Forever</string>
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="check_updates">Check Updates</string>
+    <string name="open_guide">Open Guide</string>
+    <string name="view">View</string>
+    
+    <!-- Auth -->
+    <string name="sign_in">Sign In</string>
+    <string name="google_sign_in">Sign in with Google</string>
 </resources>

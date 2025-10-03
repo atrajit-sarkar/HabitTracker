@@ -96,7 +96,7 @@ class ProfileStatsUpdater @Inject constructor(
         Log.d(TAG, "updateUserStats (legacy): Profile updated in Firestore")
     }
 
-    private fun calculateStats(habits: List<Habit>): UserStats {
+    private suspend fun calculateStats(habits: List<Habit>): UserStats {
         val activeHabits = habits.filter { !it.isDeleted }
         val totalHabits = activeHabits.size
         val today = LocalDate.now()
@@ -135,7 +135,7 @@ class ProfileStatsUpdater @Inject constructor(
         )
     }
 
-    private fun calculateCurrentStreak(habits: List<Habit>, today: LocalDate): Int {
+    private suspend fun calculateCurrentStreak(habits: List<Habit>, today: LocalDate): Int {
         if (habits.isEmpty()) return 0
         
         // Find the longest current streak among all habits
@@ -151,17 +151,51 @@ class ProfileStatsUpdater @Inject constructor(
         return maxStreak
     }
 
-    private fun calculateHabitStreak(habit: Habit, today: LocalDate): Int {
-        val lastCompleted = habit.lastCompletedDate ?: return 0
-        
-        // Simple streak calculation
-        val daysSinceLastCompleted = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today).toInt()
-        
-        return when {
-            daysSinceLastCompleted == 0 -> 1  // Completed today
-            daysSinceLastCompleted == 1 -> 2  // Completed yesterday (simplified)
-            else -> 0  // Streak broken
+    private suspend fun calculateHabitStreak(habit: Habit, today: LocalDate): Int {
+        // Fetch the completion history for this habit
+        val completions = try {
+            habitRepository.getHabitCompletions(habit.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "calculateHabitStreak: Error fetching completions for habit ${habit.id}", e)
+            return 0
         }
+        
+        if (completions.isEmpty()) return 0
+        
+        val completedDates = completions.map { it.completedDate }.toSet()
+        val yesterday = today.minusDays(1)
+        
+        // Check if there's a recent completion (today or yesterday)
+        val hasRecentCompletion = today in completedDates || yesterday in completedDates
+        
+        if (!hasRecentCompletion) {
+            // No recent completion - apply penalty system
+            // Find the most recent completion
+            val mostRecent = completedDates.max()
+            val daysSinceLastCompletion = java.time.temporal.ChronoUnit.DAYS.between(mostRecent, today).toInt()
+            
+            // Calculate what the streak would have been
+            var consecutiveStreak = 1
+            var cursor = mostRecent.minusDays(1)
+            while (cursor in completedDates) {
+                consecutiveStreak++
+                cursor = cursor.minusDays(1)
+            }
+            
+            // Apply penalty: -1 for each missed day, but don't go below 0
+            val penalty = daysSinceLastCompletion - 1 // -1 because first day after is acceptable
+            return maxOf(0, consecutiveStreak - penalty)
+        }
+        
+        // Has recent completion - calculate normal streak from most recent date
+        val startDate = if (today in completedDates) today else yesterday
+        var streak = 1
+        var cursor = startDate.minusDays(1)
+        while (cursor in completedDates) {
+            streak++
+            cursor = cursor.minusDays(1)
+        }
+        return streak
     }
 
     private data class UserStats(

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">आदत ट्रैकर</string>
+    
+    <!-- Common Actions -->
+    <string name="save">सहेजें</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="delete">हटाएं</string>
+    <string name="back">वापस</string>
+    <string name="close">बंद करें</string>
+    <string name="dismiss">खारिज करें</string>
+    <string name="done">पूर्ण</string>
+    <string name="edit">संपादित करें</string>
+    <string name="reset">रीसेट करें</string>
+    <string name="confirm">पुष्टि करें</string>
+    
+    <!-- Home/Dashboard -->
+    <string name="home_title">आपकी आदतें</string>
+    <string name="add_habit">आदत जोड़ें</string>
+    <string name="details">विवरण</string>
+    <string name="see_details">विवरण देखें</string>
+    <string name="empty_state_title">अपनी सटीक दिनचर्या डिजाइन करें</string>
+    <string name="empty_state_message">दैनिक, साप्ताहिक, मासिक या वार्षिक रिमाइंडर के साथ अपनी पहली आदत जोड़ें।</string>
+    <string name="menu">मेनू</string>
+    
+    <!-- Habit Form -->
+    <string name="habit_name_label">आदत का नाम</string>
+    <string name="habit_description_label">यह क्यों महत्वपूर्ण है?</string>
+    <string name="reminder_time_label">रिमाइंडर का समय</string>
+    <string name="reminder_toggle_label">रिमाइंडर सक्षम करें</string>
+    <string name="create_new_habit">नई आदत बनाएं</string>
+    <string name="create_habit">आदत बनाएं</string>
+    <string name="notification_sound_label">सूचना ध्वनि</string>
+    <string name="notification_sound_hint">ध्वनि चुनें</string>
+    <string name="avatar_label">अवतार चुनें</string>
+    <string name="choose_emoji_label">एक इमोजी चुनें</string>
+    <string name="background_color_label">पृष्ठभूमि रंग</string>
+    <string name="loading_sounds">ध्वनि लोड हो रही है…</string>
+    <string name="preview">पूर्वावलोकन</string>
+    <string name="selected">चयनित</string>
+    
+    <!-- Frequency -->
+    <string name="frequency_label">आवृत्ति</string>
+    <string name="frequency">आवृत्ति</string>
+    <string name="frequency_daily">दैनिक</string>
+    <string name="frequency_weekly">साप्ताहिक</string>
+    <string name="frequency_monthly">मासिक</string>
+    <string name="frequency_yearly">वार्षिक</string>
+    <string name="daily">दैनिक</string>
+    <string name="weekly">साप्ताहिक</string>
+    <string name="monthly">मासिक</string>
+    <string name="yearly">वार्षिक</string>
+    <string name="day_of_week_label">सप्ताह का दिन</string>
+    <string name="day_of_month_label">महीने का दिन</string>
+    <string name="month_of_year_label">महीना</string>
+    
+    <!-- Days of Week -->
+    <string name="monday">सोमवार</string>
+    <string name="tuesday">मंगलवार</string>
+    <string name="wednesday">बुधवार</string>
+    <string name="thursday">गुरुवार</string>
+    <string name="friday">शुक्रवार</string>
+    <string name="saturday">शनिवार</string>
+    <string name="sunday">रविवार</string>
+    
+    <!-- Habit Status -->
+    <string name="habit_completed_today">आज पूर्ण हुआ</string>
+    <string name="mark_as_done">पूर्ण के रूप में चिह्नित करें</string>
+    <string name="mark_as_completed">पूर्ण के रूप में चिह्नित करें</string>
+    <string name="completed_today">आज पूर्ण</string>
+    <string name="completed">पूर्ण</string>
+    <string name="completed_on">%1$s को पूर्ण</string>
+    <string name="reminder_off">रिमाइंडर अक्षम</string>
+    <string name="reminder_on">%1$s के लिए रिमाइंडर सेट किया गया</string>
+    
+    <!-- Statistics -->
+    <string name="current_streak">वर्तमान लकीर</string>
+    <string name="current_streak_days">वर्तमान लकीर: %1$d दिन</string>
+    <string name="longest_streak">सबसे लंबी लकीर</string>
+    <string name="total_completions">कुल पूर्णताएं</string>
+    <string name="success_rate">सफलता दर</string>
+    <string name="days">दिन</string>
+    <string name="times">बार</string>
+    <string name="progress_overview">प्रगति अवलोकन</string>
+    <string name="statistics">आंकड़े</string>
+    <string name="total">कुल</string>
+    <string name="habits">आदतें</string>
+    <string name="active">सक्रिय</string>
+    <string name="today">आज</string>
+    <string name="this_week">इस सप्ताह</string>
+    <string name="rate">दर</string>
+    <string name="completion">पूर्णता</string>
+    
+    <!-- Calendar -->
+    <string name="calendar_view">कैलेंडर दृश्य</string>
+    <string name="selected_date">चयनित तारीख: %1$s</string>
+    <string name="calendar_helper_text">इसे देखने के लिए किसी भी पिछली तारीख पर (यहां तक कि निर्माण से पहले भी) टैप करें। पूर्णता भरने के लिए ऊपर बटन का उपयोग करें।</string>
+    <string name="previous_month">पिछला महीना</string>
+    <string name="next_month">अगला महीना</string>
+    
+    <!-- Habit Details -->
+    <string name="habit_details">आदत विवरण</string>
+    <string name="reminder_time">रिमाइंडर समय</string>
+    <string name="created_on">निर्मित</string>
+    <string name="notification_sound">सूचना ध्वनि</string>
+    
+    <!-- Notifications -->
+    <string name="notification_channel_name">आदत रिमाइंडर</string>
+    <string name="notification_channel_description">आपकी आदतों को ट्रैक पर रखने के लिए समय पर संकेत।</string>
+    <string name="notification_default_description">चेक-इन करने का समय</string>
+    <string name="notification_body">%1$s • %2$s</string>
+    <string name="notification_permission_rationale">हम आपकी चुनी हुई आदतों के बारे में आपको याद दिलाने के लिए सूचनाओं का उपयोग करते हैं।</string>
+    <string name="notification_permission_allow">सूचनाओं की अनुमति दें</string>
+    <string name="notification_permission_not_now">अभी नहीं</string>
+    
+    <!-- Profile -->
+    <string name="profile">प्रोफ़ाइल</string>
+    <string name="profile_picture">प्रोफ़ाइल चित्र</string>
+    <string name="edit_name">नाम संपादित करें</string>
+    <string name="change_display_name">अपना प्रदर्शन नाम बदलें</string>
+    <string name="change_avatar">अवतार बदलें</string>
+    <string name="select_emoji_avatar">एक कस्टम इमोजी अवतार चुनें</string>
+    <string name="reset_avatar">अवतार रीसेट करें</string>
+    <string name="sign_out">साइन आउट</string>
+    <string name="sign_out_confirmation">अपने खाते से साइन आउट करें</string>
+    <string name="sign_out_message">क्या आप वाकई साइन आउट करना चाहते हैं? आपको अपनी आदतों तक पहुंचने के लिए फिर से साइन इन करना होगा।</string>
+    
+    <!-- Social Features -->
+    <string name="friends">मित्र</string>
+    <string name="leaderboard">लीडरबोर्ड</string>
+    <string name="search">खोजें</string>
+    <string name="find_friends">मित्र खोजें</string>
+    <string name="view_list">सूची देखें</string>
+    <string name="chats">चैट</string>
+    <string name="messages">संदेश</string>
+    <string name="message">संदेश</string>
+    <string name="leaderboard_score">लीडरबोर्ड स्कोर</string>
+    <string name="total_habits">कुल आदतें</string>
+    
+    <!-- Trash -->
+    <string name="trash">कचरा</string>
+    <string name="restore">पुनर्स्थापित करें</string>
+    <string name="empty_trash">कचरा खाली करें</string>
+    <string name="empty_trash_confirmation">कचरा खाली करें?</string>
+    <string name="empty_trash_message">यह कचरे में मौजूद सभी आदतों को स्थायी रूप से हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता।</string>
+    <string name="delete_permanently">स्थायी रूप से हटाएं?</string>
+    <string name="delete_permanently_message">यह आदत स्थायी रूप से हटा दी जाएगी और पुनर्प्राप्त नहीं की जा सकती। क्या आप निश्चित हैं?</string>
+    <string name="delete_forever">हमेशा के लिए हटाएं</string>
+    
+    <!-- Settings -->
+    <string name="settings">सेटिंग्स</string>
+    <string name="check_updates">अपडेट जांचें</string>
+    <string name="open_guide">गाइड खोलें</string>
+    <string name="view">देखें</string>
+    
+    <!-- Auth -->
+    <string name="sign_in">साइन इन</string>
+    <string name="google_sign_in">Google के साथ साइन इन करें</string>
+</resources>
