@@ -3,7 +3,7 @@ package com.example.habittracker.util
 import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
-import androidx.appcompat.app.AppCompatDelegate
+import android.os.Build
 import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
@@ -22,14 +22,36 @@ object LanguageManager {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_LANGUAGE, language.code).apply()
         
-        // Apply language using AppCompatDelegate for instant change
-        val localeList = LocaleListCompat.forLanguageTags(language.code)
-        AppCompatDelegate.setApplicationLocales(localeList)
+        // Apply locale change
+        setLocale(context, language.code)
         
         // Force activity recreation for immediate effect
         if (context is Activity) {
             context.recreate()
         }
+    }
+    
+    private fun setLocale(context: Context, languageCode: String) {
+        val locale = Locale(languageCode)
+        Locale.setDefault(locale)
+        
+        val resources = context.resources
+        val configuration = Configuration(resources.configuration)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            configuration.setLocale(locale)
+            configuration.setLocales(android.os.LocaleList(locale))
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale = locale
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.createConfigurationContext(configuration)
+        }
+        
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(configuration, resources.displayMetrics)
     }
     
     fun getCurrentLanguage(context: Context): Language {
@@ -44,8 +66,7 @@ object LanguageManager {
     
     fun applyLanguage(context: Context) {
         val language = getCurrentLanguage(context)
-        val localeList = LocaleListCompat.forLanguageTags(language.code)
-        AppCompatDelegate.setApplicationLocales(localeList)
+        setLocale(context, language.code)
     }
     
     fun isRTL(language: Language): Boolean {

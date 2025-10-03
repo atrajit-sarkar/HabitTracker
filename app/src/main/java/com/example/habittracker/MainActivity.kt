@@ -1,5 +1,8 @@
 package com.example.habittracker
 
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -23,6 +26,7 @@ import com.example.habittracker.update.UpdateResultDialog
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,6 +40,33 @@ class MainActivity : ComponentActivity() {
     
     private var hasCheckedBatteryOptimization = false
     private lateinit var updateManager: UpdateManager
+    
+    override fun attachBaseContext(newBase: Context) {
+        // Apply saved language before attaching context
+        val prefs = newBase.getSharedPreferences("language_prefs", Context.MODE_PRIVATE)
+        val languageCode = prefs.getString("selected_language", "en") ?: "en"
+        
+        val locale = Locale(languageCode)
+        Locale.setDefault(locale)
+        
+        val configuration = Configuration(newBase.resources.configuration)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            configuration.setLocale(locale)
+            configuration.setLocales(android.os.LocaleList(locale))
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale = locale
+        }
+        
+        val context = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            newBase.createConfigurationContext(configuration)
+        } else {
+            newBase.resources.updateConfiguration(configuration, newBase.resources.displayMetrics)
+            newBase
+        }
+        
+        super.attachBaseContext(context)
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
