@@ -390,6 +390,7 @@ fun ProfileScreen(
                             "sakura" -> "sakura_fall.json"
                             "worldwide" -> "worldwide.json"
                             "cute_anime_girl" -> "cute_anime_girl.json"
+                            "fireblast" -> "fireblast.json"
                             else -> null
                         }
                         
@@ -408,7 +409,7 @@ fun ProfileScreen(
                                 composition = composition,
                                 iterations = LottieConstants.IterateForever,
                                 isPlaying = true,
-                                speed = 0.5f,
+                                speed = 1f, // Normal speed for smoother playback
                                 restartOnPlay = true
                             )
                             
@@ -964,6 +965,7 @@ fun ProfileScreen(
                             "sakura" -> "Sakura Fall"
                             "worldwide" -> "Worldwide"
                             "cute_anime_girl" -> "Cute Anime Girl"
+                            "fireblast" -> "Fireblast"
                             else -> "None selected"
                         },
                         onClick = { showAnimationPicker = true }
@@ -1471,6 +1473,15 @@ private fun AnimationPickerDialog(
                     icon = Icons.Default.EmojiEmotions,
                     isSelected = currentSelection == "cute_anime_girl",
                     onClick = { onSelect("cute_anime_girl") }
+                )
+                
+                // Fireblast option
+                AnimationOption(
+                    title = "Fireblast",
+                    subtitle = "Blazing fire effect",
+                    icon = Icons.Default.Whatshot,
+                    isSelected = currentSelection == "fireblast",
+                    onClick = { onSelect("fireblast") }
                 )
             }
         },
