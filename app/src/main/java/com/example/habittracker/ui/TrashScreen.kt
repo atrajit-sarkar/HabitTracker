@@ -50,6 +50,7 @@ fun TrashScreen(
     var showPermanentDeleteDialog by remember { mutableStateOf<Long?>(null) }
     var isEmptyingTrash by remember { mutableStateOf(false) }
     var isDeletingHabit by remember { mutableStateOf(false) }
+    var isRestoringHabit by remember { mutableStateOf(false) }
     val habitCountBeforeDelete = remember { mutableStateOf(deletedHabits.size) }
 
     Scaffold(
@@ -150,7 +151,11 @@ fun TrashScreen(
                 items(deletedHabits, key = { it.id }) { habit ->
                     DeletedHabitCard(
                         habit = habit,
-                        onRestore = { onRestoreHabit(habit.id) },
+                        onRestore = { 
+                            habitCountBeforeDelete.value = deletedHabits.size
+                            isRestoringHabit = true
+                            onRestoreHabit(habit.id) 
+                        },
                         onPermanentlyDelete = { showPermanentDeleteDialog = habit.id }
                     )
                 }
@@ -199,6 +204,11 @@ fun TrashScreen(
         LoadingSandClockOverlay()
     }
     
+    // Loading overlay for restore operation
+    if (isRestoringHabit) {
+        LoadingSandClockOverlay()
+    }
+    
     // Auto-dismiss logic
     LaunchedEffect(deletedHabits.size) {
         // For empty trash: wait until ALL habits are deleted (size becomes 0)
@@ -208,6 +218,10 @@ fun TrashScreen(
         // For single delete: dismiss when count decreases
         if (isDeletingHabit && deletedHabits.size < habitCountBeforeDelete.value) {
             isDeletingHabit = false
+        }
+        // For restore: dismiss when count decreases (habit moved from trash)
+        if (isRestoringHabit && deletedHabits.size < habitCountBeforeDelete.value) {
+            isRestoringHabit = false
         }
     }
 }
