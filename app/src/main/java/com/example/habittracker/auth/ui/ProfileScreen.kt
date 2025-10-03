@@ -41,9 +41,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.habittracker.R
 import com.example.habittracker.ui.HabitViewModel
 import kotlin.math.cos
 import kotlin.math.sin
@@ -267,7 +269,8 @@ fun ProfileScreen(
     onFriendsListClick: () -> Unit = {},
     onLeaderboardClick: () -> Unit = {},
     onNotificationGuideClick: () -> Unit = {},
-    onCheckForUpdates: () -> Unit = {}
+    onCheckForUpdates: () -> Unit = {},
+    onLanguageSelectorClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -322,12 +325,12 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.profile), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -654,17 +657,17 @@ fun ProfileScreen(
 
             // Account Section
             Text(
-                text = "Account Settings",
+                text = stringResource(R.string.account_settings),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
             )
 
-            // Notification Setup Guide Card - Highlighted
+            // Notification Setup Guide Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .shadow(4.dp, RoundedCornerShape(16.dp))
                     .clickableOnce { onNotificationGuideClick() },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -706,13 +709,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Notification Setup Guide",
+                                text = stringResource(R.string.notification_setup_guide),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "Ensure reliable reminders",
+                                text = stringResource(R.string.notification_setup_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                             )
@@ -727,9 +730,9 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
-            // Check for Updates Card - App Settings
+            // Check for Updates Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -775,13 +778,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Check for Updates",
+                                text = stringResource(R.string.check_for_updates),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = "Get the latest features",
+                                text = stringResource(R.string.updates_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                             )
@@ -791,6 +794,75 @@ fun ProfileScreen(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Check Updates",
                         tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Language Selector Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(16.dp))
+                    .clickableOnce { onLanguageSelectorClick() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                )
+                            )
+                        )
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = stringResource(R.string.language),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = stringResource(R.string.language_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Select Language",
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -812,8 +884,8 @@ fun ProfileScreen(
                     // Edit Name (all users)
                     ProfileActionItem(
                         icon = Icons.Default.Edit,
-                        title = "Edit Name",
-                        subtitle = "Change your display name",
+                        title = stringResource(R.string.edit_name),
+                        subtitle = stringResource(R.string.edit_name_subtitle),
                         onClick = { showEditNameDialog = true }
                     )
                     
@@ -822,8 +894,8 @@ fun ProfileScreen(
                     // Change Avatar (all users)
                     ProfileActionItem(
                         icon = Icons.Default.Face,
-                        title = "Change Avatar",
-                        subtitle = "Select a custom emoji avatar",
+                        title = stringResource(R.string.change_avatar),
+                        subtitle = stringResource(R.string.change_avatar_subtitle),
                         onClick = { showAvatarPicker = true }
                     )
                     
@@ -832,11 +904,11 @@ fun ProfileScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         ProfileActionItem(
                             icon = Icons.Default.Refresh,
-                            title = "Reset Avatar",
+                            title = stringResource(R.string.reset_avatar),
                             subtitle = if (state.user?.photoUrl != null) 
-                                "Return to Google profile picture" 
+                                stringResource(R.string.reset_avatar_to_google)
                             else 
-                                "Return to default emoji",
+                                stringResource(R.string.reset_avatar_to_default),
                             onClick = { showResetAvatarDialog = true },
                             iconTint = MaterialTheme.colorScheme.secondary,
                             titleColor = MaterialTheme.colorScheme.secondary
@@ -848,8 +920,8 @@ fun ProfileScreen(
                     // Sign Out
                     ProfileActionItem(
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        title = "Sign Out",
-                        subtitle = "Sign out of your account",
+                        title = stringResource(R.string.sign_out),
+                        subtitle = stringResource(R.string.sign_out_subtitle),
                         onClick = { showSignOutDialog = true },
                         iconTint = MaterialTheme.colorScheme.error,
                         titleColor = MaterialTheme.colorScheme.error

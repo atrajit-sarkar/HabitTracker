@@ -120,7 +120,9 @@
     
     <!-- Profile & Auth -->
     <string name="profile">Profile</string>
+    <string name="account_settings">Account Settings</string>
     <string name="sign_out">Sign Out</string>
+    <string name="sign_out_subtitle">Sign out of your account</string>
     <string name="sign_out_confirm">Are you sure you want to sign out? You\'ll need to sign in again to access your habits.</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
@@ -128,8 +130,17 @@
     <string name="display_name">Display Name</string>
     <string name="enter_your_name">Enter your name</string>
     <string name="edit_name">Edit Name</string>
+    <string name="edit_name_subtitle">Change your display name</string>
+    <string name="change_avatar">Change Avatar</string>
+    <string name="change_avatar_subtitle">Select a custom emoji avatar</string>
     <string name="reset">Reset</string>
     <string name="reset_avatar">Reset Avatar</string>
+    <string name="reset_avatar_to_google">Return to Google profile picture</string>
+    <string name="reset_avatar_to_default">Return to default emoji</string>
+    <string name="notification_setup_subtitle">Ensure reliable reminders</string>
+    <string name="check_for_updates">Check for Updates</string>
+    <string name="updates_subtitle">Get the latest features</string>
+    <string name="language_subtitle">Change app language</string>
     
     <!-- Social Features -->
     <string name="friends">Friends</string>

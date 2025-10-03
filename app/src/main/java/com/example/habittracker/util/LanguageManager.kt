@@ -13,8 +13,7 @@ import javax.inject.Singleton
 /**
  * Manages app language selection and locale configuration
  */
-@Singleton
-class LanguageManager @Inject constructor(
+class LanguageManager(
     private val context: Context
 ) {
     companion object {

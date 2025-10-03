@@ -15,8 +15,8 @@ class HabitTrackerApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
     
-    @Inject
-    lateinit var languageManager: LanguageManager
+    // Manually instantiate LanguageManager instead of injecting
+    private val languageManager by lazy { LanguageManager(applicationContext) }
 
     override fun onCreate() {
         super.onCreate()

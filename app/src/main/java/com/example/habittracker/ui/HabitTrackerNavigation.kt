@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -278,7 +279,10 @@ fun HabitTrackerNavigation(
                 onFriendsListClick = onFriendsListClick,
                 onLeaderboardClick = onLeaderboardClick,
                 onNotificationGuideClick = onNotificationGuideClick,
-                onCheckForUpdates = onCheckForUpdates
+                onCheckForUpdates = onCheckForUpdates,
+                onLanguageSelectorClick = {
+                    navController.navigate("language_selector")
+                }
             )
         }
         
@@ -432,6 +436,27 @@ fun HabitTrackerNavigation(
                 friendAvatar = friendAvatar,
                 friendPhotoUrl = friendPhotoUrl,
                 onBackClick = onBackClick
+            )
+        }
+
+        // Language Selector Screen
+        composable("language_selector") {
+            val context = LocalContext.current
+            val languageManager = remember {
+                com.example.habittracker.util.LanguageManager(context.applicationContext)
+            }
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            com.example.habittracker.ui.settings.LanguageSelectorScreen(
+                languageManager = languageManager,
+                onBackClick = onBackClick,
+                onLanguageChanged = { _ ->
+                    // Language changed, UI will update automatically
+                    // due to recomposition with new locale
+                }
             )
         }
     }
