@@ -240,6 +240,8 @@ fun HabitHomeScreen(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var isDeletingHabit by remember { mutableStateOf(false) }
+    val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -372,7 +374,11 @@ fun HabitHomeScreen(
                     habit = habit,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
                     onMarkCompleted = { onMarkHabitCompleted(habit.id) },
-                    onDelete = { onDeleteHabit(habit.id) },
+                    onDelete = { 
+                        habitCountBeforeDelete.value = state.habits.size
+                        isDeletingHabit = true
+                        onDeleteHabit(habit.id)
+                    },
                     onSeeDetails = { onHabitDetailsClick(habit.id) }
                 )
             }
@@ -382,6 +388,18 @@ fun HabitHomeScreen(
             }
         }
     }
+    }
+    
+    // Global loading overlay for delete operations
+    if (isDeletingHabit) {
+        LoadingSandClockOverlay()
+    }
+    
+    // Auto-dismiss when habit count changes (deletion completed)
+    LaunchedEffect(state.habits.size) {
+        if (isDeletingHabit && state.habits.size < habitCountBeforeDelete.value) {
+            isDeletingHabit = false
+        }
     }
 }
 
@@ -641,6 +659,7 @@ private fun HabitCard(
     var isDescriptionTruncated by remember { mutableStateOf(false) }
     var showCompletionAnimation by remember { mutableStateOf(false) }
     var showFanfareAnimation by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
     
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
@@ -1194,7 +1213,23 @@ private fun AddHabitSheet(
                 enabled = !state.isSaving && state.title.isNotBlank() 
             ) {
                 if (state.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                    val composition by rememberLottieComposition(
+                        LottieCompositionSpec.Asset("loading_sand_clock.json")
+                    )
+                    
+                    val progress by animateLottieCompositionAsState(
+                        composition = composition,
+                        iterations = LottieConstants.IterateForever,
+                        isPlaying = true,
+                        speed = 1f,
+                        restartOnPlay = true
+                    )
+                    
+                    LottieAnimation(
+                        composition = composition,
+                        progress = { progress },
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Text(text = stringResource(id = R.string.save))
                 }
@@ -1859,3 +1894,31 @@ data class AddHabitState(
     val isSaving: Boolean = false
 )
 */
+
+@Composable
+private fun LoadingSandClockOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f)), // Dimmed background
+        contentAlignment = Alignment.Center
+    ) {
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("loading_sand_clock.json")
+        )
+        
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = true,
+            speed = 1f,
+            restartOnPlay = true
+        )
+        
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(120.dp) // Professional size
+        )
+    }
+}

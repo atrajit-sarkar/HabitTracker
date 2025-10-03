@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
+import com.airbnb.lottie.compose.*
 import com.example.habittracker.R
 import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
@@ -47,6 +48,9 @@ fun TrashScreen(
 ) {
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
     var showPermanentDeleteDialog by remember { mutableStateOf<Long?>(null) }
+    var isEmptyingTrash by remember { mutableStateOf(false) }
+    var isDeletingHabit by remember { mutableStateOf(false) }
+    val habitCountBeforeDelete = remember { mutableStateOf(deletedHabits.size) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -163,8 +167,10 @@ fun TrashScreen(
     if (showEmptyTrashDialog) {
         EmptyTrashConfirmationDialog(
             onConfirm = {
-                onEmptyTrash()
                 showEmptyTrashDialog = false
+                habitCountBeforeDelete.value = deletedHabits.size
+                isEmptyingTrash = true
+                onEmptyTrash()
             },
             onDismiss = { showEmptyTrashDialog = false }
         )
@@ -174,11 +180,35 @@ fun TrashScreen(
     showPermanentDeleteDialog?.let { habitId ->
         PermanentDeleteConfirmationDialog(
             onConfirm = {
-                onPermanentlyDeleteHabit(habitId)
                 showPermanentDeleteDialog = null
+                habitCountBeforeDelete.value = deletedHabits.size
+                isDeletingHabit = true
+                onPermanentlyDeleteHabit(habitId)
             },
             onDismiss = { showPermanentDeleteDialog = null }
         )
+    }
+    
+    // Loading overlay for empty trash operation
+    if (isEmptyingTrash) {
+        LoadingSandClockOverlay()
+    }
+    
+    // Loading overlay for permanent delete operation
+    if (isDeletingHabit) {
+        LoadingSandClockOverlay()
+    }
+    
+    // Auto-dismiss logic
+    LaunchedEffect(deletedHabits.size) {
+        // For empty trash: wait until ALL habits are deleted (size becomes 0)
+        if (isEmptyingTrash && deletedHabits.isEmpty()) {
+            isEmptyingTrash = false
+        }
+        // For single delete: dismiss when count decreases
+        if (isDeletingHabit && deletedHabits.size < habitCountBeforeDelete.value) {
+            isDeletingHabit = false
+        }
     }
 }
 
@@ -477,4 +507,31 @@ private fun PermanentDeleteConfirmationDialog(
     )
 }
 
+@Composable
+private fun LoadingSandClockOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f)), // Dimmed background
+        contentAlignment = Alignment.Center
+    ) {
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("loading_sand_clock.json")
+        )
+        
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = true,
+            speed = 1f,
+            restartOnPlay = true
+        )
+        
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(120.dp) // Professional size
+        )
+    }
+}
 

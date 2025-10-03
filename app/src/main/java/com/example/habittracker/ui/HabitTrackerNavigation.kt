@@ -1,15 +1,19 @@
 package com.example.habittracker.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import com.airbnb.lottie.compose.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -511,10 +515,28 @@ fun HabitDetailsRoute(
 
     if (isLoading) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator()
+            val composition by rememberLottieComposition(
+                LottieCompositionSpec.Asset("loading_sand_clock.json")
+            )
+            
+            val progress by animateLottieCompositionAsState(
+                composition = composition,
+                iterations = LottieConstants.IterateForever,
+                isPlaying = true,
+                speed = 1f,
+                restartOnPlay = true
+            )
+            
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                modifier = Modifier.size(120.dp)
+            )
         }
     } else {
         val currentHabit = habit
