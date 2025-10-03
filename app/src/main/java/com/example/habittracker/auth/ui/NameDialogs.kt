@@ -7,8 +7,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.habittracker.R
 
 @Composable
 fun EditNameDialog(
@@ -18,6 +21,7 @@ fun EditNameDialog(
 ) {
     var name by remember { mutableStateOf(currentName) }
     var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -30,7 +34,7 @@ fun EditNameDialog(
         },
         title = {
             Text(
-                "Edit Name",
+                stringResource(R.string.edit_name),
                 fontWeight = FontWeight.Bold
             )
         },
@@ -44,7 +48,7 @@ fun EditNameDialog(
                         name = it
                         error = null
                     },
-                    label = { Text("Display Name") },
+                    label = { Text(stringResource(R.string.display_name)) },
                     singleLine = true,
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
@@ -57,19 +61,19 @@ fun EditNameDialog(
                 onClick = {
                     val trimmedName = name.trim()
                     when {
-                        trimmedName.isEmpty() -> error = "Name cannot be empty"
-                        trimmedName.length < 2 -> error = "Name must be at least 2 characters"
-                        trimmedName.length > 30 -> error = "Name must be less than 30 characters"
+                        trimmedName.isEmpty() -> error = context.getString(R.string.name_cannot_be_empty)
+                        trimmedName.length < 2 -> error = context.getString(R.string.name_must_be_at_least_2_chars)
+                        trimmedName.length > 30 -> error = context.getString(R.string.name_must_be_less_than_30_chars)
                         else -> onSave(trimmedName)
                     }
                 }
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -82,6 +86,7 @@ fun SetNameDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -94,7 +99,7 @@ fun SetNameDialog(
         },
         title = {
             Text(
-                "Welcome!",
+                stringResource(R.string.welcome),
                 fontWeight = FontWeight.Bold
             )
         },
@@ -103,7 +108,7 @@ fun SetNameDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Please set your display name to personalize your profile.",
+                    text = stringResource(R.string.set_display_name_message),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedTextField(
@@ -112,8 +117,8 @@ fun SetNameDialog(
                         name = it
                         error = null
                     },
-                    label = { Text("Display Name") },
-                    placeholder = { Text("Enter your name") },
+                    label = { Text(stringResource(R.string.display_name)) },
+                    placeholder = { Text(stringResource(R.string.enter_your_name)) },
                     singleLine = true,
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
@@ -126,14 +131,14 @@ fun SetNameDialog(
                 onClick = {
                     val trimmedName = name.trim()
                     when {
-                        trimmedName.isEmpty() -> error = "Name cannot be empty"
-                        trimmedName.length < 2 -> error = "Name must be at least 2 characters"
-                        trimmedName.length > 30 -> error = "Name must be less than 30 characters"
+                        trimmedName.isEmpty() -> error = context.getString(R.string.name_cannot_be_empty)
+                        trimmedName.length < 2 -> error = context.getString(R.string.name_must_be_at_least_2_chars)
+                        trimmedName.length > 30 -> error = context.getString(R.string.name_must_be_less_than_30_chars)
                         else -> onSave(trimmedName)
                     }
                 }
             ) {
-                Text("Continue")
+                Text(stringResource(R.string.continue_text))
             }
         }
     )

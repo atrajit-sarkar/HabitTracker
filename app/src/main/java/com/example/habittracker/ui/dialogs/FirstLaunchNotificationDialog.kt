@@ -10,10 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.habittracker.R
 
 @Composable
 fun FirstLaunchNotificationDialog(
@@ -65,7 +67,7 @@ fun FirstLaunchNotificationDialog(
 
                 // Title
                 Text(
-                    text = "Welcome to HabitTracker! 🎉",
+                    text = stringResource(R.string.welcome_to_habittracker),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -73,7 +75,7 @@ fun FirstLaunchNotificationDialog(
 
                 // Message
                 Text(
-                    text = "To ensure you never miss a habit reminder, we recommend setting up reliable notifications.",
+                    text = stringResource(R.string.notification_setup_message),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
@@ -86,19 +88,19 @@ fun FirstLaunchNotificationDialog(
                 ) {
                     FeatureRow(
                         icon = Icons.Default.Alarm,
-                        text = "Get reminders even when phone is idle"
+                        text = stringResource(R.string.get_reminders_idle)
                     )
                     FeatureRow(
                         icon = Icons.Default.RestartAlt,
-                        text = "Reminders survive phone restarts"
+                        text = stringResource(R.string.reminders_survive_restarts)
                     )
                     FeatureRow(
                         icon = Icons.Default.BatteryChargingFull,
-                        text = "Works in Doze mode (overnight)"
+                        text = stringResource(R.string.works_in_doze_mode)
                     )
                     FeatureRow(
                         icon = Icons.Default.CheckCircle,
-                        text = "Minimal battery impact"
+                        text = stringResource(R.string.minimal_battery_impact)
                     )
                 }
 
@@ -115,7 +117,7 @@ fun FirstLaunchNotificationDialog(
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open Setup Guide")
+                    Text(stringResource(R.string.open_setup_guide))
                 }
 
                 // Secondary Button
@@ -123,12 +125,12 @@ fun FirstLaunchNotificationDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Maybe Later")
+                    Text(stringResource(R.string.maybe_later))
                 }
 
                 // Info Text
                 Text(
-                    text = "You can always access the guide from your Profile",
+                    text = stringResource(R.string.access_guide_from_profile),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)

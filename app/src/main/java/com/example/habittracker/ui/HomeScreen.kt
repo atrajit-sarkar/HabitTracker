@@ -753,7 +753,7 @@ private fun HabitCard(
                         ) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Done", fontWeight = FontWeight.SemiBold)
+                            Text(text = stringResource(R.string.done), fontWeight = FontWeight.SemiBold)
                         }
                         
                         OutlinedButton(
@@ -768,7 +768,7 @@ private fun HabitCard(
                         ) {
                             Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Details", fontWeight = FontWeight.SemiBold)
+                            Text(text = stringResource(R.string.details), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -788,7 +788,7 @@ private fun HabitCard(
                     ) {
                         Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "See Details", fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.see_details), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

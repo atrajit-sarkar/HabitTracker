@@ -74,4 +74,213 @@
     <string name="previous_month">Previous Month</string>
     <string name="next_month">Next Month</string>
     <string name="dismiss">Dismiss</string>
+    
+    <!-- Dialog strings -->
+    <string name="delete_habit_title">Delete Habit?</string>
+    <string name="delete_habit_message">Are you sure you want to delete \"%1$s\"? It will be moved to trash and can be restored within 30 days.</string>
+    <string name="edit_name">Edit Name</string>
+    <string name="display_name">Display Name</string>
+    <string name="welcome">Welcome!</string>
+    <string name="set_display_name_message">Please set your display name to personalize your profile.</string>
+    <string name="enter_your_name">Enter your name</string>
+    <string name="continue_text">Continue</string>
+    <string name="name_cannot_be_empty">Name cannot be empty</string>
+    <string name="name_must_be_at_least_2_chars">Name must be at least 2 characters</string>
+    <string name="name_must_be_less_than_30_chars">Name must be less than 30 characters</string>
+    
+    <!-- First Launch Dialog -->
+    <string name="welcome_to_habittracker">Welcome to HabitTracker! 🎉</string>
+    <string name="notification_setup_message">To ensure you never miss a habit reminder, we recommend setting up reliable notifications.</string>
+    <string name="get_reminders_idle">Get reminders even when phone is idle</string>
+    <string name="reminders_survive_restarts">Reminders survive phone restarts</string>
+    <string name="works_in_doze_mode">Works in Doze mode (overnight)</string>
+    <string name="minimal_battery_impact">Minimal battery impact</string>
+    <string name="open_setup_guide">Open Setup Guide</string>
+    <string name="maybe_later">Maybe Later</string>
+    <string name="access_guide_from_profile">You can always access the guide from your Profile</string>
+    
+    <!-- Home Screen -->
+    <string name="done">Done</string>
+    <string name="menu">Menu</string>
+    <string name="manage_your_habits">Manage your habits</string>
+    <string name="actions">ACTIONS</string>
+    <string name="profile">Profile</string>
+    <string name="account_settings">Account settings</string>
+    <string name="trash">Trash</string>
+    <string name="view_deleted_habits">View deleted habits</string>
+    <string name="loading_sounds">Loading sounds...</string>
+    
+    <!-- Trash Screen -->
+    <string name="trash_items_count">%1$d item%2$s</string>
+    <string name="items_auto_delete_after_30_days">Items will be automatically deleted after 30 days</string>
+    <string name="trash_is_empty">Trash is Empty</string>
+    <string name="deleted_habits_appear_here">Deleted habits will appear here</string>
+    <string name="restore_within_30_days">You can restore them within 30 days</string>
+    <string name="deleted_on">Deleted on %1$s</string>
+    <string name="restore">Restore</string>
+    <string name="empty_trash_title">Empty Trash?</string>
+    <string name="empty_trash_message">This will permanently delete all habits in trash. This action cannot be undone.</string>
+    <string name="empty_trash">Empty Trash</string>
+    <string name="delete_permanently_title">Delete Permanently?</string>
+    <string name="delete_permanently_message">This habit will be permanently deleted and cannot be recovered. Are you sure?</string>
+    <string name="delete_forever">Delete Forever</string>
+    <string name="img">IMG</string>
+    
+    <!-- Statistics Screen -->
+    <string name="analyzing_habits">Analyzing your habits...</string>
+    <string name="quick_statistics">Quick Statistics</string>
+    <string name="total">Total</string>
+    <string name="habits">Habits</string>
+    <string name="streak">Streak</string>
+    <string name="last_7_days">Last 7 Days</string>
+    <string name="thirty_day_trend">30-Day Trend</string>
+    <string name="habit_frequency">Habit Frequency</string>
+    <string name="top_performers">Top Performers</string>
+    <string name="completion_comparison">Completion Comparison</string>
+    <string name="success_by_weekday">Success by Weekday</string>
+    <string name="detailed_breakdown">Detailed Breakdown</string>
+    <string name="your_progress">Your Progress</string>
+    <string name="no_data_available">No data available</string>
+    <string name="no_trend_data_available">No trend data available</string>
+    <string name="no_habits_to_compare">No habits to compare</string>
+    <string name="times_completed">%1$d times</string>
+    <string name="no_weekday_data_available">No weekday data available</string>
+    <string name="performance_score">Performance Score</string>
+    <string name="out_of_100">/ 100</string>
+    <string name="habit_count">%1$d habit%2$s</string>
+    <string name="no_habits_to_display">No habits to display</string>
+    <string name="completions_count">%1$d completions</string>
+    
+    <!-- Social Features -->
+    <string name="find_friends_by_email">Find friends by their email address</string>
+    <string name="email_address">Email Address</string>
+    <string name="tips">Tips</string>
+    <string name="search_tips">• Enter the exact email address of your friend\n• They must have HabitTracker installed\n• Make sure the email is correct</string>
+    <string name="loading_leaderboard">Loading leaderboard...</string>
+    <string name="no_leaderboard_yet">No Leaderboard Yet</string>
+    <string name="add_friends_to_see_rankings">Add friends to see rankings based on habit completion rates</string>
+    <string name="leaderboard_explanation">Rankings are based on a comprehensive score combining your success rate, total habits, current streak, and completions. Tap ℹ️ to view the scoring formula!</string>
+    <string name="success_rate_text">%1$d%% rate</string>
+    <string name="streak_days">%1$dd</string>
+    <string name="rank_improved">🎉 Rank Improved!</string>
+    <string name="climbed_leaderboard">You climbed up the leaderboard!</string>
+    <string name="leaderboard_scoring">Leaderboard Scoring</string>
+    <string name="scoring_explanation">Your leaderboard rank is determined by a comprehensive score that combines multiple factors:</string>
+    <string name="scoring_formula">📊 Scoring Formula</string>
+    <string name="example_score">💡 Example Score</string>
+    <string name="example_calculation">(80% × 5) + (7 habits × 3) + (5 streak × 10) + (5 done × 2)</string>
+    <string name="example_result">= 400 + 21 + 50 + 10 = 481 points</string>
+    <string name="pro_tip">💪 Pro Tip: Maintaining a long streak has the biggest impact on your score! Stay consistent to climb the ranks.</string>
+    <string name="got_it">Got It!</string>
+    
+    <!-- Friends Screen -->
+    <string name="friends">Friends</string>
+    <string name="requests">Requests</string>
+    <string name="no_friends_yet">No Friends Yet</string>
+    <string name="search_for_users">Search for users to add as friends</string>
+    <string name="remove_friend_title">Remove Friend?</string>
+    <string name="remove_friend_message">Are you sure you want to remove %1$s from your friends list?</string>
+    <string name="remove">Remove</string>
+    <string name="no_pending_requests">No Pending Requests</string>
+    <string name="friend_requests_appear_here">Friend requests will appear here</string>
+    <string name="reject">Reject</string>
+    <string name="accept">Accept</string>
+    
+    <!-- Friend Profile -->
+    <string name="profile_not_found">Profile not found</string>
+    <string name="message">Message</string>
+    <string name="statistics">Statistics</string>
+    <string name="friend_profile_note">This is a friend\'s profile. You can view their stats but cannot modify their habits or settings.</string>
+    
+    <!-- Chat -->
+    <string name="start_conversation">Start the conversation!</string>
+    <string name="send_message_to_break_ice">Send a message or sticker to break the ice 🎉</string>
+    <string name="type_a_message">Type a message...</string>
+    <string name="no_messages_yet">No Messages Yet</string>
+    <string name="start_conversation_with_friends">Start a conversation with your friends from their profile!</string>
+    <string name="photo">Photo</string>
+    
+    <!-- Update Dialog -->
+    <string name="youre_running_latest_version">You\'re running the latest version</string>
+    <string name="current_version">Current Version</string>
+    <string name="ok">OK</string>
+    <string name="checking_for_updates">Checking for updates...</string>
+    <string name="please_wait_a_moment">Please wait a moment</string>
+    <string name="current">Current</string>
+    <string name="new_update">New</string>
+    <string name="downloading">Downloading...</string>
+    <string name="download_progress">%1$d%%</string>
+    <string name="please_dont_close_app">Please don\'t close the app</string>
+    <string name="whats_new">What\'s New</string>
+    <string name="default_update_notes">• Bug fixes and performance improvements\n• Enhanced stability\n• UI refinements</string>
+    <string name="skip">Skip</string>
+    <string name="later">Later</string>
+    
+    <!-- Notification Setup Guide -->
+    <string name="notification_setup_guide">Notification Setup Guide</string>
+    <string name="battery_optimization_explanation">Android\'s battery optimization can prevent HabitTracker from sending you reminders when your phone is idle or in Doze mode. This guide helps you ensure 100%% reliable notifications.</string>
+    <string name="most_important_step">This is the most important step to ensure reliable notifications.</string>
+    <string name="already_exempt_battery">Already exempt from battery optimization ✓</string>
+    <string name="allow_battery_optimization">Allow Battery Optimization</string>
+    <string name="notifications_enabled">Notifications are enabled ✓</string>
+    <string name="open_notification_settings">Open Notification Settings</string>
+    <string name="can_customize_notification">You can still open settings to customize notification channels and sounds.</string>
+    <string name="exact_alarms_allowed">Exact alarms are allowed ✓</string>
+    <string name="allow_exact_alarms">Allow Exact Alarms</string>
+    <string name="exact_alarm_enabled">Exact alarm scheduling is enabled for precise reminder timing.</string>
+    <string name="background_activity_enabled">Background activity is enabled ✓</string>
+    <string name="enable_battery_data_permissions">Enable both battery and data permissions for maximum reliability:</string>
+    <string name="open_app_info">1. Open App Info (Then find Battery)</string>
+    <string name="open_data_usage_settings">2. Open Data Usage Settings</string>
+    <string name="battery_settings">Battery Settings:</string>
+    <string name="data_usage_settings">Data Usage Settings:</string>
+    <string name="manufacturer_specific_note">On some phones (Realme, Oppo, etc.), these settings are in different places. Enable both!</string>
+    <string name="background_activity_note">Background activity is enabled. Reminders will work even when the app is closed.</string>
+    <string name="important">Important!</string>
+    <string name="manufacturer_additional_steps">Your device manufacturer has additional battery saving features. Please complete these steps:</string>
+    <string name="open_app_settings">Open App Settings</string>
+    <string name="quick_test_5_min">Quick Test (5 minutes):</string>
+    <string name="reboot_test">Reboot Test:</string>
+    <string name="setup_complete">Setup Complete!</string>
+    <string name="youre_all_set">You\'re all set for reliable habit reminders</string>
+    <string name="step_progress">%1$d/%2$d</string>
+    
+    <!-- Profile Screen -->
+    <string name="profile_title">Profile</string>
+    <string name="your_statistics">Your Statistics</string>
+    <string name="detailed_analytics">Detailed Analytics</string>
+    <string name="charts_trends_comparisons">Charts, trends &amp; comparisons</string>
+    <string name="social_and_friends">Social &amp; Friends</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="compete_with_friends">Compete with friends</string>
+    <string name="notification_setup_guide_title">Notification Setup Guide</string>
+    <string name="ensure_reliable_reminders">Ensure reliable reminders</string>
+    <string name="check_for_updates">Check for Updates</string>
+    <string name="get_latest_features">Get the latest features</string>
+    <string name="habit_tracker_tagline">Build better habits, one day at a time</string>
+    <string name="reset">Reset</string>
+    <string name="sign_out_confirmation">Are you sure you want to sign out? You\'ll need to sign in again to access your habits.</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="close">Close</string>
+    
+    <!-- Auth Screen -->
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="or">OR</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="back_to_sign_in">Back to Sign In</string>
+    <string name="forgot_password">Forgot Password?</string>
+    
+    <!-- Habit Details -->
+    <string name="streak_rules">Streak Rules</string>
+    <string name="streak_rules_text">• Complete today or yesterday to maintain streak\n• Miss days? Streak reduces by 1 per missed day (motivational penalty)\n• Backfill past days to recover your streak progress</string>
+    <string name="error_loading_habit">Error loading habit</string>
+    <string name="retry">Retry</string>
+    <string name="habit_not_found">Habit not found</string>
+    
+    <!-- Edit Mode -->
+    <string name="edit_habit">Edit Habit</string>
+    <string name="add_new_habit">Add New Habit</string>
+    <string name="update_habit">Update Habit</string>
 </resources>

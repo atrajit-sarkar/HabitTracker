@@ -55,14 +55,15 @@ fun TrashScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Trash",
+                            text = stringResource(R.string.trash),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold
                             )
                         )
                         if (deletedHabits.isNotEmpty()) {
+                            val itemText = if (deletedHabits.size == 1) "" else "s"
                             Text(
-                                text = "${deletedHabits.size} item${if (deletedHabits.size == 1) "" else "s"}",
+                                text = stringResource(R.string.trash_items_count, deletedHabits.size, itemText),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -73,7 +74,7 @@ fun TrashScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -125,7 +126,7 @@ fun TrashScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Items will be automatically deleted after 30 days",
+                            text = stringResource(R.string.items_auto_delete_after_30_days),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -211,7 +212,7 @@ private fun EmptyTrashState() {
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "Trash is Empty",
+            text = stringResource(R.string.trash_is_empty),
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
@@ -221,7 +222,7 @@ private fun EmptyTrashState() {
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Deleted habits will appear here",
+            text = stringResource(R.string.deleted_habits_appear_here),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
@@ -229,7 +230,7 @@ private fun EmptyTrashState() {
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "You can restore them within 30 days",
+            text = stringResource(R.string.restore_within_30_days),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
@@ -308,7 +309,7 @@ private fun DeletedHabitCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Deleted on $it",
+                            text = stringResource(R.string.deleted_on, it),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -332,7 +333,7 @@ private fun DeletedHabitCard(
                     ) {
                         Icon(imageVector = Icons.Default.Restore, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Restore", fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.restore), fontWeight = FontWeight.SemiBold)
                     }
                     
                     OutlinedButton(
@@ -347,7 +348,7 @@ private fun DeletedHabitCard(
                     ) {
                         Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Delete", fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.delete), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -390,7 +391,7 @@ private fun TrashAvatarDisplay(
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
                 Text(
-                    text = "IMG",
+                    text = stringResource(R.string.img),
                     color = Color.White.copy(alpha = alpha),
                     fontSize = (size.value * 0.3).sp,
                     fontWeight = FontWeight.Bold
@@ -415,10 +416,10 @@ private fun EmptyTrashConfirmationDialog(
             )
         },
         title = {
-            Text(text = "Empty Trash?")
+            Text(text = stringResource(R.string.empty_trash_title))
         },
         text = {
-            Text(text = "This will permanently delete all habits in trash. This action cannot be undone.")
+            Text(text = stringResource(R.string.empty_trash_message))
         },
         confirmButton = {
             TextButton(
@@ -427,12 +428,12 @@ private fun EmptyTrashConfirmationDialog(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Empty Trash")
+                Text(stringResource(R.string.empty_trash))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -453,10 +454,10 @@ private fun PermanentDeleteConfirmationDialog(
             )
         },
         title = {
-            Text(text = "Delete Permanently?")
+            Text(text = stringResource(R.string.delete_permanently_title))
         },
         text = {
-            Text(text = "This habit will be permanently deleted and cannot be recovered. Are you sure?")
+            Text(text = stringResource(R.string.delete_permanently_message))
         },
         confirmButton = {
             TextButton(
@@ -465,12 +466,12 @@ private fun PermanentDeleteConfirmationDialog(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Delete Forever")
+                Text(stringResource(R.string.delete_forever))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

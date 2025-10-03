@@ -23,10 +23,10 @@ fun DeleteHabitConfirmationDialog(
             )
         },
         title = {
-            Text(text = "Delete Habit?")
+            Text(text = stringResource(R.string.delete_habit_title))
         },
         text = {
-            Text(text = "Are you sure you want to delete \"$habitTitle\"? It will be moved to trash and can be restored within 30 days.")
+            Text(text = stringResource(R.string.delete_habit_message, habitTitle))
         },
         confirmButton = {
             TextButton(
@@ -35,12 +35,12 @@ fun DeleteHabitConfirmationDialog(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Delete")
+                Text(stringResource(R.string.delete))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
