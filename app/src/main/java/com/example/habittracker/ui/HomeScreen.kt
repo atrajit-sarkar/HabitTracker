@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
@@ -67,6 +68,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalNavigationDrawer
@@ -110,6 +112,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.airbnb.lottie.compose.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
@@ -632,6 +635,12 @@ private fun HabitCard(
     modifier: Modifier = Modifier
 ) {
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showTitleDialog by remember { mutableStateOf(false) }
+    var showDescriptionDialog by remember { mutableStateOf(false) }
+    var isTitleTruncated by remember { mutableStateOf(false) }
+    var isDescriptionTruncated by remember { mutableStateOf(false) }
+    var showCompletionAnimation by remember { mutableStateOf(false) }
+    
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
     val reminderText = if (habit.isReminderEnabled) {
@@ -662,21 +671,66 @@ private fun HabitCard(
                     )
                     
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = habit.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = habit.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                onTextLayout = { textLayoutResult ->
+                                    isTitleTruncated = textLayoutResult.hasVisualOverflow
+                                },
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (isTitleTruncated) {
+                                IconButton(
+                                    onClick = { showTitleDialog = true },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Show full title",
+                                        tint = Color.White.copy(alpha = 0.9f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
                         if (habit.description.isNotBlank()) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = habit.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.82f),
-                                maxLines = 3
-                            )
+                            Row(
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = habit.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White.copy(alpha = 0.82f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    onTextLayout = { textLayoutResult ->
+                                        isDescriptionTruncated = textLayoutResult.hasVisualOverflow
+                                    },
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (isDescriptionTruncated) {
+                                    IconButton(
+                                        onClick = { showDescriptionDialog = true },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = "Show full description",
+                                            tint = Color.White.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     IconButton(onClick = { showDeleteConfirmation = true }) {
@@ -688,19 +742,26 @@ private fun HabitCard(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Icon(
                         imageVector = Icons.Default.Alarm,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f)
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = reminderText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Switch(
                         checked = habit.isReminderEnabled,
                         onCheckedChange = onToggleReminder,
@@ -714,28 +775,80 @@ private fun HabitCard(
                 }
 
                 if (habit.isCompletedToday) {
-                    AssistChip(
-                        onClick = { /* No action needed or perhaps show details */ },
-                        label = {
-                            Text(
-                                text = stringResource(id = R.string.habit_completed_today),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color.White
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = Color.White.copy(alpha = 0.18f),
-                            labelColor = Color.White,
-                            leadingIconContentColor = Color.White
-                        )
+                    // Lottie animation composition
+                    val composition by rememberLottieComposition(
+                        LottieCompositionSpec.Asset("man_with_task_list.json")
                     )
+                    
+                    // Calculate target frame: 132 out of 241 total frames
+                    val targetProgress = 132f / 241f // ≈ 0.5477
+                    
+                    val rawAnimationProgress by animateLottieCompositionAsState(
+                        composition = composition,
+                        iterations = 1, // Play only once
+                        isPlaying = showCompletionAnimation,
+                        speed = 1f,
+                        restartOnPlay = false
+                    )
+                    
+                    // Clamp progress to stop at frame 132
+                    val animationProgress = if (rawAnimationProgress > targetProgress) {
+                        targetProgress
+                    } else {
+                        rawAnimationProgress
+                    }
+                    
+                    // Stop animation when target frame is reached
+                    LaunchedEffect(rawAnimationProgress) {
+                        if (rawAnimationProgress >= targetProgress) {
+                            showCompletionAnimation = false
+                        }
+                    }
+                    
+                    // Trigger animation when habit becomes completed
+                    LaunchedEffect(habit.isCompletedToday) {
+                        if (habit.isCompletedToday && !showCompletionAnimation) {
+                            showCompletionAnimation = true
+                        }
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Completed chip
+                        AssistChip(
+                            onClick = { /* No action needed or perhaps show details */ },
+                            label = {
+                                Text(
+                                    text = stringResource(id = R.string.habit_completed_today),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = Color.White.copy(alpha = 0.18f),
+                                labelColor = Color.White,
+                                leadingIconContentColor = Color.White
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        // Lottie animation
+                        LottieAnimation(
+                            composition = composition,
+                            progress = { animationProgress },
+                            modifier = Modifier.size(60.dp)
+                        )
+                    }
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -793,6 +906,48 @@ private fun HabitCard(
                 }
             }
         }
+    }
+    
+    // Title dialog
+    if (showTitleDialog) {
+        AlertDialog(
+            onDismissRequest = { showTitleDialog = false },
+            icon = {
+                Icon(imageVector = Icons.Default.Info, contentDescription = null)
+            },
+            title = {
+                Text(text = "Habit Title")
+            },
+            text = {
+                Text(text = habit.title)
+            },
+            confirmButton = {
+                TextButton(onClick = { showTitleDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+    
+    // Description dialog
+    if (showDescriptionDialog) {
+        AlertDialog(
+            onDismissRequest = { showDescriptionDialog = false },
+            icon = {
+                Icon(imageVector = Icons.Default.Info, contentDescription = null)
+            },
+            title = {
+                Text(text = "Description")
+            },
+            text = {
+                Text(text = habit.description)
+            },
+            confirmButton = {
+                TextButton(onClick = { showDescriptionDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
     
     // Delete confirmation dialog

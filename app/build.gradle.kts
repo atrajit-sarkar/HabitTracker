@@ -16,8 +16,8 @@ android {
         applicationId = "com.example.habittracker"
         minSdk = 29
         targetSdk = 36
-        versionCode = 6
-        versionName = "3.0.5"
+        versionCode = 7
+        versionName = "3.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -96,6 +96,9 @@ dependencies {
     
     // OkHttp for update checks
     implementation(libs.okhttp)
+    
+    // Lottie Animations
+    implementation(libs.lottie.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

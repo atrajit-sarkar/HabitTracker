@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.airbnb.lottie.compose.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -140,32 +141,38 @@ fun UpdateDialog(
 
 @Composable
 private fun UpdateIcon(isDownloading: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "rotation")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
-    
     Box(
-        modifier = Modifier.size(64.dp),
+        modifier = Modifier.size(80.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = if (isDownloading) Icons.Default.CloudDownload else Icons.Default.SystemUpdate,
-            contentDescription = null,
-            modifier = Modifier
-                .size(48.dp)
-                .then(
-                    if (isDownloading) Modifier.rotate(rotation)
-                    else Modifier
-                ),
-            tint = MaterialTheme.colorScheme.primary
-        )
+        if (isDownloading) {
+            // Lottie loading animation
+            val composition by rememberLottieComposition(
+                LottieCompositionSpec.Asset("loading.json")
+            )
+            
+            val progress by animateLottieCompositionAsState(
+                composition = composition,
+                iterations = LottieConstants.IterateForever,
+                isPlaying = true,
+                speed = 1f,
+                restartOnPlay = true
+            )
+            
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                modifier = Modifier.size(80.dp)
+            )
+        } else {
+            // Static update icon
+            Icon(
+                imageVector = Icons.Default.SystemUpdate,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 

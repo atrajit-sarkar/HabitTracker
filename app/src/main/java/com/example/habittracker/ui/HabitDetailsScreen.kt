@@ -33,6 +33,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.habittracker.R
@@ -77,7 +78,9 @@ fun HabitDetailsScreen(
                 title = {
                     Text(
                         text = habit.title,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
@@ -145,6 +148,11 @@ private fun HeroSection(
     val selectedDateText = remember(selectedDate) { dateFormatter.format(selectedDate) }
     val isToday = selectedDate == LocalDate.now()
     val canMarkSelectedDate = !isSelectedDateCompleted && !selectedDate.isAfter(LocalDate.now())
+    
+    var showTitleDialog by remember { mutableStateOf(false) }
+    var showDescriptionDialog by remember { mutableStateOf(false) }
+    var isTitleTruncated by remember { mutableStateOf(false) }
+    var isDescriptionTruncated by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -166,22 +174,71 @@ private fun HeroSection(
                 size = 80.dp
             )
 
-            // Habit Title and Description
-            Text(
-                text = habit.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
+            // Habit Title and Description with Info Buttons
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.Top,
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                Text(
+                    text = habit.title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                        isTitleTruncated = textLayoutResult.hasVisualOverflow
+                    },
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (isTitleTruncated) {
+                    IconButton(
+                        onClick = { showTitleDialog = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Show full title",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
 
             if (habit.description.isNotBlank()) {
-                Text(
-                    text = habit.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = habit.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isDescriptionTruncated = textLayoutResult.hasVisualOverflow
+                        },
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isDescriptionTruncated) {
+                        IconButton(
+                            onClick = { showDescriptionDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Show full description",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             // Current Streak with Animated Fire
@@ -320,6 +377,48 @@ private fun HeroSection(
                 }
             }
         }
+    }
+    
+    // Title dialog
+    if (showTitleDialog) {
+        AlertDialog(
+            onDismissRequest = { showTitleDialog = false },
+            icon = {
+                Icon(imageVector = Icons.Default.Info, contentDescription = null)
+            },
+            title = {
+                Text(text = "Habit Title")
+            },
+            text = {
+                Text(text = habit.title)
+            },
+            confirmButton = {
+                TextButton(onClick = { showTitleDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+    
+    // Description dialog
+    if (showDescriptionDialog) {
+        AlertDialog(
+            onDismissRequest = { showDescriptionDialog = false },
+            icon = {
+                Icon(imageVector = Icons.Default.Info, contentDescription = null)
+            },
+            title = {
+                Text(text = "Description")
+            },
+            text = {
+                Text(text = habit.description)
+            },
+            confirmButton = {
+                TextButton(onClick = { showDescriptionDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }
 

@@ -24,6 +24,7 @@ playServicesAuth = "21.2.0"
 coil = "2.7.0"
 vico = "2.0.0-alpha.28"
 okhttp = "4.12.0"
+lottie = "6.5.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -76,6 +77,9 @@ vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = 
 
 # Network
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+
+# Lottie Animations
+lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
