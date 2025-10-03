@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">متتبع العادات</string>
+    <string name="home_title">عاداتك</string>
+    <string name="add_habit">إضافة عادة</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="habit_name_label">اسم العادة</string>
+    <string name="habit_description_label">لماذا هذا مهم؟</string>
+    <string name="reminder_time_label">وقت التذكير</string>
+    <string name="reminder_toggle_label">تمكين التذكيرات</string>
+    <string name="habit_completed_today">مكتملة اليوم</string>
+    <string name="mark_as_done">وضع علامة كمكتمل</string>
+    <string name="reminder_off">التذكير معطل</string>
+    <string name="reminder_on">تم ضبط التذكير على %1$s</string>
+    <string name="empty_state_title">صمم روتينك المثالي</string>
+    <string name="empty_state_message">أضف عادتك الأولى مع جدولة مخصصة - تذكيرات يومية أو أسبوعية أو شهرية أو سنوية.</string>
+    <string name="notification_channel_name">تذكيرات العادات</string>
+    <string name="notification_channel_description">تنبيهات في الوقت المناسب للحفاظ على عاداتك على المسار الصحيح.</string>
+    <string name="notification_default_description">حان وقت التحقق</string>
+    <string name="notification_body">%1$s • %2$s</string>
+    <string name="notification_permission_rationale">نستخدم الإشعارات لتذكيرك بالعادات التي تختارها.</string>
+    <string name="notification_permission_allow">السماح بالإشعارات</string>
+    <string name="notification_permission_not_now">ليس الآن</string>
+    <string name="delete">حذف</string>
+    <string name="frequency_label">التكرار</string>
+    <string name="frequency_daily">يومي</string>
+    <string name="frequency_weekly">أسبوعي</string>
+    <string name="frequency_monthly">شهري</string>
+    <string name="frequency_yearly">سنوي</string>
+    <string name="day_of_week_label">يوم الأسبوع</string>
+    <string name="day_of_month_label">يوم الشهر</string>
+    <string name="month_of_year_label">الشهر</string>
+    <string name="monday">الاثنين</string>
+    <string name="tuesday">الثلاثاء</string>
+    <string name="wednesday">الأربعاء</string>
+    <string name="thursday">الخميس</string>
+    <string name="friday">الجمعة</string>
+    <string name="saturday">السبت</string>
+    <string name="sunday">الأحد</string>
+    <string name="notification_sound_label">صوت الإشعار</string>
+    <string name="notification_sound_hint">اختر الصوت</string>
+    <string name="avatar_label">اختر الصورة الرمزية</string>
+    <string name="choose_emoji_label">اختر رمز تعبيري</string>
+    <string name="background_color_label">لون الخلفية</string>
+    <string name="create_new_habit">إنشاء عادة جديدة</string>
+    <string name="create_habit">إنشاء عادة</string>
+    <string name="back">رجوع</string>
+    <string name="details">التفاصيل</string>
+    <string name="see_details">عرض التفاصيل</string>
+    <string name="mark_as_completed">وضع علامة كمكتمل</string>
+    <string name="completed_today">مكتمل اليوم</string>
+    <string name="current_streak">السلسلة الحالية</string>
+    <string name="current_streak_days">السلسلة الحالية: %1$d أيام</string>
+    <string name="longest_streak">أطول سلسلة</string>
+    <string name="total_completions">إجمالي الإنجازات</string>
+    <string name="success_rate">معدل النجاح</string>
+    <string name="days">أيام</string>
+    <string name="times">مرات</string>
+    <string name="completed">مكتمل</string>
+    <string name="progress_overview">نظرة عامة على التقدم</string>
+    <string name="calendar_view">عرض التقويم</string>
+    <string name="selected_date">التاريخ المحدد: %1$s</string>
+    <string name="completed_on">مكتمل في %1$s</string>
+    <string name="calendar_helper_text">انقر على أي تاريخ سابق (حتى قبل الإنشاء) لعرضه. استخدم الزر أعلاه لملء الإكمال.</string>
+    <string name="habit_details">تفاصيل العادة</string>
+    <string name="frequency">التكرار</string>
+    <string name="daily">يومي</string>
+    <string name="weekly">أسبوعي</string>
+    <string name="monthly">شهري</string>
+    <string name="yearly">سنوي</string>
+    <string name="reminder_time">وقت التذكير</string>
+    <string name="created_on">تم الإنشاء في</string>
+    <string name="notification_sound">صوت الإشعار</string>
+    <string name="previous_month">الشهر السابق</string>
+    <string name="next_month">الشهر التالي</string>
+    <string name="dismiss">رفض</string>
+    
+    <!-- Dialog strings -->
+    <string name="delete_habit_title">حذف العادة؟</string>
+    <string name="delete_habit_message">هل أنت متأكد من رغبتك في حذف \"%1$s\"؟ سيتم نقلها إلى سلة المهملات ويمكن استعادتها في غضون 30 يومًا.</string>
+    <string name="edit_name">تعديل الاسم</string>
+    <string name="display_name">الاسم المعروض</string>
+    <string name="welcome">مرحباً!</string>
+    <string name="set_display_name_message">يرجى تعيين اسم العرض الخاص بك لتخصيص ملفك الشخصي.</string>
+    <string name="enter_your_name">أدخل اسمك</string>
+    <string name="continue_text">متابعة</string>
+    <string name="name_cannot_be_empty">لا يمكن أن يكون الاسم فارغاً</string>
+    <string name="name_must_be_at_least_2_chars">يجب أن يكون الاسم حرفين على الأقل</string>
+    <string name="name_must_be_less_than_30_chars">يجب أن يكون الاسم أقل من 30 حرفاً</string>
+    
+    <!-- First Launch Dialog -->
+    <string name="welcome_to_habittracker">مرحباً بك في متتبع العادات! 🎉</string>
+    <string name="notification_setup_message">لضمان عدم تفويت أي تذكير بالعادات، نوصي بإعداد إشعارات موثوقة.</string>
+    <string name="get_reminders_idle">احصل على تذكيرات حتى عندما يكون الهاتف في وضع الخمول</string>
+    <string name="reminders_survive_restarts">التذكيرات تبقى بعد إعادة تشغيل الهاتف</string>
+    <string name="works_in_doze_mode">يعمل في وضع السكون (طوال الليل)</string>
+    <string name="minimal_battery_impact">تأثير ضئيل على البطارية</string>
+    <string name="open_setup_guide">فتح دليل الإعداد</string>
+    <string name="maybe_later">ربما لاحقاً</string>
+    <string name="access_guide_from_profile">يمكنك دائماً الوصول إلى الدليل من ملفك الشخصي</string>
+    
+    <!-- Home Screen -->
+    <string name="done">تم</string>
+    <string name="menu">القائمة</string>
+    <string name="manage_your_habits">إدارة عاداتك</string>
+    <string name="actions">الإجراءات</string>
+    <string name="profile">الملف الشخصي</string>
+    <string name="account_settings">إعدادات الحساب</string>
+    <string name="trash">سلة المهملات</string>
+    <string name="view_deleted_habits">عرض العادات المحذوفة</string>
+    <string name="loading_sounds">جاري تحميل الأصوات...</string>
+    
+    <!-- Trash Screen -->
+    <string name="trash_items_count">%1$d عنصر%2$s</string>
+    <string name="items_auto_delete_after_30_days">سيتم حذف العناصر تلقائياً بعد 30 يوماً</string>
+    <string name="trash_is_empty">سلة المهملات فارغة</string>
+    <string name="deleted_habits_appear_here">ستظهر العادات المحذوفة هنا</string>
+    <string name="restore_within_30_days">يمكنك استعادتها في غضون 30 يوماً</string>
+    <string name="deleted_on">تم الحذف في %1$s</string>
+    <string name="restore">استعادة</string>
+    <string name="empty_trash_title">إفراغ سلة المهملات؟</string>
+    <string name="empty_trash_message">سيؤدي هذا إلى حذف جميع العادات في سلة المهملات نهائياً. لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="empty_trash">إفراغ سلة المهملات</string>
+    <string name="delete_permanently_title">حذف نهائي؟</string>
+    <string name="delete_permanently_message">سيتم حذف هذه العادة نهائياً ولا يمكن استعادتها. هل أنت متأكد؟</string>
+    <string name="delete_forever">حذف للأبد</string>
+    <string name="img">صورة</string>
+    
+    <!-- Statistics Screen -->
+    <string name="analyzing_habits">تحليل عاداتك...</string>
+    <string name="quick_statistics">إحصائيات سريعة</string>
+    <string name="total">الإجمالي</string>
+    <string name="habits">العادات</string>
+    <string name="streak">السلسلة</string>
+    <string name="last_7_days">آخر 7 أيام</string>
+    <string name="thirty_day_trend">اتجاه 30 يوماً</string>
+    <string name="habit_frequency">تكرار العادة</string>
+    <string name="top_performers">الأفضل أداءً</string>
+    <string name="completion_comparison">مقارنة الإنجاز</string>
+    <string name="success_by_weekday">النجاح حسب أيام الأسبوع</string>
+    <string name="detailed_breakdown">تفصيل مفصل</string>
+    <string name="your_progress">تقدمك</string>
+    <string name="no_data_available">لا توجد بيانات متاحة</string>
+    <string name="no_trend_data_available">لا توجد بيانات اتجاه متاحة</string>
+    <string name="no_habits_to_compare">لا توجد عادات للمقارنة</string>
+    <string name="times_completed">%1$d مرات</string>
+    <string name="no_weekday_data_available">لا توجد بيانات أيام الأسبوع متاحة</string>
+    <string name="performance_score">نقاط الأداء</string>
+    <string name="out_of_100">/ 100</string>
+    <string name="habit_count">%1$d عادة%2$s</string>
+    <string name="no_habits_to_display">لا توجد عادات للعرض</string>
+    <string name="completions_count">%1$d إنجاز</string>
+    
+    <!-- Language Settings -->
+    <string name="language_settings">إعدادات اللغة</string>
+    <string name="select_language">اختر اللغة</string>
+    <string name="language_selection_message">اختر لغتك المفضلة. سيتم تحديث التطبيق على الفور.</string>
+    <string name="current_language">اللغة الحالية</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية</string>
+    
+    <!-- Profile Screen -->
+    <string name="profile_title">الملف الشخصي</string>
+    <string name="your_statistics">إحصائياتك</string>
+    <string name="detailed_analytics">تحليلات مفصلة</string>
+    <string name="charts_trends_comparisons">الرسوم البيانية والاتجاهات والمقارنات</string>
+    <string name="social_and_friends">الاجتماعيات والأصدقاء</string>
+    <string name="leaderboard">لوحة المتصدرين</string>
+    <string name="compete_with_friends">تنافس مع الأصدقاء</string>
+    <string name="notification_setup_guide_title">دليل إعداد الإشعارات</string>
+    <string name="ensure_reliable_reminders">ضمان تذكيرات موثوقة</string>
+    <string name="check_for_updates">التحقق من التحديثات</string>
+    <string name="get_latest_features">احصل على أحدث الميزات</string>
+    <string name="habit_tracker_tagline">بناء عادات أفضل، يوماً بعد يوم</string>
+    <string name="reset">إعادة تعيين</string>
+    <string name="sign_out_confirmation">هل أنت متأكد من رغبتك في تسجيل الخروج؟ ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى عاداتك.</string>
+    <string name="sign_out">تسجيل الخروج</string>
+    <string name="close">إغلاق</string>
+</resources>

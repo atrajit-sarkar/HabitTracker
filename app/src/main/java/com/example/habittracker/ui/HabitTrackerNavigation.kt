@@ -35,6 +35,7 @@ import com.example.habittracker.ui.social.FriendProfileScreen
 import com.example.habittracker.ui.chat.ChatListScreen
 import com.example.habittracker.ui.chat.ChatScreen
 import com.example.habittracker.ui.settings.NotificationSetupGuideScreen
+import com.example.habittracker.ui.settings.LanguageSelectorScreen
 import com.example.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -269,6 +270,10 @@ fun HabitTrackerNavigation(
                 navController.navigate("notification_setup_guide")
             }
             
+            val onLanguageSettingsClick = rememberNavigationHandler {
+                navController.navigate("language_selector")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -278,7 +283,8 @@ fun HabitTrackerNavigation(
                 onFriendsListClick = onFriendsListClick,
                 onLeaderboardClick = onLeaderboardClick,
                 onNotificationGuideClick = onNotificationGuideClick,
-                onCheckForUpdates = onCheckForUpdates
+                onCheckForUpdates = onCheckForUpdates,
+                onLanguageSettingsClick = onLanguageSettingsClick
             )
         }
         
@@ -303,6 +309,16 @@ fun HabitTrackerNavigation(
             
             NotificationSetupGuideScreen(
                 onNavigateBack = onBackClick
+            )
+        }
+        
+        composable("language_selector") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            LanguageSelectorScreen(
+                onBackClick = onBackClick
             )
         }
         

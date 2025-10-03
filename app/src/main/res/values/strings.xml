@@ -151,6 +151,14 @@
     <string name="no_habits_to_display">No habits to display</string>
     <string name="completions_count">%1$d completions</string>
     
+    <!-- Language Settings -->
+    <string name="language_settings">Language Settings</string>
+    <string name="select_language">Select Language</string>
+    <string name="language_selection_message">Choose your preferred language. The app will update instantly.</string>
+    <string name="current_language">Current Language</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    
     <!-- Social Features -->
     <string name="find_friends_by_email">Find friends by their email address</string>
     <string name="email_address">Email Address</string>

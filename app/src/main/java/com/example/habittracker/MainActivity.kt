@@ -41,6 +41,10 @@ class MainActivity : ComponentActivity() {
         // Install splash screen before super.onCreate()
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        // Apply saved language preference
+        com.example.habittracker.util.LanguageManager.applyLanguage(this)
+        
         enableEdgeToEdge()
         HabitReminderService.ensureDefaultChannel(this)
         

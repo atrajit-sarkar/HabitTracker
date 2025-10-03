@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.habittracker.R
 import com.example.habittracker.ui.HabitViewModel
 import kotlin.math.cos
 import kotlin.math.sin
@@ -267,7 +269,8 @@ fun ProfileScreen(
     onFriendsListClick: () -> Unit = {},
     onLeaderboardClick: () -> Unit = {},
     onNotificationGuideClick: () -> Unit = {},
-    onCheckForUpdates: () -> Unit = {}
+    onCheckForUpdates: () -> Unit = {},
+    onLanguageSettingsClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -727,6 +730,75 @@ fun ProfileScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Language Settings Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(16.dp))
+                    .clickableOnce { onLanguageSettingsClick() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                                )
+                            )
+                        )
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = stringResource(R.string.language_settings),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = stringResource(R.string.select_language),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(R.string.language_settings),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            
             Spacer(modifier = Modifier.height(8.dp))
             
             // Check for Updates Card - App Settings
