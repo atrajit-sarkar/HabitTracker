@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.*
 import com.example.habittracker.R
 import com.example.habittracker.data.local.Habit
 import com.example.habittracker.data.local.HabitAvatar
@@ -153,6 +154,7 @@ private fun HeroSection(
     var showDescriptionDialog by remember { mutableStateOf(false) }
     var isTitleTruncated by remember { mutableStateOf(false) }
     var isDescriptionTruncated by remember { mutableStateOf(false) }
+    var showFanfareAnimation by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -361,19 +363,59 @@ private fun HeroSection(
                     label = "button_alpha"
                 )
                 
-                FilledTonalButton(
-                    onClick = onMarkCompleted,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer { alpha = if (canMarkSelectedDate) buttonAlpha else 0.6f },
-                    enabled = canMarkSelectedDate
-                ) {
-                    Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.mark_as_completed),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(
+                        onClick = {
+                            showFanfareAnimation = true
+                            onMarkCompleted()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = if (canMarkSelectedDate) buttonAlpha else 0.6f },
+                        enabled = canMarkSelectedDate
+                    ) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.mark_as_completed),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    
+                    // Fanfare animation overlay
+                    if (showFanfareAnimation) {
+                        val fanfareComposition by rememberLottieComposition(
+                            LottieCompositionSpec.Asset("Fanfare.json")
+                        )
+                        
+                        val fanfareProgress by animateLottieCompositionAsState(
+                            composition = fanfareComposition,
+                            iterations = 1,
+                            isPlaying = showFanfareAnimation,
+                            speed = 1.2f,
+                            restartOnPlay = false
+                        )
+                        
+                        // Stop animation when complete
+                        LaunchedEffect(fanfareProgress) {
+                            if (fanfareProgress >= 0.99f) {
+                                showFanfareAnimation = false
+                            }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = fanfareComposition,
+                                progress = { fanfareProgress },
+                                modifier = Modifier.size(150.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

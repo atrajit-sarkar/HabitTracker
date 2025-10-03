@@ -640,6 +640,7 @@ private fun HabitCard(
     var isTitleTruncated by remember { mutableStateOf(false) }
     var isDescriptionTruncated by remember { mutableStateOf(false) }
     var showCompletionAnimation by remember { mutableStateOf(false) }
+    var showFanfareAnimation by remember { mutableStateOf(false) }
     
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
@@ -854,19 +855,59 @@ private fun HabitCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilledTonalButton(
-                            onClick = onMarkCompleted,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(20.dp)),
-                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
-                                containerColor = Color.White,
-                                contentColor = palette.accent
-                            )
-                        ) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = stringResource(R.string.done), fontWeight = FontWeight.SemiBold)
+                        Box(modifier = Modifier.weight(1f)) {
+                            FilledTonalButton(
+                                onClick = {
+                                    showFanfareAnimation = true
+                                    onMarkCompleted()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(20.dp)),
+                                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = Color.White,
+                                    contentColor = palette.accent
+                                )
+                            ) {
+                                Icon(imageVector = Icons.Default.Check, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = stringResource(R.string.done), fontWeight = FontWeight.SemiBold)
+                            }
+                            
+                            // Fanfare animation overlay
+                            if (showFanfareAnimation) {
+                                val fanfareComposition by rememberLottieComposition(
+                                    LottieCompositionSpec.Asset("Fanfare.json")
+                                )
+                                
+                                val fanfareProgress by animateLottieCompositionAsState(
+                                    composition = fanfareComposition,
+                                    iterations = 1,
+                                    isPlaying = showFanfareAnimation,
+                                    speed = 1.2f,
+                                    restartOnPlay = false
+                                )
+                                
+                                // Stop animation when complete
+                                LaunchedEffect(fanfareProgress) {
+                                    if (fanfareProgress >= 0.99f) {
+                                        showFanfareAnimation = false
+                                    }
+                                }
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(60.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LottieAnimation(
+                                        composition = fanfareComposition,
+                                        progress = { fanfareProgress },
+                                        modifier = Modifier.size(120.dp)
+                                    )
+                                }
+                            }
                         }
                         
                         OutlinedButton(
