@@ -533,7 +533,9 @@ private fun ProgressStatsSection(progress: HabitProgress) {
                         Color(0xFFFF6B35),
                         Color(0xFFFF8E53)
                     ),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    useLottieAnimation = true,
+                    lottieAsset = if (progress.currentStreak == 0) "fireblack.json" else "Fire.json"
                 )
                 EnhancedStatCard(
                     title = "Longest Streak",
@@ -593,7 +595,9 @@ private fun EnhancedStatCard(
     subtitle: String,
     icon: ImageVector,
     gradient: List<Color>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useLottieAnimation: Boolean = false,
+    lottieAsset: String? = null
 ) {
     val isDark = isSystemInDarkTheme()
     
@@ -631,6 +635,24 @@ private fun EnhancedStatCard(
             repeatMode = RepeatMode.Reverse
         ),
         label = "shimmer_alpha"
+    )
+    
+    // Lottie animation setup
+    val lottieComposition by rememberLottieComposition(
+        spec = if (useLottieAnimation && lottieAsset != null) {
+            LottieCompositionSpec.Asset(lottieAsset)
+        } else {
+            // Provide a dummy spec that won't load anything
+            LottieCompositionSpec.Asset("")
+        }
+    )
+    
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = lottieComposition,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = useLottieAnimation && lottieComposition != null,
+        speed = 1f,
+        restartOnPlay = true
     )
     
     Card(
@@ -703,16 +725,26 @@ private fun EnhancedStatCard(
                             shape = CircleShape
                         )
                         .graphicsLayer {
-                            rotationZ = iconRotation
+                            rotationZ = if (useLottieAnimation) 0f else iconRotation
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = gradient[0],
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (useLottieAnimation && lottieComposition != null) {
+                        // Use Lottie animation
+                        LottieAnimation(
+                            composition = lottieComposition,
+                            progress = { lottieProgress },
+                            modifier = Modifier.size(28.dp)
+                        )
+                    } else {
+                        // Use regular icon
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = gradient[0],
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
                 
                 // Value with enhanced typography
@@ -1087,53 +1119,52 @@ private fun AnimatedFireIcon(
     streakCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "fire_animation")
+    // Determine which fire animation to use
+    val shouldUseBlackFire = !isActive || streakCount == 0
+    val fireAsset = if (shouldUseBlackFire) "fireblack.json" else "Fire.json"
     
-    // Flame flickering animation
-    val flameScale by infiniteTransition.animateFloat(
-        initialValue = 0.9f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "flame_scale"
+    // Load Lottie fire animation
+    val fireComposition by rememberLottieComposition(
+        LottieCompositionSpec.Asset(fireAsset)
     )
     
-    // Color animation based on active state
-    val fireColor by animateColorAsState(
-        targetValue = if (isActive) {
-            Color(0xFFFF6B35) // Bright orange-red
-        } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) // Faded
-        },
-        animationSpec = tween(600),
-        label = "fire_color"
+    val fireProgress by animateLottieCompositionAsState(
+        composition = fireComposition,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = true,
+        speed = 1f,
+        restartOnPlay = true
     )
     
-    // Rotation for extra liveliness
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = -2f,
-        targetValue = 2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "fire_rotation"
-    )
-    
-    Icon(
-        imageVector = Icons.Default.LocalFireDepartment,
-        contentDescription = "Streak Fire",
-        tint = fireColor,
-        modifier = modifier
-            .size(28.dp)
-            .graphicsLayer {
-                scaleX = if (isActive) flameScale else 1f
-                scaleY = if (isActive) flameScale else 1f
-                rotationZ = if (isActive) rotation else 0f
-            }
-    )
+    // Add grey circular background for black fire visibility in dark mode
+    if (shouldUseBlackFire) {
+        Box(
+            modifier = modifier
+                .size(40.dp)
+                .background(
+                    color = Color(0xFFE0E0E0), // Light grey background
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            LottieAnimation(
+                composition = fireComposition,
+                progress = { fireProgress },
+                modifier = Modifier.size(36.dp) // Slightly bigger for black fire
+            )
+        }
+    } else {
+        // Orange fire without background
+        Box(
+            modifier = modifier.size(32.dp)
+        ) {
+            LottieAnimation(
+                composition = fireComposition,
+                progress = { fireProgress },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
 }
 
 @Composable
