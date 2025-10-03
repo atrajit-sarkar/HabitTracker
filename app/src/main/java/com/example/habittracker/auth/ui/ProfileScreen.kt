@@ -437,7 +437,7 @@ fun ProfileScreen(
 
             // Stats Cards
             Text(
-                text = "Your Statistics",
+                text = stringResource(R.string.your_statistics),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -539,13 +539,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Detailed Analytics",
+                                text = stringResource(R.string.detailed_analytics),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Charts, trends & comparisons",
+                                text = stringResource(R.string.charts_trends_comparisons),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                             )
@@ -562,7 +562,7 @@ fun ProfileScreen(
 
             // Social Features Section
             Text(
-                text = "Social & Friends",
+                text = stringResource(R.string.social_and_friends),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -634,13 +634,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Leaderboard",
+                                text = stringResource(R.string.leaderboard),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = "Compete with friends",
+                                text = stringResource(R.string.compete_with_friends),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                             )
@@ -657,7 +657,7 @@ fun ProfileScreen(
 
             // Account Section
             Text(
-                text = "Account Settings",
+                text = stringResource(R.string.account_settings),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -709,13 +709,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Notification Setup Guide",
+                                text = stringResource(R.string.notification_setup_guide),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "Ensure reliable reminders",
+                                text = stringResource(R.string.ensure_reliable_reminders),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                             )
@@ -847,13 +847,13 @@ fun ProfileScreen(
                         }
                         Column {
                             Text(
-                                text = "Check for Updates",
+                                text = stringResource(R.string.check_for_updates),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = "Get the latest features",
+                                text = stringResource(R.string.get_latest_features),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                             )
@@ -953,13 +953,13 @@ fun ProfileScreen(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "Habit Tracker",
+                        text = stringResource(R.string.app_name_display),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "Build better habits, one day at a time",
+                        text = stringResource(R.string.app_tagline),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

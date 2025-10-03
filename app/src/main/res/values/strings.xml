@@ -105,7 +105,6 @@
     <string name="manage_your_habits">Manage your habits</string>
     <string name="actions">ACTIONS</string>
     <string name="profile">Profile</string>
-    <string name="account_settings">Account settings</string>
     <string name="trash">Trash</string>
     <string name="view_deleted_habits">View deleted habits</string>
     <string name="loading_sounds">Loading sounds...</string>
@@ -253,24 +252,6 @@
     <string name="youre_all_set">You\'re all set for reliable habit reminders</string>
     <string name="step_progress">%1$d/%2$d</string>
     
-    <!-- Profile Screen -->
-    <string name="profile_title">Profile</string>
-    <string name="your_statistics">Your Statistics</string>
-    <string name="detailed_analytics">Detailed Analytics</string>
-    <string name="charts_trends_comparisons">Charts, trends &amp; comparisons</string>
-    <string name="social_and_friends">Social &amp; Friends</string>
-    <string name="leaderboard">Leaderboard</string>
-    <string name="compete_with_friends">Compete with friends</string>
-    <string name="notification_setup_guide_title">Notification Setup Guide</string>
-    <string name="ensure_reliable_reminders">Ensure reliable reminders</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="get_latest_features">Get the latest features</string>
-    <string name="habit_tracker_tagline">Build better habits, one day at a time</string>
-    <string name="reset">Reset</string>
-    <string name="sign_out_confirmation">Are you sure you want to sign out? You\'ll need to sign in again to access your habits.</string>
-    <string name="sign_out">Sign Out</string>
-    <string name="close">Close</string>
-    
     <!-- Auth Screen -->
     <string name="email">Email</string>
     <string name="password">Password</string>
@@ -291,4 +272,18 @@
     <string name="edit_habit">Edit Habit</string>
     <string name="add_new_habit">Add New Habit</string>
     <string name="update_habit">Update Habit</string>
+    
+    <!-- Profile Screen -->
+    <string name="your_statistics">Your Statistics</string>
+    <string name="detailed_analytics">Detailed Analytics</string>
+    <string name="charts_trends_comparisons">Charts, trends &amp; comparisons</string>
+    <string name="social_and_friends">Social &amp; Friends</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="compete_with_friends">Compete with friends</string>
+    <string name="account_settings">Account Settings</string>
+    <string name="ensure_reliable_reminders">Ensure reliable reminders</string>
+    <string name="check_for_updates">Check for Updates</string>
+    <string name="get_latest_features">Get the latest features</string>
+    <string name="app_name_display">Habit Tracker</string>
+    <string name="app_tagline">Build better habits, one day at a time</string>
 </resources>
