@@ -246,7 +246,8 @@ private fun HeroSection(
             // Current Streak with Animated Fire
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 AnimatedFireIcon(
                     isActive = isSelectedDateCompleted && isToday,
@@ -256,7 +257,10 @@ private fun HeroSection(
                     text = stringResource(R.string.current_streak_days, progress.currentStreak),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
             
@@ -1140,7 +1144,7 @@ private fun AnimatedFireIcon(
     if (shouldUseBlackFire) {
         Box(
             modifier = modifier
-                .size(40.dp)
+                .size(32.dp)
                 .background(
                     color = Color(0xFFE0E0E0), // Light grey background
                     shape = CircleShape
@@ -1150,13 +1154,13 @@ private fun AnimatedFireIcon(
             LottieAnimation(
                 composition = fireComposition,
                 progress = { fireProgress },
-                modifier = Modifier.size(36.dp) // Slightly bigger for black fire
+                modifier = Modifier.size(28.dp) // Compact size for single line layout
             )
         }
     } else {
         // Orange fire without background
         Box(
-            modifier = modifier.size(32.dp)
+            modifier = modifier.size(28.dp)
         ) {
             LottieAnimation(
                 composition = fireComposition,
