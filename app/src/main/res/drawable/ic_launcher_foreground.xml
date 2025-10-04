@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Habit Tracker Icon with Target and Check -->
+    <group android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:pivotX="54"
+        android:pivotY="54">
+        
+        <!-- Outer Ring -->
+        <path
+            android:pathData="M54,15 A39,39 0 1,1 54,93 A39,39 0 1,1 54,15 Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF6B35"
+            android:strokeWidth="4"/>
+        
+        <!-- Middle Ring -->
+        <path
+            android:pathData="M54,25 A29,29 0 1,1 54,83 A29,29 0 1,1 54,25 Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF8E53"
+            android:strokeWidth="3"/>
+        
+        <!-- Inner Ring -->
+        <path
+            android:pathData="M54,35 A19,19 0 1,1 54,73 A19,19 0 1,1 54,35 Z"
+            android:fillColor="#FFB366"
+            android:strokeColor="#FF6B35"
+            android:strokeWidth="2"/>
+        
+        <!-- Center Bullseye -->
+        <path
+            android:pathData="M54,46 A8,8 0 1,1 54,62 A8,8 0 1,1 54,46 Z"
+            android:fillColor="#FF6B35"/>
+        
+        <!-- Check Mark -->
+        <path
+            android:pathData="M46,54 L51,59 L62,48"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000"/>
+            
+        <!-- Flame accent -->
+        <path
+            android:pathData="M54,45 C52,42 50,40 48,42 C48,40 50,38 52,39 C54,37 56,39 58,42 C56,40 54,42 54,45 Z"
+            android:fillColor="#FFD700"/>
+    </group>
+</vector>

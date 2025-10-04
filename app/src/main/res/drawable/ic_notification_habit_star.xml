@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alternative: Star/Achievement style notification icon -->
+<!-- Represents achieving habit milestones -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Outer star points -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2.5l2.09,6.43h6.76l-5.47,3.97l2.09,6.43L12,15.36l-5.47,3.97l2.09,-6.43L3.15,8.93h6.76L12,2.5z" />
+    
+    <!-- Inner star (creates hollow effect) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M12,6.73l1.04,3.21h3.38l-2.73,1.98l1.04,3.21L12,13.15l-2.73,1.98l1.04,-3.21l-2.73,-1.98h3.38L12,6.73z" />
+</vector>

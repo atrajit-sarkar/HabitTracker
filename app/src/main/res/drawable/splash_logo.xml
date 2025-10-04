@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    
+    <!-- Main Icon -->
+    <group android:scaleX="1.2"
+        android:scaleY="1.2"
+        android:pivotX="60"
+        android:pivotY="60">
+        
+        <!-- Outer Ring with Gradient Effect -->
+        <path
+            android:pathData="M60,10 A50,50 0 1,1 60,110 A50,50 0 1,1 60,10 Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF6B35"
+            android:strokeWidth="5"/>
+        
+        <!-- Middle Ring -->
+        <path
+            android:pathData="M60,20 A40,40 0 1,1 60,100 A40,40 0 1,1 60,20 Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF8E53"
+            android:strokeWidth="4"/>
+        
+        <!-- Inner Ring -->
+        <path
+            android:pathData="M60,30 A30,30 0 1,1 60,90 A30,30 0 1,1 60,30 Z"
+            android:fillColor="#FFB366"
+            android:strokeColor="#FF6B35"
+            android:strokeWidth="3"/>
+        
+        <!-- Center Bullseye -->
+        <path
+            android:pathData="M60,48 A12,12 0 1,1 60,72 A12,12 0 1,1 60,48 Z"
+            android:fillColor="#FF6B35"/>
+        
+        <!-- Large Check Mark -->
+        <path
+            android:pathData="M48,60 L56,68 L72,52"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000"/>
+            
+        <!-- Flame accents around the target -->
+        <path
+            android:pathData="M60,45 C57,40 53,37 50,40 C50,37 53,34 56,36 C60,32 64,36 68,40 C65,37 60,40 60,45 Z"
+            android:fillColor="#FFD700"/>
+        
+        <!-- Additional small flames -->
+        <path
+            android:pathData="M40,70 C38,67 35,65 33,67 C33,65 35,63 37,64 C40,62 43,64 45,67 C43,65 40,67 40,70 Z"
+            android:fillColor="#FFD700"
+            android:alpha="0.8"/>
+            
+        <path
+            android:pathData="M80,70 C78,67 75,65 73,67 C73,65 75,63 77,64 C80,62 83,64 85,67 C83,65 80,67 80,70 Z"
+            android:fillColor="#FFD700"
+            android:alpha="0.8"/>
+    </group>
+</vector>
