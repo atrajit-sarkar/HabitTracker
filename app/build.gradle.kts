@@ -8,6 +8,33 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
+// Create keystore if it doesn't exist
+tasks.register("createKeystore") {
+    doLast {
+        val keystoreFile = file("../habit-tracker-release.jks")
+        if (!keystoreFile.exists()) {
+            println("Creating production keystore...")
+            exec {
+                commandLine(
+                    "keytool", "-genkeypair", "-v",
+                    "-keystore", keystoreFile.absolutePath,
+                    "-keyalg", "RSA",
+                    "-keysize", "2048",
+                    "-validity", "10000",
+                    "-alias", "habit-tracker-key",
+                    "-storepass", "HabitTracker2025!",
+                    "-keypass", "HabitTracker2025!",
+                    "-dname", "CN=Habit Tracker, OU=Development, O=Habit Tracker, L=Unknown, ST=Unknown, C=US"
+                )
+            }
+            println("✅ Keystore created: ${keystoreFile.absolutePath}")
+            println("⚠️  IMPORTANT: Backup this keystore file!")
+        } else {
+            println("✅ Keystore already exists: ${keystoreFile.absolutePath}")
+        }
+    }
+}
+
 android {
     namespace = "com.example.habittracker"
     compileSdk = 36
@@ -22,8 +49,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../habit-tracker-release.jks")
+            storePassword = "HabitTracker2025!"
+            keyAlias = "habit-tracker-key"
+            keyPassword = "HabitTracker2025!"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -120,4 +157,11 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+}
+
+// Run createKeystore before assembleRelease
+afterEvaluate {
+    tasks.named("assembleRelease") {
+        dependsOn("createKeystore")
+    }
 }
