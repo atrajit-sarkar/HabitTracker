@@ -59,9 +59,26 @@ fun HabitTrackerNavigation(
         composable("loading") {
             val authViewModel: AuthViewModel = hiltViewModel()
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
-            var animationComplete by remember { mutableStateOf(false) }
             
-            // Loading screen with Lottie animation
+            // Navigate based on auth state once it's loaded
+            LaunchedEffect(authState.isLoading, authState.user) {
+                if (!authState.isLoading) {
+                    // Auth state has been checked, now navigate
+                    if (authState.user != null) {
+                        // User is authenticated, go directly to home
+                        navController.navigate("home") {
+                            popUpTo("loading") { inclusive = true }
+                        }
+                    } else {
+                        // User is not authenticated, go to auth screen
+                        navController.navigate("auth") {
+                            popUpTo("loading") { inclusive = true }
+                        }
+                    }
+                }
+            }
+            
+            // Loading screen with Trail Loading animation
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -69,41 +86,16 @@ fun HabitTrackerNavigation(
                 contentAlignment = Alignment.Center
             ) {
                 val composition by rememberLottieComposition(
-                    LottieCompositionSpec.Asset("welcome.json")
+                    LottieCompositionSpec.Asset("trail_loading.json")
                 )
                 
                 val progress by animateLottieCompositionAsState(
                     composition = composition,
-                    iterations = 1,
+                    iterations = LottieConstants.IterateForever,
                     isPlaying = true,
-                    speed = 4f,
-                    restartOnPlay = false
+                    speed = 5f,
+                    restartOnPlay = true
                 )
-                
-                // Check if animation is complete
-                LaunchedEffect(progress) {
-                    if (progress >= 1f) {
-                        animationComplete = true
-                    }
-                }
-                
-                // Navigate only after animation completes AND auth state is loaded
-                LaunchedEffect(animationComplete, authState.isLoading, authState.user) {
-                    if (animationComplete && !authState.isLoading) {
-                        // Auth state has been checked and animation completed, now navigate
-                        if (authState.user != null) {
-                            // User is authenticated, go directly to home
-                            navController.navigate("home") {
-                                popUpTo("loading") { inclusive = true }
-                            }
-                        } else {
-                            // User is not authenticated, go to auth screen
-                            navController.navigate("auth") {
-                                popUpTo("loading") { inclusive = true }
-                            }
-                        }
-                    }
-                }
                 
                 LottieAnimation(
                     composition = composition,

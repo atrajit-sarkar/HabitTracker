@@ -1,18 +1,17 @@
-# Welcome Animation - Loading Screen
+# Trail Loading Animation - Loading Screen
 
 ## Feature Overview
-Replaced the default `CircularProgressIndicator` on the loading screen (between splash screen and home screen) with the **Welcome** Lottie animation at 4x speed. The app now **waits for the animation to complete** before navigating to the next screen.
+Replaced the default `CircularProgressIndicator` on the loading screen (between splash screen and home screen) with the **Trail Loading** Lottie animation at 5x speed. The app navigates as soon as authentication check completes.
 
 ## What Changed
 
 ### 1. Animation File Added
-- **Source:** `animations/Welcome.json`
-- **Destination:** `app/src/main/assets/welcome.json`
+- **Source:** `animations/Trail loading.json`
+- **Destination:** `app/src/main/assets/trail_loading.json`
 - **Type:** Lottie JSON animation file
-- **Size:** 428x123 pixels, 60 FPS
-- **Animation:** Animated "Welcome" text with gradient stroke effect
-- **Speed:** 4x (ultra-fast playback)
-- **Duration:** ~2 seconds at 4x speed (original: ~8.2 seconds)ation - Loading Screen
+- **Size:** 500x500 pixels, 60 FPS
+- **Animation:** Rotating circles with trail effect (blue color)
+- **Speed:** 5x (ultra-fast playback)ation - Loading Screen
 
 ## Feature Overview
 Replaced the default `CircularProgressIndicator` on the loading screen (between splash screen and home screen) with the **Welcome** Lottie animation at 2x speed.
@@ -43,11 +42,26 @@ Box(
 
 #### After:
 ```kotlin
-// Loading screen with Lottie animation
+// Loading screen with Trail Loading animation
 composable("loading") {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
-    var animationComplete by remember { mutableStateOf(false) }
+    
+    // Navigate based on auth state once it's loaded
+    LaunchedEffect(authState.isLoading, authState.user) {
+        if (!authState.isLoading) {
+            // Auth state has been checked, now navigate
+            if (authState.user != null) {
+                navController.navigate("home") {
+                    popUpTo("loading") { inclusive = true }
+                }
+            } else {
+                navController.navigate("auth") {
+                    popUpTo("loading") { inclusive = true }
+                }
+            }
+        }
+    }
     
     Box(
         modifier = Modifier
@@ -56,39 +70,16 @@ composable("loading") {
         contentAlignment = Alignment.Center
     ) {
         val composition by rememberLottieComposition(
-            LottieCompositionSpec.Asset("welcome.json")
+            LottieCompositionSpec.Asset("trail_loading.json")
         )
         
         val progress by animateLottieCompositionAsState(
             composition = composition,
-            iterations = 1,  // Play once
+            iterations = LottieConstants.IterateForever,
             isPlaying = true,
-            speed = 4f,
-            restartOnPlay = false
+            speed = 5f,
+            restartOnPlay = true
         )
-        
-        // Check if animation is complete
-        LaunchedEffect(progress) {
-            if (progress >= 1f) {
-                animationComplete = true
-            }
-        }
-        
-        // Navigate only after animation completes AND auth state is loaded
-        LaunchedEffect(animationComplete, authState.isLoading, authState.user) {
-            if (animationComplete && !authState.isLoading) {
-                // Navigate based on auth state
-                if (authState.user != null) {
-                    navController.navigate("home") {
-                        popUpTo("loading") { inclusive = true }
-                    }
-                } else {
-                    navController.navigate("auth") {
-                        popUpTo("loading") { inclusive = true }
-                    }
-                }
-            }
-        }
         
         LottieAnimation(
             composition = composition,
@@ -102,33 +93,28 @@ composable("loading") {
 ## Implementation Details
 
 ### Animation Properties
-- **Loop:** Single play (plays once then navigates)
-- **Speed:** 4x (ultra-fast for instant visual feedback)
-- **Duration:** ~2 seconds at 4x speed
+- **Loop:** Infinite (continuously plays until navigation)
+- **Speed:** 5x (ultra-fast for quick visual feedback)
 - **Size:** 400dp (large, prominent size)
 - **Position:** Center of screen
 - **Background:** Transparent (shows through to app theme)
-- **Behavior:** Waits for animation to complete before navigation
+- **Behavior:** Navigates immediately when auth check completes
 
 ### When It Appears
 The loading animation appears in these scenarios:
-1. **App Launch:** After splash screen, plays Welcome animation
-2. **Authentication Check:** Runs in parallel with auth state verification
-3. **Navigation:** Waits for BOTH animation completion AND auth check before navigating
+1. **App Launch:** After splash screen, shows Trail Loading animation
+2. **Authentication Check:** Animation plays while checking auth state
+3. **Navigation:** Navigates immediately when auth check completes
 
 ### Navigation Logic
 ```
 Splash Screen
     ↓
-Loading Screen (Welcome Animation starts)
+Loading Screen (Trail Loading Animation starts at 5x speed)
     ↓
-[Parallel Processes]
-├─ Animation plays (4x speed, ~2 seconds)
-└─ Authentication check
+Authentication check completes
     ↓
-Wait for BOTH to complete
-    ↓
-Navigate to appropriate screen
+Navigate immediately to Home/Auth screen
 ```
 
 ### User Flow
@@ -150,11 +136,11 @@ Check Authentication State
 - No additional dependencies required
 
 ### Animation Details
-The Welcome animation shows:
-- Animated "Welcome" text with gradient stroke
-- Smooth line drawing animation
-- Professional gradient colors
-- Ultra-fast 4x playback speed for instant visual feedback
+The Trail Loading animation shows:
+- Multiple rotating circles of different sizes
+- Blue gradient color scheme
+- Trail/orbit effect as circles rotate
+- Fast 5x playback speed for ultra-snappy feel
 
 ### Performance
 - Lightweight JSON animation
@@ -167,8 +153,8 @@ The Welcome animation shows:
    - Replaced CircularProgressIndicator with Lottie animation
 
 ## Files Added
-1. `app/src/main/assets/welcome.json`
-   - Welcome Lottie animation
+1. `app/src/main/assets/trail_loading.json`
+   - Trail Loading Lottie animation
 
 ## Testing
 To test the animation:
@@ -180,12 +166,12 @@ To test the animation:
 **Note:** The animation appears very briefly if authentication check is fast, but provides a smooth visual transition during the loading process.
 
 ## Benefits
-✅ **More Welcoming:** "Welcome" text creates a friendly first impression
+✅ **Dynamic Animation:** Rotating circles with trail effect
 ✅ **Brand Consistency:** Custom animation matches app theme
 ✅ **Better UX:** Clear visual feedback during authentication check
-✅ **Smooth Transition:** Animation completes before navigation (no jarring cuts)
-✅ **Fast Animation:** 4x speed ensures quick, snappy feel (~2 seconds)
-✅ **Smart Logic:** Waits for both animation AND auth check to complete
+✅ **Smooth Transition:** Immediate navigation when ready
+✅ **Ultra-Fast Animation:** 5x speed ensures snappy, energetic feel
+✅ **No Delays:** Navigates as soon as auth completes
 ✅ **Modern Feel:** Lottie animations feel more polished than system spinners
 
 ## Version
@@ -197,6 +183,6 @@ To test the animation:
 ---
 
 **Next Steps:**
-- Build and install the app to see the new Welcome animation at 4x speed
+- Build and install the app to see the new Trail Loading animation at 5x speed
 - Test on different devices and Android versions
 - Monitor for any performance issues
