@@ -286,4 +286,12 @@
     <string name="get_latest_features">Get the latest features</string>
     <string name="app_name_display">Habit Tracker</string>
     <string name="app_tagline">Build better habits, one day at a time</string>
+    
+    <!-- Missing strings for translations -->
+    <string name="profile_title">Profile</string>
+    <string name="habit_tracker_tagline">Build better habits, one day at a time</string>
+    <string name="reset">Reset</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="sign_out_confirmation">Are you sure you want to sign out? You will need to log in again to access your habits.</string>
+    <string name="close">Close</string>
 </resources>
