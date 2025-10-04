@@ -26,6 +26,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.habittracker.auth.GoogleSignInHelper
 import com.example.habittracker.auth.User
+import com.example.habittracker.performance.PerformanceManager
+import javax.inject.Inject
 import com.example.habittracker.auth.ui.AuthScreen
 import com.example.habittracker.auth.ui.AuthViewModel
 import com.example.habittracker.auth.ui.ProfileScreen
@@ -60,6 +62,15 @@ fun HabitTrackerNavigation(
             val authViewModel: AuthViewModel = hiltViewModel()
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
             
+            // Get PerformanceManager from context
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val performanceManager = remember { PerformanceManager(context.applicationContext) }
+            
+            // Log performance info once
+            LaunchedEffect(Unit) {
+                performanceManager.logPerformanceInfo()
+            }
+            
             // Navigate based on auth state once it's loaded
             LaunchedEffect(authState.isLoading, authState.user) {
                 if (!authState.isLoading) {
@@ -78,7 +89,7 @@ fun HabitTrackerNavigation(
                 }
             }
             
-            // Loading screen with Trail Loading animation
+            // Loading screen with Trail Loading animation (adaptive performance)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -93,14 +104,14 @@ fun HabitTrackerNavigation(
                     composition = composition,
                     iterations = LottieConstants.IterateForever,
                     isPlaying = true,
-                    speed = 5f,
+                    speed = performanceManager.getAnimationSpeed(),
                     restartOnPlay = true
                 )
                 
                 LottieAnimation(
                     composition = composition,
                     progress = { progress },
-                    modifier = Modifier.size(400.dp)
+                    modifier = Modifier.size(performanceManager.getAnimationSize().dp)
                 )
             }
         }
