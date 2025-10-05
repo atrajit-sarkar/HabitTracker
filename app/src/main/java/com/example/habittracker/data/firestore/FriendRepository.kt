@@ -332,6 +332,83 @@ class FriendRepository @Inject constructor(
         }
     }
 
+    // Update only avatar/photoUrl in user profile (partial update)
+    suspend fun updateUserAvatar(
+        userId: String,
+        photoUrl: String?,
+        customAvatar: String?
+    ): Result<Unit> {
+        return try {
+            // First check if the profile exists
+            val profileDoc = firestore.collection(USER_PROFILES_COLLECTION)
+                .document(userId)
+            
+            val snapshot = profileDoc.get().await()
+            
+            if (snapshot.exists()) {
+                // Profile exists, do a partial update
+                val updates = mutableMapOf<String, Any?>()
+                updates["photoUrl"] = photoUrl
+                updates["customAvatar"] = customAvatar // Can be null, URL, or emoji
+                updates["updatedAt"] = System.currentTimeMillis()
+                
+                profileDoc.update(updates).await()
+                Log.d(TAG, "User avatar updated in existing profile - photoUrl: $photoUrl, customAvatar: $customAvatar")
+            } else {
+                // Profile doesn't exist yet, get user info from auth
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                val email = currentUser?.email ?: ""
+                val displayName = currentUser?.displayName ?: ""
+                
+                // Create minimal profile
+                val profile = hashMapOf(
+                    "userId" to userId,
+                    "email" to email,
+                    "displayName" to displayName,
+                    "photoUrl" to photoUrl,
+                    "customAvatar" to customAvatar,
+                    "successRate" to 0,
+                    "totalHabits" to 0,
+                    "totalCompletions" to 0,
+                    "currentStreak" to 0,
+                    "leaderboardScore" to 0,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+                profileDoc.set(profile).await()
+                Log.d(TAG, "User avatar saved in new profile - photoUrl: $photoUrl, customAvatar: $customAvatar")
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user avatar: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    // Update only display name in user profile (partial update)
+    suspend fun updateUserDisplayName(
+        userId: String,
+        displayName: String
+    ): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "displayName" to displayName,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            
+            firestore.collection(USER_PROFILES_COLLECTION)
+                .document(userId)
+                .update(updates)
+                .await()
+            
+            Log.d(TAG, "User display name updated in public profile: $displayName")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user display name: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     // Get friend's public profile
     suspend fun getFriendProfile(friendId: String): UserPublicProfile? {
         return try {
@@ -339,15 +416,13 @@ class FriendRepository @Inject constructor(
                 .document(friendId)
                 .get()
                 .await()
-
+            
             snapshot.toUserPublicProfile()
         } catch (e: Exception) {
             Log.e(TAG, "Error getting friend profile: ${e.message}", e)
             null
         }
-    }
-
-    // Real-time friend profile observer
+    }    // Real-time friend profile observer
     fun observeFriendProfile(friendId: String): Flow<UserPublicProfile?> = callbackFlow {
         var listener: ListenerRegistration? = null
         

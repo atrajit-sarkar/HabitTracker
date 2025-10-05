@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -20,7 +21,8 @@ private const val CUSTOM_DISPLAY_NAME_FIELD = "customDisplayName"
 @Singleton
 class AuthRepository @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val friendRepository: FriendRepository
 ) {
     
     val currentUser: Flow<User?> = callbackFlow {
@@ -151,10 +153,28 @@ class AuthRepository @Inject constructor(
                 userDoc.set(mapOf(CUSTOM_AVATAR_FIELD to avatar), 
                     com.google.firebase.firestore.SetOptions.merge()).await()
                 Log.d(TAG, "Custom avatar updated to: $avatar")
+                
+                // Also update in social profile (userProfiles collection)
+                val photoUrl = firebaseAuth.currentUser?.photoUrl?.toString()
+                friendRepository.updateUserAvatar(
+                    userId = userId,
+                    photoUrl = photoUrl,
+                    customAvatar = avatar
+                )
+                Log.d(TAG, "Custom avatar synced to social profile")
             } else {
                 // Reset to default by removing the field
                 userDoc.update(CUSTOM_AVATAR_FIELD, com.google.firebase.firestore.FieldValue.delete()).await()
                 Log.d(TAG, "Custom avatar reset to default")
+                
+                // Also update in social profile
+                val photoUrl = firebaseAuth.currentUser?.photoUrl?.toString()
+                friendRepository.updateUserAvatar(
+                    userId = userId,
+                    photoUrl = photoUrl,
+                    customAvatar = null
+                )
+                Log.d(TAG, "Avatar reset synced to social profile")
             }
             
             AuthResult.Success
@@ -177,6 +197,13 @@ class AuthRepository @Inject constructor(
             userDoc.set(mapOf(CUSTOM_DISPLAY_NAME_FIELD to name.trim()), 
                 com.google.firebase.firestore.SetOptions.merge()).await()
             Log.d(TAG, "Display name updated to: $name")
+            
+            // Also update in social profile (userProfiles collection)
+            friendRepository.updateUserDisplayName(
+                userId = userId,
+                displayName = name.trim()
+            )
+            Log.d(TAG, "Display name synced to social profile")
             
             AuthResult.Success
         } catch (e: Exception) {

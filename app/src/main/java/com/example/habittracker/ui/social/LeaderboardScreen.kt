@@ -383,7 +383,26 @@ fun TopThreeCard(
             val context = androidx.compose.ui.platform.LocalContext.current
             
             // Avatar - show photo if available, otherwise custom avatar
-            if (entry.profile.photoUrl != null && entry.profile.customAvatar == null) {
+            // Priority: custom image URL > Google photo > emoji > default icon
+            val hasCustomImageAvatar = entry.profile.customAvatar?.startsWith("https://") == true
+            val hasGooglePhoto = entry.profile.photoUrl != null
+            
+            if (hasCustomImageAvatar) {
+                // Custom avatar from URL (e.g., GitHub)
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.customAvatar)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom avatar",
+                    modifier = Modifier
+                        .size(if (isFirst) 56.dp else 48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else if (hasGooglePhoto) {
                 // Google profile picture in high quality
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -398,23 +417,22 @@ fun TopThreeCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
-            } else if (entry.profile.customAvatar?.startsWith("https://") == true) {
-                // Custom avatar from GitHub (image URL)
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(entry.profile.customAvatar)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Custom avatar",
+            } else if (!entry.profile.customAvatar.isNullOrBlank()) {
+                // Emoji avatar
+                Box(
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = entry.profile.customAvatar,
+                        fontSize = if (isFirst) 28.sp else 24.sp
+                    )
+                }
             } else {
-                // Fallback
+                // Fallback to default icon
                 Box(
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
@@ -531,7 +549,26 @@ fun LeaderboardEntryCard(
             // Avatar - show photo if available, otherwise custom avatar
             val context = androidx.compose.ui.platform.LocalContext.current
             
-            if (entry.profile.photoUrl != null && entry.profile.customAvatar == null) {
+            // Priority: custom image URL > Google photo > emoji > default icon
+            val hasCustomImageAvatar = entry.profile.customAvatar?.startsWith("https://") == true
+            val hasGooglePhoto = entry.profile.photoUrl != null
+            
+            if (hasCustomImageAvatar) {
+                // Custom avatar from URL (e.g., GitHub)
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.customAvatar)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom avatar",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else if (hasGooglePhoto) {
                 // Google profile picture in high quality
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -546,23 +583,22 @@ fun LeaderboardEntryCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
-            } else if (entry.profile.customAvatar?.startsWith("https://") == true) {
-                // Custom avatar from GitHub (image URL)
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(entry.profile.customAvatar)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Custom avatar",
+            } else if (!entry.profile.customAvatar.isNullOrBlank()) {
+                // Emoji avatar
+                Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = entry.profile.customAvatar,
+                        fontSize = 24.sp
+                    )
+                }
             } else {
-                // Fallback
+                // Fallback to default icon
                 Box(
                     modifier = Modifier
                         .size(48.dp)
