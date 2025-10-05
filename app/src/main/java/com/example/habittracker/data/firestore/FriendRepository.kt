@@ -370,6 +370,17 @@ class FriendRepository @Inject constructor(
         leaderboardScore: Int
     ): Result<Unit> {
         return try {
+            val profileDoc = firestore.collection(USER_PROFILES_COLLECTION).document(userId)
+            
+            // Check if profile exists
+            val snapshot = profileDoc.get().await()
+            
+            if (!snapshot.exists()) {
+                Log.w(TAG, "updateUserStats: Profile doesn't exist for $userId, cannot update stats")
+                return Result.failure(Exception("Profile does not exist"))
+            }
+            
+            // Only update stats fields, preserving all other data
             val updates = hashMapOf<String, Any>(
                 "successRate" to successRate,
                 "totalHabits" to totalHabits,
@@ -379,12 +390,9 @@ class FriendRepository @Inject constructor(
                 "updatedAt" to System.currentTimeMillis()
             )
             
-            firestore.collection(USER_PROFILES_COLLECTION)
-                .document(userId)
-                .update(updates)
-                .await()
+            profileDoc.update(updates).await()
             
-            Log.d(TAG, "updateUserStats: Stats updated for $userId - SR: $successRate%, Score: $leaderboardScore")
+            Log.d(TAG, "updateUserStats: Stats updated for $userId - SR: $successRate%, Habits: $totalHabits, Score: $leaderboardScore")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating user stats: ${e.message}", e)
