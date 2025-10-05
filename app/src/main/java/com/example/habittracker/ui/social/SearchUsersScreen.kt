@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.data.firestore.UserPublicProfile
 
@@ -268,9 +270,14 @@ fun UserSearchResultCard(
             ) {
                 // Avatar - show photo if available, otherwise emoji
                 if (user.photoUrl != null && user.customAvatar == "😊") {
-                    // Google profile picture
+                    // Google profile picture in high quality
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     AsyncImage(
-                        model = user.photoUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(user.photoUrl)
+                            .size(Size.ORIGINAL) // Load original high-quality image
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Profile picture",
                         modifier = Modifier
                             .size(64.dp)

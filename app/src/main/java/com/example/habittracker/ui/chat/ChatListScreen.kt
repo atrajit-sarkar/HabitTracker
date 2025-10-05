@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.data.firestore.Chat
 import it.atraj.habittracker.data.firestore.MessageType
@@ -167,8 +169,13 @@ fun ChatListItem(
             // Avatar
             Box {
                 if (otherUserPhotoUrl != null && otherUserAvatar == "😊") {
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     AsyncImage(
-                        model = otherUserPhotoUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(otherUserPhotoUrl)
+                            .size(Size.ORIGINAL) // Load original high-quality image
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Profile picture",
                         modifier = Modifier
                             .size(56.dp)

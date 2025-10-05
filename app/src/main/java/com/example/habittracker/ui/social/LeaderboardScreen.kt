@@ -30,6 +30,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.atraj.habittracker.ui.HabitViewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import kotlinx.coroutines.delay
 
@@ -381,9 +383,14 @@ fun TopThreeCard(
 
             // Avatar - show photo if available, otherwise emoji
             if (entry.profile.photoUrl != null && entry.profile.customAvatar == "😊") {
-                // Google profile picture
+                // Google profile picture in high quality
+                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
-                    model = entry.profile.photoUrl,
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.photoUrl)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
@@ -506,9 +513,14 @@ fun LeaderboardEntryCard(
 
             // Avatar - show photo if available, otherwise emoji
             if (entry.profile.photoUrl != null && entry.profile.customAvatar == "😊") {
-                // Google profile picture
+                // Google profile picture in high quality
+                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
-                    model = entry.profile.photoUrl,
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.photoUrl)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
                         .size(48.dp)

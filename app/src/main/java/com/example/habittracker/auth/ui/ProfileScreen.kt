@@ -12,6 +12,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import it.atraj.habittracker.util.clickableOnce
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import com.airbnb.lottie.compose.*
 import it.atraj.habittracker.R
 import it.atraj.habittracker.ui.HabitViewModel
@@ -229,9 +234,14 @@ fun GlitteringProfilePhoto(
                     label = "avatar_crossfade"
                 ) { (isPhoto, emoji) ->
                     if (isPhoto) {
-                        // Load Google profile photo with Coil
+                        // Load Google profile photo with Coil in high quality
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         AsyncImage(
-                            model = photoUrl,
+                            model = ImageRequest.Builder(context)
+                                .data(photoUrl)
+                                .size(Size.ORIGINAL) // Load original high-quality image
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Profile photo",
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1311,9 +1321,12 @@ private fun AvatarPickerDialog(
             )
         },
         text = {
-            LazyRow(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                modifier = Modifier.heightIn(max = 300.dp)
             ) {
                 items(avatarEmojis) { emoji ->
                     val isSelected = emoji == currentAvatar

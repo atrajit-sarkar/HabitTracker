@@ -116,6 +116,8 @@ import com.airbnb.lottie.compose.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.R
 import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.data.local.HabitAvatar
@@ -299,9 +301,14 @@ fun HabitHomeScreen(
                         val currentAvatar = user?.customAvatar ?: "👤"
                         
                         if (showProfilePhoto && user?.photoUrl != null) {
-                            // Load Google profile photo
+                            // Load Google profile photo in high quality
+                            val context = LocalContext.current
                             AsyncImage(
-                                model = user.photoUrl,
+                                model = ImageRequest.Builder(context)
+                                    .data(user.photoUrl)
+                                    .size(Size.ORIGINAL) // Load original high-quality image
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Profile picture",
                                 modifier = Modifier
                                     .fillMaxSize()

@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.data.firestore.ChatMessage
 import it.atraj.habittracker.data.firestore.MessageType
@@ -129,8 +131,13 @@ fun ChatScreen(
                     
                     // Friend Avatar
                     if (friendPhotoUrl != null && friendAvatar == "😊") {
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         AsyncImage(
-                            model = friendPhotoUrl,
+                            model = ImageRequest.Builder(context)
+                                .data(friendPhotoUrl)
+                                .size(Size.ORIGINAL) // Load original high-quality image
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Profile picture",
                             modifier = Modifier
                                 .size(40.dp)

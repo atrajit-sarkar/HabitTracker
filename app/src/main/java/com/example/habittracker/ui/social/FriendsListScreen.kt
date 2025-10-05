@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.ui.HabitViewModel
 import it.atraj.habittracker.data.firestore.FriendRequest
@@ -358,9 +360,14 @@ fun FriendCard(
         ) {
             // Avatar - show photo if available, otherwise emoji
             if (friend.photoUrl != null && friend.customAvatar == "😊") {
-                // Google profile picture
+                // Google profile picture in high quality
+                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
-                    model = friend.photoUrl,
+                    model = ImageRequest.Builder(context)
+                        .data(friend.photoUrl)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
                         .size(56.dp)
