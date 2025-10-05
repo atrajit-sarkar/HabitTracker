@@ -79,7 +79,7 @@ class SocialViewModel @Inject constructor(
                 email = user.email ?: "",
                 displayName = user.effectiveDisplayName,
                 photoUrl = user.photoUrl,
-                customAvatar = user.customAvatar ?: "😊",
+                customAvatar = user.customAvatar, // null if no custom avatar set
                 // Preserve existing stats or use 0 if profile doesn't exist yet
                 successRate = existingProfile?.successRate ?: 0,
                 totalHabits = existingProfile?.totalHabits ?: 0,
@@ -101,7 +101,7 @@ class SocialViewModel @Inject constructor(
                 email = user.email ?: "",
                 displayName = user.effectiveDisplayName,
                 photoUrl = user.photoUrl,
-                customAvatar = user.customAvatar ?: "😊",
+                customAvatar = user.customAvatar, // null if no custom avatar set
                 successRate = successRate,
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,
@@ -211,7 +211,7 @@ class SocialViewModel @Inject constructor(
                 fromUserId = currentUser.uid,
                 fromUserEmail = currentUser.email ?: "",
                 fromUserName = currentUser.effectiveDisplayName,
-                fromUserAvatar = currentUser.customAvatar ?: "😊",
+                fromUserAvatar = currentUser.customAvatar ?: "", // Empty string if no custom avatar
                 toUserId = toUser.userId,
                 toUserEmail = toUser.email
             )

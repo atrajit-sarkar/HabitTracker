@@ -84,7 +84,7 @@ class ChatViewModel @Inject constructor(
                 val result = chatRepository.getOrCreateChat(
                     userId1 = user.uid,
                     userName1 = user.effectiveDisplayName,
-                    userAvatar1 = user.customAvatar ?: "😊",
+                    userAvatar1 = user.customAvatar, // Pass null if no custom avatar
                     userPhotoUrl1 = user.photoUrl,
                     userId2 = friendId,
                     userName2 = friendName,
@@ -164,7 +164,7 @@ class ChatViewModel @Inject constructor(
                     chatId = chat.id,
                     senderId = user.uid,
                     senderName = user.effectiveDisplayName,
-                    senderAvatar = user.customAvatar ?: "😊",
+                    senderAvatar = user.customAvatar, // Pass null if no custom avatar
                     senderPhotoUrl = user.photoUrl,
                     content = content,
                     type = type,

@@ -56,7 +56,7 @@ class ProfileStatsUpdater @Inject constructor(
             email = user.email ?: "",
             displayName = user.effectiveDisplayName,
             photoUrl = user.photoUrl,
-            customAvatar = user.customAvatar ?: "😊",
+            customAvatar = user.customAvatar, // null if no custom avatar set
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
@@ -85,7 +85,7 @@ class ProfileStatsUpdater @Inject constructor(
             email = user.email ?: "",
             displayName = user.effectiveDisplayName,
             photoUrl = user.photoUrl,
-            customAvatar = user.customAvatar ?: "😊",
+            customAvatar = user.customAvatar, // null if no custom avatar set
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,

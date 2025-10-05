@@ -31,7 +31,7 @@ data class UserPublicProfile(
     val email: String = "",
     val displayName: String = "",
     val photoUrl: String? = null, // Google profile picture URL
-    val customAvatar: String = "😊",
+    val customAvatar: String? = null, // Custom avatar URL from GitHub, or null for default
     val successRate: Int = 0, // Completion percentage
     val totalHabits: Int = 0,
     val totalCompletions: Int = 0,
@@ -83,7 +83,7 @@ fun DocumentSnapshot.toUserPublicProfile(): UserPublicProfile? {
             email = data["email"] as? String ?: "",
             displayName = data["displayName"] as? String ?: "",
             photoUrl = data["photoUrl"] as? String,
-            customAvatar = data["customAvatar"] as? String ?: "😊",
+            customAvatar = data["customAvatar"] as? String, // null if not set
             successRate = (data["successRate"] as? Long)?.toInt() ?: 0,
             totalHabits = (data["totalHabits"] as? Long)?.toInt() ?: 0,
             totalCompletions = (data["totalCompletions"] as? Long)?.toInt() ?: 0,

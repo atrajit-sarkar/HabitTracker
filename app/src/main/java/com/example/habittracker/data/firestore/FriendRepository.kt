@@ -299,7 +299,7 @@ class FriendRepository @Inject constructor(
         email: String,
         displayName: String,
         photoUrl: String?,
-        customAvatar: String,
+        customAvatar: String?, // Nullable - null means no custom avatar set
         successRate: Int,
         totalHabits: Int,
         totalCompletions: Int,
