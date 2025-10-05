@@ -51,12 +51,9 @@ class ProfileStatsUpdater @Inject constructor(
         
         Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
         
-        friendRepository.updateUserPublicProfile(
+        // Use updateUserStats instead of updateUserPublicProfile to avoid overwriting displayName/photoUrl
+        friendRepository.updateUserStats(
             userId = user.uid,
-            email = user.email ?: "",
-            displayName = user.effectiveDisplayName,
-            photoUrl = user.photoUrl,
-            customAvatar = user.customAvatar, // null if no custom avatar set
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
@@ -64,7 +61,7 @@ class ProfileStatsUpdater @Inject constructor(
             leaderboardScore = stats.leaderboardScore
         )
         
-        Log.d(TAG, "updateUserStats: Profile updated in Firestore")
+        Log.d(TAG, "updateUserStats: Profile stats updated in Firestore")
     }
     
     /**
@@ -80,12 +77,9 @@ class ProfileStatsUpdater @Inject constructor(
         
         Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
         
-        friendRepository.updateUserPublicProfile(
+        // Use updateUserStats instead of updateUserPublicProfile to avoid overwriting displayName/photoUrl
+        friendRepository.updateUserStats(
             userId = user.uid,
-            email = user.email ?: "",
-            displayName = user.effectiveDisplayName,
-            photoUrl = user.photoUrl,
-            customAvatar = user.customAvatar, // null if no custom avatar set
             successRate = stats.successRate,
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
@@ -93,7 +87,7 @@ class ProfileStatsUpdater @Inject constructor(
             leaderboardScore = stats.leaderboardScore
         )
         
-        Log.d(TAG, "updateUserStats (legacy): Profile updated in Firestore")
+        Log.d(TAG, "updateUserStats (legacy): Profile stats updated in Firestore")
     }
 
     private suspend fun calculateStats(habits: List<Habit>): UserStats {

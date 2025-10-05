@@ -96,12 +96,9 @@ class SocialViewModel @Inject constructor(
         viewModelScope.launch {
             val user = _uiState.value.currentUser ?: return@launch
             
-            friendRepository.updateUserPublicProfile(
+            // Use updateUserStats to only update stats, not displayName/photoUrl
+            friendRepository.updateUserStats(
                 userId = user.uid,
-                email = user.email ?: "",
-                displayName = user.effectiveDisplayName,
-                photoUrl = user.photoUrl,
-                customAvatar = user.customAvatar, // null if no custom avatar set
                 successRate = successRate,
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,

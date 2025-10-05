@@ -314,15 +314,23 @@ class FriendRepository @Inject constructor(
                 .await()
                 .toUserPublicProfile()
             
-            // Use existing displayName/photoUrl if new ones are empty/null
-            val finalDisplayName = if (displayName.isBlank() && existingProfile != null) {
-                existingProfile.displayName
+            // Preserve existing displayName if new one is empty, blank, or default "User"
+            val finalDisplayName = if (displayName.isBlank() || displayName == "User") {
+                existingProfile?.displayName?.takeIf { it.isNotBlank() } ?: displayName
             } else {
                 displayName
             }
             
+            // Preserve existing photoUrl if new one is null
             val finalPhotoUrl = photoUrl ?: existingProfile?.photoUrl
+            
+            // Preserve existing customAvatar if new one is null
             val finalCustomAvatar = customAvatar ?: existingProfile?.customAvatar
+            
+            Log.d(TAG, "updateUserPublicProfile: Updating profile for $userId")
+            Log.d(TAG, "  - displayName: '$displayName' -> '$finalDisplayName' (existing: '${existingProfile?.displayName}')")
+            Log.d(TAG, "  - photoUrl: $photoUrl -> $finalPhotoUrl")
+            Log.d(TAG, "  - customAvatar: $customAvatar -> $finalCustomAvatar")
             
             val profile = UserPublicProfile(
                 userId = userId,
@@ -345,6 +353,41 @@ class FriendRepository @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating user profile: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update ONLY user stats without touching displayName, photoUrl, or customAvatar
+     * This is safer for periodic stats updates as it preserves user profile data
+     */
+    suspend fun updateUserStats(
+        userId: String,
+        successRate: Int,
+        totalHabits: Int,
+        totalCompletions: Int,
+        currentStreak: Int,
+        leaderboardScore: Int
+    ): Result<Unit> {
+        return try {
+            val updates = hashMapOf<String, Any>(
+                "successRate" to successRate,
+                "totalHabits" to totalHabits,
+                "totalCompletions" to totalCompletions,
+                "currentStreak" to currentStreak,
+                "leaderboardScore" to leaderboardScore,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            
+            firestore.collection(USER_PROFILES_COLLECTION)
+                .document(userId)
+                .update(updates)
+                .await()
+            
+            Log.d(TAG, "updateUserStats: Stats updated for $userId - SR: $successRate%, Score: $leaderboardScore")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user stats: ${e.message}", e)
             Result.failure(e)
         }
     }
