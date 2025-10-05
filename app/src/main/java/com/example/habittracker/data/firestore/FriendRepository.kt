@@ -307,12 +307,29 @@ class FriendRepository @Inject constructor(
         leaderboardScore: Int
     ): Result<Unit> {
         return try {
+            // Fetch existing profile to preserve displayName and photoUrl if new ones are empty
+            val existingProfile = firestore.collection(USER_PROFILES_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+                .toUserPublicProfile()
+            
+            // Use existing displayName/photoUrl if new ones are empty/null
+            val finalDisplayName = if (displayName.isBlank() && existingProfile != null) {
+                existingProfile.displayName
+            } else {
+                displayName
+            }
+            
+            val finalPhotoUrl = photoUrl ?: existingProfile?.photoUrl
+            val finalCustomAvatar = customAvatar ?: existingProfile?.customAvatar
+            
             val profile = UserPublicProfile(
                 userId = userId,
                 email = email,
-                displayName = displayName,
-                photoUrl = photoUrl,
-                customAvatar = customAvatar,
+                displayName = finalDisplayName,
+                photoUrl = finalPhotoUrl,
+                customAvatar = finalCustomAvatar,
                 successRate = successRate,
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,
