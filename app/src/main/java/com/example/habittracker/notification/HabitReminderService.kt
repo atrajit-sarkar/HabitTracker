@@ -1,4 +1,4 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,12 +16,12 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.core.graphics.toColorInt
-import com.example.habittracker.MainActivity
-import com.example.habittracker.R
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
-import com.example.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.MainActivity
+import it.atraj.habittracker.R
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.local.NotificationSound
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 

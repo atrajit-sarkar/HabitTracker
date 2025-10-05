@@ -1,11 +1,11 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import com.example.habittracker.R
+import it.atraj.habittracker.R
 
 @Composable
 fun DeleteHabitConfirmationDialog(

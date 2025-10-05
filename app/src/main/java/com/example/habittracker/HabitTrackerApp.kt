@@ -1,9 +1,9 @@
-package com.example.habittracker
+package it.atraj.habittracker
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.example.habittracker.notification.NotificationReliabilityHelper
+import it.atraj.habittracker.notification.NotificationReliabilityHelper
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

@@ -1,4 +1,4 @@
-package com.example.habittracker.update
+package it.atraj.habittracker.update
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*

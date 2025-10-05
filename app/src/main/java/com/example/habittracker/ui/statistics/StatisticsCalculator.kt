@@ -1,8 +1,8 @@
-package com.example.habittracker.ui.statistics
+package it.atraj.habittracker.ui.statistics
 
-import com.example.habittracker.data.local.HabitFrequency
-import com.example.habittracker.ui.HabitCardUi
-import com.example.habittracker.ui.HabitViewModel
+import it.atraj.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.ui.HabitCardUi
+import it.atraj.habittracker.ui.HabitViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

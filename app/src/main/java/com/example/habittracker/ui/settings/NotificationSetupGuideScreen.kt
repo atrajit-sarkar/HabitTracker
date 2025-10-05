@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.settings
+package it.atraj.habittracker.ui.settings
 
 import android.app.AlarmManager
 import android.app.NotificationManager
@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.habittracker.notification.NotificationReliabilityHelper
+import it.atraj.habittracker.notification.NotificationReliabilityHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

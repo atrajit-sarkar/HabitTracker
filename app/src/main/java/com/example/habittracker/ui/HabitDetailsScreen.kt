@@ -1,4 +1,4 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 import androidx.compose.animation.core.*
 import androidx.compose.animation.animateColorAsState
@@ -37,11 +37,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.compose.*
-import com.example.habittracker.R
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
-import com.example.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.R
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.local.HabitFrequency
 import androidx.core.graphics.toColorInt
 import java.time.LocalDate
 import java.time.YearMonth

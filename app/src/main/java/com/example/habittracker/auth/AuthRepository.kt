@@ -1,4 +1,4 @@
-package com.example.habittracker.auth
+package it.atraj.habittracker.auth
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth

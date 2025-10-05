@@ -1,12 +1,12 @@
-package com.example.habittracker.ui.social
+package it.atraj.habittracker.ui.social
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.habittracker.auth.User
-import com.example.habittracker.data.firestore.FriendRepository
-import com.example.habittracker.data.firestore.FriendRequest
-import com.example.habittracker.data.firestore.UserPublicProfile
+import it.atraj.habittracker.auth.User
+import it.atraj.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.data.firestore.FriendRequest
+import it.atraj.habittracker.data.firestore.UserPublicProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

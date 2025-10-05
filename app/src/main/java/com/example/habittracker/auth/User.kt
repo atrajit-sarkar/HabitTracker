@@ -1,4 +1,4 @@
-package com.example.habittracker.auth
+package it.atraj.habittracker.auth
 
 data class User(
     val uid: String,

@@ -19,11 +19,11 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.habittracker"
+    namespace = "it.atraj.habittracker"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.habittracker"
+        applicationId = "it.atraj.habittracker"
         minSdk = 29
         targetSdk = 36
         versionCode = 8

@@ -1,4 +1,4 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -29,10 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.airbnb.lottie.compose.*
-import com.example.habittracker.R
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.R
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 

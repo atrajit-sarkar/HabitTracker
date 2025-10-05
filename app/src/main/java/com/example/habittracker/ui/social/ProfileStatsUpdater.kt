@@ -1,10 +1,10 @@
-package com.example.habittracker.ui.social
+package it.atraj.habittracker.ui.social
 
 import android.util.Log
-import com.example.habittracker.auth.User
-import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.firestore.FriendRepository
-import com.example.habittracker.data.local.Habit
+import it.atraj.habittracker.auth.User
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.data.local.Habit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

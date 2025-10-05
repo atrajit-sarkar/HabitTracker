@@ -1,11 +1,11 @@
-package com.example.habittracker.auth.ui
+package it.atraj.habittracker.auth.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.habittracker.auth.AuthRepository
-import com.example.habittracker.auth.AuthResult
-import com.example.habittracker.auth.GoogleSignInHelper
-import com.example.habittracker.auth.User
+import it.atraj.habittracker.auth.AuthRepository
+import it.atraj.habittracker.auth.AuthResult
+import it.atraj.habittracker.auth.GoogleSignInHelper
+import it.atraj.habittracker.auth.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

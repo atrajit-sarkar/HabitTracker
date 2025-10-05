@@ -1,4 +1,4 @@
-package com.example.habittracker.util
+package it.atraj.habittracker.util
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource

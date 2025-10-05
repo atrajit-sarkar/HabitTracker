@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.chat
+package it.atraj.habittracker.ui.chat
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -36,11 +36,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.habittracker.auth.ui.AuthViewModel
-import com.example.habittracker.data.firestore.ChatMessage
-import com.example.habittracker.data.firestore.MessageType
-import com.example.habittracker.data.firestore.StickerPacks
-import com.example.habittracker.data.firestore.UserPresenceManager
+import it.atraj.habittracker.auth.ui.AuthViewModel
+import it.atraj.habittracker.data.firestore.ChatMessage
+import it.atraj.habittracker.data.firestore.MessageType
+import it.atraj.habittracker.data.firestore.StickerPacks
+import it.atraj.habittracker.data.firestore.UserPresenceManager
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*

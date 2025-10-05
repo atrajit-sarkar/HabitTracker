@@ -1,4 +1,4 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,8 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.local.Habit
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.local.Habit
 
 @AndroidEntryPoint
 class HabitReminderReceiver : BroadcastReceiver() {

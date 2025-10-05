@@ -1,4 +1,4 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,8 +12,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.graphics.drawable.IconCompat
-import com.example.habittracker.MainActivity
-import com.example.habittracker.R
+import it.atraj.habittracker.MainActivity
+import it.atraj.habittracker.R
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +30,7 @@ class ChatMessagingService : FirebaseMessagingService() {
         const val CHANNEL_ID = "chat_messages"
         const val CHANNEL_NAME = "Chat Messages"
         const val KEY_TEXT_REPLY = "key_text_reply"
-        const val ACTION_REPLY = "com.example.habittracker.ACTION_REPLY"
+        const val ACTION_REPLY = "it.atraj.habittracker.ACTION_REPLY"
         const val EXTRA_FRIEND_ID = "extra_friend_id"
         const val EXTRA_FRIEND_NAME = "extra_friend_name"
         const val EXTRA_FRIEND_AVATAR = "extra_friend_avatar"

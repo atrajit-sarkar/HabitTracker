@@ -1,4 +1,4 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 // import androidx.compose.ui.platform.LocalLifecycleOwner // Already imported via androidx.lifecycle.compose.LocalLifecycleOwner
 import android.Manifest
@@ -116,15 +116,15 @@ import com.airbnb.lottie.compose.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
-import com.example.habittracker.R
-import com.example.habittracker.auth.User
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
-import com.example.habittracker.data.local.HabitFrequency
-import com.example.habittracker.data.local.NotificationSound
-import com.example.habittracker.ui.DeleteHabitConfirmationDialog
-import com.example.habittracker.ui.dialogs.FirstLaunchNotificationDialog
-import com.example.habittracker.util.clickableOnce
+import it.atraj.habittracker.R
+import it.atraj.habittracker.auth.User
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.ui.DeleteHabitConfirmationDialog
+import it.atraj.habittracker.ui.dialogs.FirstLaunchNotificationDialog
+import it.atraj.habittracker.util.clickableOnce
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle

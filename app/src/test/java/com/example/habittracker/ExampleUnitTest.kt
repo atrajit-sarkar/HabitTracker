@@ -1,4 +1,4 @@
-package com.example.habittracker
+package it.atraj.habittracker
 
 import org.junit.Test
 

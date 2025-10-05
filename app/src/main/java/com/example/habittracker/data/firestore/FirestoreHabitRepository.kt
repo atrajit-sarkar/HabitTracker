@@ -1,13 +1,13 @@
-package com.example.habittracker.data.firestore
+package it.atraj.habittracker.data.firestore
 
-import com.example.habittracker.auth.AuthRepository
-import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
-import com.example.habittracker.data.local.HabitCompletion
-import com.example.habittracker.data.local.HabitFrequency
-import com.example.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.auth.AuthRepository
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.local.HabitCompletion
+import it.atraj.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.data.local.NotificationSound
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query

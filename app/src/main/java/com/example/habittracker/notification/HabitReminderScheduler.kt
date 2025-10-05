@@ -1,4 +1,4 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.example.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.Habit
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
@@ -59,22 +59,22 @@ class HabitReminderSchedulerImpl @Inject constructor(
         val baseTime = now.withHour(habit.reminderHour).withMinute(habit.reminderMinute).withSecond(0).withNano(0)
         
         val nextTrigger = when (habit.frequency) {
-            com.example.habittracker.data.local.HabitFrequency.DAILY -> {
+            it.atraj.habittracker.data.local.HabitFrequency.DAILY -> {
                 if (baseTime.isBefore(now) || baseTime.isEqual(now)) {
                     baseTime.plusDays(1)
                 } else {
                     baseTime
                 }
             }
-            com.example.habittracker.data.local.HabitFrequency.WEEKLY -> {
+            it.atraj.habittracker.data.local.HabitFrequency.WEEKLY -> {
                 val targetDayOfWeek = habit.dayOfWeek ?: 1 // Default to Monday
                 findNextWeeklyTrigger(now, baseTime, targetDayOfWeek)
             }
-            com.example.habittracker.data.local.HabitFrequency.MONTHLY -> {
+            it.atraj.habittracker.data.local.HabitFrequency.MONTHLY -> {
                 val targetDayOfMonth = habit.dayOfMonth ?: 1
                 findNextMonthlyTrigger(now, baseTime, targetDayOfMonth)
             }
-            com.example.habittracker.data.local.HabitFrequency.YEARLY -> {
+            it.atraj.habittracker.data.local.HabitFrequency.YEARLY -> {
                 val targetMonth = habit.monthOfYear ?: 1
                 val targetDay = habit.dayOfMonth ?: 1
                 findNextYearlyTrigger(now, baseTime, targetMonth, targetDay)

@@ -1,4 +1,4 @@
-package com.example.habittracker.auth
+package it.atraj.habittracker.auth
 
 sealed class AuthResult {
     data object Success : AuthResult()

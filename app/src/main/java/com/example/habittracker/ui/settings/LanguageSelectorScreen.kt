@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.settings
+package it.atraj.habittracker.ui.settings
 
 import android.app.Activity
 import androidx.compose.animation.*
@@ -27,8 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.habittracker.R
-import com.example.habittracker.util.LanguageManager
+import it.atraj.habittracker.R
+import it.atraj.habittracker.util.LanguageManager
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)

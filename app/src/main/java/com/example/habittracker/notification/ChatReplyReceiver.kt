@@ -1,12 +1,12 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.RemoteInput
-import com.example.habittracker.data.firestore.ChatRepository
-import com.example.habittracker.data.firestore.MessageType
+import it.atraj.habittracker.data.firestore.ChatRepository
+import it.atraj.habittracker.data.firestore.MessageType
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint

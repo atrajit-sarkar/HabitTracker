@@ -1,13 +1,13 @@
-package com.example.habittracker.ui.chat
+package it.atraj.habittracker.ui.chat
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.habittracker.auth.User
-import com.example.habittracker.data.firestore.Chat
-import com.example.habittracker.data.firestore.ChatMessage
-import com.example.habittracker.data.firestore.ChatRepository
-import com.example.habittracker.data.firestore.MessageType
+import it.atraj.habittracker.auth.User
+import it.atraj.habittracker.data.firestore.Chat
+import it.atraj.habittracker.data.firestore.ChatMessage
+import it.atraj.habittracker.data.firestore.ChatRepository
+import it.atraj.habittracker.data.firestore.MessageType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

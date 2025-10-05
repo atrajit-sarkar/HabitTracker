@@ -1,7 +1,7 @@
-package com.example.habittracker.data
+package it.atraj.habittracker.data
 
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitCompletion
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitCompletion
 import kotlinx.coroutines.flow.Flow
 
 interface HabitRepository {

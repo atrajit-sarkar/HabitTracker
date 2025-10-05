@@ -1,4 +1,4 @@
-package com.example.habittracker.auth
+package it.atraj.habittracker.auth
 
 import android.content.Context
 import com.google.android.gms.auth.api.signin.GoogleSignIn

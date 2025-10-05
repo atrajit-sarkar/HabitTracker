@@ -1,4 +1,4 @@
-package com.example.habittracker
+package it.atraj.habittracker
 
 import android.content.Context
 import android.content.res.Configuration
@@ -11,18 +11,18 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
-import com.example.habittracker.auth.GoogleSignInHelper
-import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.firestore.UserPresenceManager
-import com.example.habittracker.notification.HabitReminderService
-import com.example.habittracker.notification.NotificationReliabilityHelper
-import com.example.habittracker.ui.HabitTrackerNavigation
-import com.example.habittracker.ui.theme.HabitTrackerTheme
-import com.example.habittracker.update.CheckingUpdatesDialog
-import com.example.habittracker.update.UpdateDialog
-import com.example.habittracker.update.UpdateInfo
-import com.example.habittracker.update.UpdateManager
-import com.example.habittracker.update.UpdateResultDialog
+import it.atraj.habittracker.auth.GoogleSignInHelper
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.firestore.UserPresenceManager
+import it.atraj.habittracker.notification.HabitReminderService
+import it.atraj.habittracker.notification.NotificationReliabilityHelper
+import it.atraj.habittracker.ui.HabitTrackerNavigation
+import it.atraj.habittracker.ui.theme.HabitTrackerTheme
+import it.atraj.habittracker.update.CheckingUpdatesDialog
+import it.atraj.habittracker.update.UpdateDialog
+import it.atraj.habittracker.update.UpdateInfo
+import it.atraj.habittracker.update.UpdateManager
+import it.atraj.habittracker.update.UpdateResultDialog
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         // Apply saved language preference
-        com.example.habittracker.util.LanguageManager.applyLanguage(this)
+        it.atraj.habittracker.util.LanguageManager.applyLanguage(this)
         
         enableEdgeToEdge()
         HabitReminderService.ensureDefaultChannel(this)

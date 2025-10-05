@@ -1,4 +1,4 @@
-package com.example.habittracker.image
+package it.atraj.habittracker.image
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -6,7 +6,7 @@ import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.util.DebugLogger
-import com.example.habittracker.BuildConfig
+import it.atraj.habittracker.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

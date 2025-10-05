@@ -1,4 +1,4 @@
-package com.example.habittracker.util
+package it.atraj.habittracker.util
 
 import android.app.Activity
 import android.content.Context

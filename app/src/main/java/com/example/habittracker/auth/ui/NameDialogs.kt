@@ -1,4 +1,4 @@
-package com.example.habittracker.auth.ui
+package it.atraj.habittracker.auth.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.habittracker.R
+import it.atraj.habittracker.R
 
 @Composable
 fun EditNameDialog(

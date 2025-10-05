@@ -1,4 +1,4 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
@@ -68,11 +68,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.habittracker.R
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitAvatarType
-import com.example.habittracker.data.local.HabitFrequency
-import com.example.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.R
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.data.local.NotificationSound
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

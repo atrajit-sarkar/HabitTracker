@@ -1,4 +1,4 @@
-package com.example.habittracker.performance
+package it.atraj.habittracker.performance
 
 import android.app.ActivityManager
 import android.content.Context

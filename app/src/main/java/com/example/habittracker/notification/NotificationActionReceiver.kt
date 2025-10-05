@@ -1,9 +1,9 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.HabitRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

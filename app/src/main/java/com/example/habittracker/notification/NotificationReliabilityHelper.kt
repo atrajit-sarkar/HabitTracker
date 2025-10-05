@@ -1,4 +1,4 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.app.AlertDialog
 import android.app.AlarmManager

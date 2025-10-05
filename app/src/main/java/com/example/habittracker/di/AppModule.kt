@@ -1,12 +1,12 @@
-package com.example.habittracker.di
+package it.atraj.habittracker.di
 
 import android.content.Context
 import coil.ImageLoader
-import com.example.habittracker.data.HabitRepository
-import com.example.habittracker.data.firestore.FirestoreHabitRepository
-import com.example.habittracker.image.OptimizedImageLoader
-import com.example.habittracker.notification.HabitReminderScheduler
-import com.example.habittracker.notification.HabitReminderSchedulerImpl
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.firestore.FirestoreHabitRepository
+import it.atraj.habittracker.image.OptimizedImageLoader
+import it.atraj.habittracker.notification.HabitReminderScheduler
+import it.atraj.habittracker.notification.HabitReminderSchedulerImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds

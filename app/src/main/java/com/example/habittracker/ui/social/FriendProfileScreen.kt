@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.social
+package it.atraj.habittracker.ui.social
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,9 +23,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.habittracker.data.firestore.FriendRepository
-import com.example.habittracker.data.firestore.UserPublicProfile
-import com.example.habittracker.ui.HabitViewModel
+import it.atraj.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.data.firestore.UserPublicProfile
+import it.atraj.habittracker.ui.HabitViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

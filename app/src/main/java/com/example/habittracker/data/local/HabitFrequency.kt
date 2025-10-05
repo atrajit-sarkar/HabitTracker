@@ -1,4 +1,4 @@
-package com.example.habittracker.data.local
+package it.atraj.habittracker.data.local
 
 enum class HabitFrequency {
     DAILY,

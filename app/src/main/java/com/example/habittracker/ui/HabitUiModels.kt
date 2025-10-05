@@ -1,9 +1,9 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.data.local.HabitAvatar
-import com.example.habittracker.data.local.HabitFrequency
-import com.example.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitFrequency
+import it.atraj.habittracker.data.local.NotificationSound
 import java.time.LocalTime
 
 data class HabitCardUi(

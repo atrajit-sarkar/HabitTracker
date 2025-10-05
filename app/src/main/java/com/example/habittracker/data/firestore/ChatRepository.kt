@@ -1,4 +1,4 @@
-package com.example.habittracker.data.firestore
+package it.atraj.habittracker.data.firestore
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore

@@ -1,4 +1,4 @@
-package com.example.habittracker.auth.ui
+package it.atraj.habittracker.auth.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -10,7 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import com.example.habittracker.util.clickableOnce
+import it.atraj.habittracker.util.clickableOnce
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -47,8 +47,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.airbnb.lottie.compose.*
-import com.example.habittracker.R
-import com.example.habittracker.ui.HabitViewModel
+import it.atraj.habittracker.R
+import it.atraj.habittracker.ui.HabitViewModel
 import kotlin.math.cos
 import kotlin.math.sin
 

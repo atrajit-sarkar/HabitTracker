@@ -1,4 +1,4 @@
-package com.example.habittracker.auth.ui
+package it.atraj.habittracker.auth.ui
 
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.habittracker.auth.GoogleSignInHelper
+import it.atraj.habittracker.auth.GoogleSignInHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 

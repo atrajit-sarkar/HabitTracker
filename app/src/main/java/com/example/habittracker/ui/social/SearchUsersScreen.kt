@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.social
+package it.atraj.habittracker.ui.social
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.habittracker.auth.ui.AuthViewModel
-import com.example.habittracker.data.firestore.UserPublicProfile
+import it.atraj.habittracker.auth.ui.AuthViewModel
+import it.atraj.habittracker.data.firestore.UserPublicProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

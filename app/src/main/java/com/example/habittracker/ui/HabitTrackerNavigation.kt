@@ -1,4 +1,4 @@
-package com.example.habittracker.ui
+package it.atraj.habittracker.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,25 +24,25 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.habittracker.auth.GoogleSignInHelper
-import com.example.habittracker.auth.User
-import com.example.habittracker.performance.PerformanceManager
+import it.atraj.habittracker.auth.GoogleSignInHelper
+import it.atraj.habittracker.auth.User
+import it.atraj.habittracker.performance.PerformanceManager
 import javax.inject.Inject
-import com.example.habittracker.auth.ui.AuthScreen
-import com.example.habittracker.auth.ui.AuthViewModel
-import com.example.habittracker.auth.ui.ProfileScreen
-import com.example.habittracker.data.local.Habit
-import com.example.habittracker.util.rememberNavigationHandler
-import com.example.habittracker.ui.statistics.StatisticsScreen
-import com.example.habittracker.ui.social.SearchUsersScreen
-import com.example.habittracker.ui.social.FriendsListScreen
-import com.example.habittracker.ui.social.LeaderboardScreen
-import com.example.habittracker.ui.social.FriendProfileScreen
-import com.example.habittracker.ui.chat.ChatListScreen
-import com.example.habittracker.ui.chat.ChatScreen
-import com.example.habittracker.ui.settings.NotificationSetupGuideScreen
-import com.example.habittracker.ui.settings.LanguageSelectorScreen
-import com.example.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.auth.ui.AuthScreen
+import it.atraj.habittracker.auth.ui.AuthViewModel
+import it.atraj.habittracker.auth.ui.ProfileScreen
+import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.util.rememberNavigationHandler
+import it.atraj.habittracker.ui.statistics.StatisticsScreen
+import it.atraj.habittracker.ui.social.SearchUsersScreen
+import it.atraj.habittracker.ui.social.FriendsListScreen
+import it.atraj.habittracker.ui.social.LeaderboardScreen
+import it.atraj.habittracker.ui.social.FriendProfileScreen
+import it.atraj.habittracker.ui.chat.ChatListScreen
+import it.atraj.habittracker.ui.chat.ChatScreen
+import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
+import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
+import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -438,7 +438,7 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            val onChatClick: (com.example.habittracker.data.firestore.Chat) -> Unit = { chat ->
+            val onChatClick: (it.atraj.habittracker.data.firestore.Chat) -> Unit = { chat ->
                 // Get the other participant's info
                 val currentUserId = authViewModel.uiState.value.user?.uid ?: ""
                 val friendId = chat.participants.firstOrNull { it != currentUserId } ?: ""

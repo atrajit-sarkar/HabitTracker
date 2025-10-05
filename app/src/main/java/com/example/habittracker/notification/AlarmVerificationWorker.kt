@@ -1,11 +1,11 @@
-package com.example.habittracker.notification
+package it.atraj.habittracker.notification
 
 import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.HabitRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
