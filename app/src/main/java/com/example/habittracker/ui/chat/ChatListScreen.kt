@@ -168,8 +168,9 @@ fun ChatListItem(
         ) {
             // Avatar
             Box {
-                if (otherUserPhotoUrl != null && otherUserAvatar == "😊") {
-                    val context = androidx.compose.ui.platform.LocalContext.current
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
+                if (otherUserPhotoUrl != null && otherUserAvatar == null) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(otherUserPhotoUrl)
@@ -177,6 +178,20 @@ fun ChatListItem(
                             .crossfade(true)
                             .build(),
                         contentDescription = "Profile picture",
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else if (otherUserAvatar?.startsWith("https://") == true) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(otherUserAvatar)
+                            .size(Size.ORIGINAL) // Load original high-quality image
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Custom avatar",
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
@@ -191,9 +206,11 @@ fun ChatListItem(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = otherUserAvatar,
-                            style = MaterialTheme.typography.headlineMedium
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Default avatar",
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }

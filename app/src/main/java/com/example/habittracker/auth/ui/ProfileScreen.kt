@@ -9,6 +9,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import it.atraj.habittracker.util.clickableOnce
 import androidx.compose.foundation.lazy.LazyRow
@@ -40,12 +41,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -64,7 +68,8 @@ fun GlitteringProfilePhoto(
     photoUrl: String?,
     currentAvatar: String,
     avatarLoaded: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {}
 ) {
     // Animation states
     val infiniteTransition = rememberInfiniteTransition(label = "glitter_animation")
@@ -204,7 +209,12 @@ fun GlitteringProfilePhoto(
                 drawSparkle(sparkle3Angle, sparkleDistance)
             }
             .rotate(rotationAngle)
-            .clickableOnce(onClick = onClick),
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress() }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         // Inner profile photo container
@@ -232,10 +242,11 @@ fun GlitteringProfilePhoto(
                 Crossfade(
                     targetState = Pair(showProfilePhoto, currentAvatar),
                     label = "avatar_crossfade"
-                ) { (isPhoto, emoji) ->
+                ) { (isPhoto, avatarValue) ->
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    
                     if (isPhoto) {
                         // Load Google profile photo with Coil in high quality
-                        val context = androidx.compose.ui.platform.LocalContext.current
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(photoUrl)
@@ -248,13 +259,35 @@ fun GlitteringProfilePhoto(
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
-                    } else {
-                        // Custom avatar (both Google and Email users can use this)
-                        Text(
-                            text = emoji,
-                            fontSize = 48.sp,
-                            modifier = Modifier.padding(8.dp)
+                    } else if (avatarValue.startsWith("https://")) {
+                        // Custom avatar from GitHub (image URL)
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(avatarValue)
+                                .size(Size.ORIGINAL) // Load original high-quality image
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Custom avatar",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        // Fallback - should not be used anymore, but keeping for safety
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Default avatar",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             } else {
@@ -292,6 +325,7 @@ fun ProfileScreen(
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showSetNameDialog by remember { mutableStateOf(false) }
     var showAnimationPicker by remember { mutableStateOf(false) }
+    var showEnlargedPhotoDialog by remember { mutableStateOf(false) }
     
     // Profile card animation preference (stored in SharedPreferences)
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -316,8 +350,8 @@ fun ProfileScreen(
         }
     }
 
-    // Get the current avatar to display
-    val currentAvatar = state.user?.customAvatar ?: "😊"
+    // Get the current avatar to display (URL string or fallback)
+    val currentAvatar = state.user?.customAvatar ?: "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_1_professional.png"
     
     // Determine if we should show profile photo or custom avatar
     val showProfilePhoto = state.user?.photoUrl != null && state.user?.customAvatar == null
@@ -447,7 +481,13 @@ fun ProfileScreen(
                             photoUrl = state.user?.photoUrl,
                             currentAvatar = currentAvatar,
                             avatarLoaded = avatarLoaded,
-                            onClick = { showAvatarPicker = true }
+                            onClick = { showAvatarPicker = true },
+                            onLongPress = { 
+                                // Show enlarged photo dialog only if there's an image to show
+                                if (showProfilePhoto || currentAvatar.startsWith("https://")) {
+                                    showEnlargedPhotoDialog = true
+                                }
+                            }
                         )
 
                         // User Info
@@ -1189,6 +1229,68 @@ fun ProfileScreen(
             }
         )
     }
+    
+    // Enlarged Photo Dialog
+    if (showEnlargedPhotoDialog) {
+        EnlargedPhotoDialog(
+            photoUrl = if (showProfilePhoto) state.user?.photoUrl else currentAvatar,
+            onDismiss = { showEnlargedPhotoDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun EnlargedPhotoDialog(
+    photoUrl: String?,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.9f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            if (photoUrl != null) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(photoUrl)
+                        .size(Size.ORIGINAL)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Enlarged profile photo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                        CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -1304,12 +1406,13 @@ private fun AvatarPickerDialog(
     onAvatarSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val avatarEmojis = listOf(
-        "😊", "😎", "🤗", "🥳", "🤓", 
-        "😇", "🤠", "🥰", "😄", "🙂",
-        "🦸", "🧑‍💼", "👨‍🎓", "👩‍🎓", "🧑‍🚀",
-        "🦊", "🐱", "🐶", "🐼", "🐨",
-        "🌟", "⭐", "✨", "💫", "🎯"
+    // GitHub raw URLs for avatar images
+    val avatarUrls = listOf(
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_1_professional.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_2_casual.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_3_creative.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_4_modern.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_5_artistic.png"
     )
 
     AlertDialog(
@@ -1322,17 +1425,19 @@ private fun AvatarPickerDialog(
         },
         text = {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                columns = GridCells.Fixed(3),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 8.dp),
-                modifier = Modifier.heightIn(max = 300.dp)
+                modifier = Modifier.heightIn(max = 400.dp)
             ) {
-                items(avatarEmojis) { emoji ->
-                    val isSelected = emoji == currentAvatar
+                items(avatarUrls) { url ->
+                    val isSelected = url == currentAvatar
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .aspectRatio(1f)
                             .clip(CircleShape)
                             .background(
                                 if (isSelected)
@@ -1341,7 +1446,7 @@ private fun AvatarPickerDialog(
                                     MaterialTheme.colorScheme.surface
                             )
                             .border(
-                                width = if (isSelected) 3.dp else 1.dp,
+                                width = if (isSelected) 4.dp else 2.dp,
                                 color = if (isSelected)
                                     MaterialTheme.colorScheme.primary
                                 else
@@ -1349,14 +1454,42 @@ private fun AvatarPickerDialog(
                                 shape = CircleShape
                             )
                             .clickableOnce(debounceTime = 300L) {
-                                onAvatarSelected(emoji)
+                                onAvatarSelected(url)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = emoji,
-                            fontSize = 32.sp
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(url)
+                                .size(Size.ORIGINAL)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Avatar option",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                        
+                        // Show checkmark for selected avatar
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

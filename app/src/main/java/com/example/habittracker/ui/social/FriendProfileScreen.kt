@@ -147,10 +147,11 @@ fun FriendProfileContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Avatar - show photo if available, otherwise emoji
-                if (profile.photoUrl != null && profile.customAvatar == "😊") {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
+                // Avatar - show photo if available, otherwise custom avatar
+                if (profile.photoUrl != null && profile.customAvatar == null) {
                     // Google profile picture in high quality
-                    val context = androidx.compose.ui.platform.LocalContext.current
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(profile.photoUrl)
@@ -164,8 +165,23 @@ fun FriendProfileContent(
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
+                } else if (profile.customAvatar?.startsWith("https://") == true) {
+                    // Custom avatar from GitHub (image URL)
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(profile.customAvatar)
+                            .size(Size.ORIGINAL) // Load original high-quality image
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Custom avatar",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
                 } else {
-                    // Custom emoji avatar
+                    // Fallback
                     Box(
                         modifier = Modifier
                             .size(120.dp)
@@ -173,9 +189,11 @@ fun FriendProfileContent(
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = profile.customAvatar,
-                            fontSize = 64.sp
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Default avatar",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }

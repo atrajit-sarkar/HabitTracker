@@ -130,8 +130,9 @@ fun ChatScreen(
                     }
                     
                     // Friend Avatar
-                    if (friendPhotoUrl != null && friendAvatar == "😊") {
-                        val context = androidx.compose.ui.platform.LocalContext.current
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    
+                    if (friendPhotoUrl != null && friendAvatar == null) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(friendPhotoUrl)
@@ -139,6 +140,20 @@ fun ChatScreen(
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Profile picture",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else if (friendAvatar?.startsWith("https://") == true) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(friendAvatar)
+                                .size(Size.ORIGINAL) // Load original high-quality image
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Custom avatar",
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
@@ -153,9 +168,11 @@ fun ChatScreen(
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = friendAvatar,
-                                fontSize = 20.sp
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Default avatar",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }

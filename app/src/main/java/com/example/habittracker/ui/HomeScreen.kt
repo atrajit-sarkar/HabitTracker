@@ -298,11 +298,11 @@ fun HabitHomeScreen(
                     ) {
                         // Determine if we should show profile photo or custom avatar
                         val showProfilePhoto = user?.photoUrl != null && user.customAvatar == null
-                        val currentAvatar = user?.customAvatar ?: "👤"
+                        val currentAvatar = user?.customAvatar ?: "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_1_professional.png"
+                        val context = LocalContext.current
                         
                         if (showProfilePhoto && user?.photoUrl != null) {
                             // Load Google profile photo in high quality
-                            val context = LocalContext.current
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(user.photoUrl)
@@ -315,12 +315,26 @@ fun HabitHomeScreen(
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
+                        } else if (currentAvatar.startsWith("https://")) {
+                            // Custom avatar from GitHub (image URL)
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(currentAvatar)
+                                    .size(Size.ORIGINAL) // Load original high-quality image
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Custom avatar",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
                         } else {
-                            // Show custom avatar emoji or default
-                            Text(
-                                text = currentAvatar,
-                                fontSize = 20.sp,
-                                modifier = Modifier.padding(2.dp)
+                            // Fallback
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Default avatar",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

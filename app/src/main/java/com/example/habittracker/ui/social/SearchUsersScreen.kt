@@ -268,10 +268,11 @@ fun UserSearchResultCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Avatar - show photo if available, otherwise emoji
-                if (user.photoUrl != null && user.customAvatar == "😊") {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
+                // Avatar - show photo if available, otherwise custom avatar
+                if (user.photoUrl != null && user.customAvatar == null) {
                     // Google profile picture in high quality
-                    val context = androidx.compose.ui.platform.LocalContext.current
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(user.photoUrl)
@@ -285,8 +286,23 @@ fun UserSearchResultCard(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
+                } else if (user.customAvatar?.startsWith("https://") == true) {
+                    // Custom avatar from GitHub (image URL)
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(user.customAvatar)
+                            .size(Size.ORIGINAL) // Load original high-quality image
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Custom avatar",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
                 } else {
-                    // Custom emoji avatar
+                    // Fallback
                     Box(
                         modifier = Modifier
                             .size(64.dp)
@@ -294,9 +310,11 @@ fun UserSearchResultCard(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = user.customAvatar,
-                            fontSize = 32.sp
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Default avatar",
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }

@@ -380,11 +380,11 @@ fun TopThreeCard(
                     fontSize = if (isFirst) 24.sp else 20.sp
                 )
             }
-
-            // Avatar - show photo if available, otherwise emoji
-            if (entry.profile.photoUrl != null && entry.profile.customAvatar == "😊") {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            
+            // Avatar - show photo if available, otherwise custom avatar
+            if (entry.profile.photoUrl != null && entry.profile.customAvatar == null) {
                 // Google profile picture in high quality
-                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(entry.profile.photoUrl)
@@ -398,8 +398,23 @@ fun TopThreeCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
+            } else if (entry.profile.customAvatar?.startsWith("https://") == true) {
+                // Custom avatar from GitHub (image URL)
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.customAvatar)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom avatar",
+                    modifier = Modifier
+                        .size(if (isFirst) 56.dp else 48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
             } else {
-                // Custom emoji avatar
+                // Fallback
                 Box(
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
@@ -407,9 +422,11 @@ fun TopThreeCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = entry.profile.customAvatar,
-                        fontSize = if (isFirst) 28.sp else 24.sp
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default avatar",
+                        modifier = Modifier.size(if (isFirst) 28.dp else 24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
@@ -511,10 +528,11 @@ fun LeaderboardEntryCard(
                 )
             }
 
-            // Avatar - show photo if available, otherwise emoji
-            if (entry.profile.photoUrl != null && entry.profile.customAvatar == "😊") {
+            // Avatar - show photo if available, otherwise custom avatar
+            val context = androidx.compose.ui.platform.LocalContext.current
+            
+            if (entry.profile.photoUrl != null && entry.profile.customAvatar == null) {
                 // Google profile picture in high quality
-                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(entry.profile.photoUrl)
@@ -528,8 +546,23 @@ fun LeaderboardEntryCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
+            } else if (entry.profile.customAvatar?.startsWith("https://") == true) {
+                // Custom avatar from GitHub (image URL)
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(entry.profile.customAvatar)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom avatar",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
             } else {
-                // Custom emoji avatar
+                // Fallback
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -537,9 +570,11 @@ fun LeaderboardEntryCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = entry.profile.customAvatar,
-                        fontSize = 24.sp
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default avatar",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }

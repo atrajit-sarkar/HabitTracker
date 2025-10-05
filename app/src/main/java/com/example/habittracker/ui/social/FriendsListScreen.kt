@@ -358,10 +358,11 @@ fun FriendCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar - show photo if available, otherwise emoji
-            if (friend.photoUrl != null && friend.customAvatar == "😊") {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            
+            // Avatar - show photo if available, otherwise custom avatar
+            if (friend.photoUrl != null && friend.customAvatar == null) {
                 // Google profile picture in high quality
-                val context = androidx.compose.ui.platform.LocalContext.current
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(friend.photoUrl)
@@ -375,8 +376,23 @@ fun FriendCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
+            } else if (friend.customAvatar?.startsWith("https://") == true) {
+                // Custom avatar from GitHub (image URL)
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(friend.customAvatar)
+                        .size(Size.ORIGINAL) // Load original high-quality image
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom avatar",
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
             } else {
-                // Custom emoji avatar
+                // Fallback
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -384,9 +400,11 @@ fun FriendCard(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = friend.customAvatar,
-                        fontSize = 28.sp
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default avatar",
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
