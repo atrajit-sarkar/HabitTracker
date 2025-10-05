@@ -51,7 +51,17 @@ fun LeaderboardScreen(
     var showRankImproved by remember { mutableStateOf(false) }
     var showRulesDialog by remember { mutableStateOf(false) }
 
-    // Set current user and load leaderboard
+    // Refresh stats and reload leaderboard when screen is opened
+    LaunchedEffect(Unit) {
+        authState.user?.let { 
+            socialViewModel.setCurrentUser(it)
+            // Refresh user stats before loading leaderboard
+            habitViewModel.refreshUserStats()
+            socialViewModel.loadLeaderboard()
+        }
+    }
+
+    // Set current user and load leaderboard when user changes
     LaunchedEffect(authState.user) {
         authState.user?.let { 
             socialViewModel.setCurrentUser(it)

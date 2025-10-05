@@ -309,6 +309,9 @@ class HabitViewModel @Inject constructor(
                     isAddSheetVisible = false
                 )
             }
+            
+            // Update user's stats on leaderboard immediately after creating new habit
+            updateUserStatsAsync()
         }
     }
 
@@ -365,6 +368,10 @@ class HabitViewModel @Inject constructor(
         android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Starting for user ${user.uid}")
         android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Fetching fresh habits from Firestore")
         
+        // Delay to ensure Firestore snapshot listener has time to update
+        // Increased to 800ms to allow completion data and streak calculations to sync
+        kotlinx.coroutines.delay(800)
+        
         // Use the new method that fetches habits directly from Firestore
         // This ensures we always have the latest data, even if UI state isn't loaded yet
         profileStatsUpdater.updateUserStats(user)
@@ -388,6 +395,9 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" moved to trash")
             }
+            
+            // Update user's stats on leaderboard immediately
+            updateUserStatsAsync()
         }
     }
 
@@ -406,6 +416,9 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" restored")
             }
+            
+            // Update user's stats on leaderboard immediately
+            updateUserStatsAsync()
         }
     }
 
@@ -424,6 +437,9 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" permanently deleted")
             }
+            
+            // Update user's stats on leaderboard immediately
+            updateUserStatsAsync()
         }
     }
 
@@ -444,6 +460,9 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "Trash emptied")
             }
+            
+            // Update user's stats on leaderboard immediately
+            updateUserStatsAsync()
         }
     }
 

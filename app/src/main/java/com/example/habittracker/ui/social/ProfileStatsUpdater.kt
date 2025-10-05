@@ -98,9 +98,16 @@ class ProfileStatsUpdater @Inject constructor(
         // Calculate completions today
         val completedToday = activeHabits.count { it.lastCompletedDate == today }
         
-        // Calculate total completions (approximate - just count habits completed today)
-        // For accurate count, you'd need to query all completions from the repository
-        val totalCompletions = completedToday
+        // Calculate TOTAL completions across all time (not just today)
+        var totalCompletions = 0
+        activeHabits.forEach { habit ->
+            try {
+                val completions = habitRepository.getHabitCompletions(habit.id)
+                totalCompletions += completions.size
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching completions for habit ${habit.id}: ${e.message}")
+            }
+        }
         
         // Calculate success rate (percentage of habits completed today)
         val successRate = if (totalHabits > 0) {
@@ -120,6 +127,8 @@ class ProfileStatsUpdater @Inject constructor(
         // - Total Completions × 2 = rewards overall dedication
         val leaderboardScore = (successRate * 5) + (totalHabits * 3) + (currentStreak * 10) + (totalCompletions * 2)
         
+        Log.d(TAG, "calculateStats: Habits=$totalHabits, TodayCompleted=$completedToday, TotalCompletions=$totalCompletions, SuccessRate=$successRate%, Streak=$currentStreak, Score=$leaderboardScore")
+        
         return UserStats(
             totalHabits = totalHabits,
             totalCompletions = totalCompletions,
@@ -132,16 +141,20 @@ class ProfileStatsUpdater @Inject constructor(
     private suspend fun calculateCurrentStreak(habits: List<Habit>, today: LocalDate): Int {
         if (habits.isEmpty()) return 0
         
+        Log.d(TAG, "calculateCurrentStreak: Calculating streak for ${habits.size} habits")
+        
         // Find the longest current streak among all habits
         var maxStreak = 0
         
         habits.forEach { habit ->
             val streak = calculateHabitStreak(habit, today)
+            Log.d(TAG, "calculateCurrentStreak: Habit '${habit.title}' has streak: $streak")
             if (streak > maxStreak) {
                 maxStreak = streak
             }
         }
         
+        Log.d(TAG, "calculateCurrentStreak: Max streak across all habits: $maxStreak")
         return maxStreak
     }
 
@@ -153,6 +166,8 @@ class ProfileStatsUpdater @Inject constructor(
             Log.e(TAG, "calculateHabitStreak: Error fetching completions for habit ${habit.id}", e)
             return 0
         }
+        
+        Log.d(TAG, "calculateHabitStreak: Habit '${habit.title}' has ${completions.size} total completions")
         
         if (completions.isEmpty()) return 0
         
