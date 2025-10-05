@@ -71,11 +71,53 @@
 -dontwarn coil.**
 
 # ========== Data Classes (Keep for Firestore) ==========
+# Keep all data classes with BOTH package names
 -keep class com.example.habittracker.data.** { *; }
+-keep class it.atraj.habittracker.data.** { *; }
 -keep class com.example.habittracker.auth.User { *; }
+-keep class it.atraj.habittracker.auth.User { *; }
 -keepclassmembers class com.example.habittracker.data.** {
-    public <init>(...);
-    public <fields>;
+    *;
+}
+-keepclassmembers class it.atraj.habittracker.data.** {
+    *;
+}
+
+# Keep all local data models (Habit, HabitAvatar, etc.)
+-keep class it.atraj.habittracker.data.local.** { *; }
+-keepclassmembers class it.atraj.habittracker.data.local.** {
+    *;
+}
+
+# ========== UI Models and State Classes ==========
+# Keep all UI state classes and their fields with BOTH package names
+-keep class com.example.habittracker.ui.** { *; }
+-keep class it.atraj.habittracker.ui.** { *; }
+-keepclassmembers class com.example.habittracker.ui.** {
+    *;
+}
+-keepclassmembers class it.atraj.habittracker.ui.** {
+    *;
+}
+
+# Specifically keep important UI classes
+-keep class it.atraj.habittracker.ui.HabitScreenState { *; }
+-keep class it.atraj.habittracker.ui.AddHabitState { *; }
+-keep class it.atraj.habittracker.ui.HabitCardUi { *; }
+-keep class it.atraj.habittracker.ui.HabitUiModelsKt { *; }
+
+# Keep all Kotlin data classes
+-keep @kotlin.Metadata class * {
+    *;
+}
+-keepclassmembers class * {
+    @kotlin.jvm.JvmField *;
+}
+
+# Keep data class copy methods
+-keepclassmembers class * {
+    public ** copy(...);
+    public ** component*();
 }
 
 # ========== Serialization ==========
@@ -89,11 +131,19 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# Keep serialization for BOTH package names
 -keep,includedescriptorclasses class com.example.habittracker.**$$serializer { *; }
+-keep,includedescriptorclasses class it.atraj.habittracker.**$$serializer { *; }
 -keepclassmembers class com.example.habittracker.** {
     *** Companion;
 }
+-keepclassmembers class it.atraj.habittracker.** {
+    *** Companion;
+}
 -keepclasseswithmembers class com.example.habittracker.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class it.atraj.habittracker.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
