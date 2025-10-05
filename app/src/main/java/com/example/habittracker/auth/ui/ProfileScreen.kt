@@ -1093,9 +1093,9 @@ fun ProfileScreen(
         }
     }
 
-    // Avatar Picker Dialog
+    // Avatar Picker Dialog - Now with upload functionality
     if (showAvatarPicker) {
-        AvatarPickerDialog(
+        it.atraj.habittracker.avatar.ui.EnhancedAvatarPickerDialog(
             currentAvatar = currentAvatar,
             onAvatarSelected = { avatar ->
                 viewModel.updateCustomAvatar(avatar)

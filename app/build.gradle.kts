@@ -124,6 +124,9 @@ dependencies {
 
     // WorkManager for reliable background tasks
     implementation(libs.androidx.work.runtime.ktx)
+    
+    // Security - Encrypted SharedPreferences (for secure token storage)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Charts
     implementation(libs.vico.compose)

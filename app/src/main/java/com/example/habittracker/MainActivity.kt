@@ -38,6 +38,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var habitRepository: HabitRepository
     
+    @Inject
+    lateinit var avatarConfig: it.atraj.habittracker.avatar.AvatarConfig
+    
     private var hasCheckedBatteryOptimization = false
     private lateinit var updateManager: UpdateManager
     
@@ -81,6 +84,9 @@ class MainActivity : ComponentActivity() {
         
         // Initialize update manager
         updateManager = UpdateManager(this)
+        
+        // Initialize avatar upload feature with secure token storage
+        initializeAvatarFeature()
         
         // Get and log FCM token for testing
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -293,6 +299,31 @@ class MainActivity : ComponentActivity() {
                     Log.e("MainActivity", "Error checking battery optimization: ${e.message}")
                 }
             }
+        }
+    }
+    
+    /**
+     * Initialize avatar upload feature with secure token storage
+     * 
+     * Note: Token is stored in encrypted SharedPreferences on device.
+     * To add/update token: Use SecureTokenStorage.storeToken() manually or via settings.
+     */
+    private fun initializeAvatarFeature() {
+        try {
+            // Retrieve token from secure encrypted storage
+            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(this)
+            
+            if (token != null) {
+                // Initialize avatar feature with stored token
+                avatarConfig.initialize(token)
+                Log.d("MainActivity", "✅ Avatar upload feature initialized")
+            } else {
+                // No token stored - upload feature will be disabled
+                Log.w("MainActivity", "⚠️ GitHub token not found - avatar upload disabled")
+                Log.i("MainActivity", "To enable: Store token using SecureTokenStorage.storeToken()")
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "❌ Failed to initialize avatar feature: ${e.message}", e)
         }
     }
     
