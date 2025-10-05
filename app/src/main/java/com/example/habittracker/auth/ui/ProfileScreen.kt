@@ -1412,7 +1412,10 @@ private fun AvatarPickerDialog(
         "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_2_casual.png",
         "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_3_creative.png",
         "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_4_modern.png",
-        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_5_artistic.png"
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_5_artistic.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_6_gemini_1.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_7_gemini_2.png",
+        "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_8_gemini_3.png"
     )
 
     AlertDialog(

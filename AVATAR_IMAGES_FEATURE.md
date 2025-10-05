@@ -6,7 +6,8 @@ Replaced emoji-based avatars with high-quality image avatars hosted on GitHub. U
 ## Key Features
 
 ### 1. **Image-Based Avatars** 🖼️
-- **5 Professional Avatar Images** hosted on GitHub
+- **8 Professional Avatar Images** hosted on GitHub
+- 5 original avatars + 3 Gemini-generated avatars
 - High-quality PNG images loaded from GitHub raw URLs
 - Displayed in circular format across all screens
 - Original size loading for maximum quality
@@ -42,6 +43,9 @@ https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/
 3. **avatar_3_creative.png** - Creative style
 4. **avatar_4_modern.png** - Modern style
 5. **avatar_5_artistic.png** - Artistic style
+6. **avatar_6_gemini_1.png** - AI-generated style 1
+7. **avatar_7_gemini_2.png** - AI-generated style 2
+8. **avatar_8_gemini_3.png** - AI-generated style 3
 
 ## Implementation Details
 
@@ -189,10 +193,11 @@ AsyncImage(
 
 ### Selecting an Avatar
 1. Tap profile photo → Opens avatar picker
-2. View 5 professional images in grid
-3. Tap to select → Checkmark appears
-4. Image updates instantly with crossfade
-5. Tap "Close" to finish
+2. View 8 professional images in grid (3 columns)
+3. Scroll to see all options
+4. Tap to select → Checkmark appears
+5. Image updates instantly with crossfade
+6. Tap "Close" to finish
 
 ### Viewing Full Size
 1. Long-press on profile photo
@@ -245,7 +250,8 @@ Hierarchical fallback system:
 ### Avatar Selection
 - [ ] Open profile screen
 - [ ] Tap profile photo
-- [ ] See 5 avatar images in grid
+- [ ] See 8 avatar images in grid (3 columns)
+- [ ] Scroll to see all avatars
 - [ ] Tap to select different avatar
 - [ ] See checkmark on selected avatar
 - [ ] Avatar updates in profile screen
@@ -291,10 +297,10 @@ Hierarchical fallback system:
 ## Future Enhancements
 
 ### Potential Additions
-1. **More Avatar Options** - Add more professional images
-2. **Category Filters** - Group avatars by style
+1. **More Avatar Options** - Add more professional or AI-generated images
+2. **Category Filters** - Group avatars by style (Professional, Casual, AI-generated)
 3. **Custom Upload** - Allow users to upload their own
-4. **AI Avatars** - Generate AI-based avatars
+4. **AI Avatars** - Generate more AI-based avatars on demand
 5. **Avatar Animations** - Animated avatar options
 6. **Pinch to Zoom** - In enlarged view
 7. **Share Avatar** - Share profile picture
@@ -319,8 +325,8 @@ Hierarchical fallback system:
 ## Summary
 
 Successfully migrated from emoji-based avatars to professional image-based avatars with:
-- 5 high-quality avatar images
-- Grid-based selection interface
+- 8 high-quality avatar images (5 original + 3 AI-generated)
+- Grid-based selection interface (3 columns)
 - Long-press to view full size
 - Consistent display across 8+ screens
 - Robust fallback system
