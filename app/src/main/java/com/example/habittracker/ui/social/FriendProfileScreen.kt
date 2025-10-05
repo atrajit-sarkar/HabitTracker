@@ -37,7 +37,7 @@ fun FriendProfileScreen(
     friendRepository: FriendRepository,
     habitViewModel: HabitViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
-    onMessageClick: (String, String, String, String?) -> Unit = { _, _, _, _ -> }
+    onMessageClick: (String, String, String?, String?) -> Unit = { _, _, _, _ -> } // Third param is nullable customAvatar
 ) {
     var friendProfile by remember { mutableStateOf<UserPublicProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -120,7 +120,7 @@ fun FriendProfileScreen(
 fun FriendProfileContent(
     profile: UserPublicProfile,
     paddingValues: PaddingValues,
-    onMessageClick: (String, String, String, String?) -> Unit = { _, _, _, _ -> }
+    onMessageClick: (String, String, String?, String?) -> Unit = { _, _, _, _ -> } // Third param is nullable customAvatar
 ) {
     Column(
         modifier = Modifier

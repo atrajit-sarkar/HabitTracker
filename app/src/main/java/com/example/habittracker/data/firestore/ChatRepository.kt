@@ -25,11 +25,11 @@ class ChatRepository @Inject constructor(
     suspend fun getOrCreateChat(
         userId1: String,
         userName1: String,
-        userAvatar1: String,
+        userAvatar1: String?, // Nullable - null if no custom avatar
         userPhotoUrl1: String?,
         userId2: String,
         userName2: String,
-        userAvatar2: String,
+        userAvatar2: String?, // Nullable - null if no custom avatar
         userPhotoUrl2: String?
     ): Result<Chat> {
         return try {
@@ -122,7 +122,7 @@ class ChatRepository @Inject constructor(
         chatId: String,
         senderId: String,
         senderName: String,
-        senderAvatar: String,
+        senderAvatar: String?, // Nullable - null if no custom avatar
         senderPhotoUrl: String?,
         content: String,
         type: MessageType = MessageType.TEXT,

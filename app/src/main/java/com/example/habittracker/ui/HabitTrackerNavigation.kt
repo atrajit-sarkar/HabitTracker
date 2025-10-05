@@ -462,12 +462,15 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            val onMessageClick: (String, String, String, String?) -> Unit = { id, name, avatar, photoUrl ->
+            val onMessageClick: (String, String, String?, String?) -> Unit = { id, name, avatar, photoUrl ->
                 // Navigate to chat screen
+                val avatarEncoded = avatar?.let {
+                    java.net.URLEncoder.encode(it, "UTF-8")
+                } ?: "null"
                 val photoUrlEncoded = photoUrl?.let { 
                     java.net.URLEncoder.encode(it, "UTF-8") 
                 } ?: "null"
-                safeNavigate("chat/$id/$name/$avatar/$photoUrlEncoded")
+                safeNavigate("chat/$id/$name/$avatarEncoded/$photoUrlEncoded")
             }
             
             // Get FriendRepository from DI

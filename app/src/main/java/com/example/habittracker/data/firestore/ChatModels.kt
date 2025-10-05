@@ -9,7 +9,7 @@ data class ChatMessage(
     val chatId: String = "",
     val senderId: String = "",
     val senderName: String = "",
-    val senderAvatar: String = "😊",
+    val senderAvatar: String? = null, // Nullable - null if no custom avatar
     val senderPhotoUrl: String? = null,
     val content: String = "",
     val type: MessageType = MessageType.TEXT,
@@ -30,7 +30,7 @@ data class Chat(
     val id: String = "",
     val participants: List<String> = emptyList(), // User IDs
     val participantNames: Map<String, String> = emptyMap(),
-    val participantAvatars: Map<String, String> = emptyMap(),
+    val participantAvatars: Map<String, String?> = emptyMap(), // Nullable avatars
     val participantPhotoUrls: Map<String, String?> = emptyMap(),
     val lastMessage: String = "",
     val lastMessageType: String = MessageType.TEXT.name,
