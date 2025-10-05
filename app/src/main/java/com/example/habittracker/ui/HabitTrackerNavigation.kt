@@ -24,6 +24,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.navigation.NavBackStackEntry
 import it.atraj.habittracker.auth.GoogleSignInHelper
 import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.performance.PerformanceManager
@@ -54,9 +57,61 @@ fun HabitTrackerNavigation(
     googleSignInHelper: GoogleSignInHelper,
     onCheckForUpdates: () -> Unit = {}
 ) {
+    // Prevent navigation black screen by ensuring stable content
+    DisposableEffect(navController) {
+        // Keep the navigation controller stable
+        onDispose { }
+    }
+    
+    // Safe navigation wrapper to prevent black screens and duplicate navigations
+    fun safeNavigate(route: String, popUpToRoute: String? = null) {
+        try {
+            navController.navigate(route) {
+                launchSingleTop = true
+                popUpToRoute?.let {
+                    popUpTo(it) {
+                        inclusive = false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Catch any navigation exceptions to prevent crashes
+            android.util.Log.e("Navigation", "Navigation error: ${e.message}")
+        }
+    }
+    
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        // Add smooth enter/exit transitions to prevent black screens
+        enterTransition = { 
+            fadeIn(animationSpec = tween(200)) + 
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(200)
+            )
+        },
+        exitTransition = { 
+            fadeOut(animationSpec = tween(200)) + 
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(200)
+            )
+        },
+        popEnterTransition = { 
+            fadeIn(animationSpec = tween(200)) + 
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(200)
+            )
+        },
+        popExitTransition = { 
+            fadeOut(animationSpec = tween(200)) + 
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(200)
+            )
+        }
     ) {
         composable("loading") {
             val authViewModel: AuthViewModel = hiltViewModel()
@@ -79,11 +134,13 @@ fun HabitTrackerNavigation(
                         // User is authenticated, go directly to home
                         navController.navigate("home") {
                             popUpTo("loading") { inclusive = true }
+                            launchSingleTop = true
                         }
                     } else {
                         // User is not authenticated, go to auth screen
                         navController.navigate("auth") {
                             popUpTo("loading") { inclusive = true }
+                            launchSingleTop = true
                         }
                     }
                 }
@@ -166,16 +223,16 @@ fun HabitTrackerNavigation(
             
             // Debounced navigation handlers to prevent rapid clicks
             val onAddHabitClick = rememberNavigationHandler { 
-                navController.navigate("add_habit") 
+                safeNavigate("add_habit")
             }
             val onTrashClick = rememberNavigationHandler { 
-                navController.navigate("trash") 
+                safeNavigate("trash")
             }
             val onProfileClick = rememberNavigationHandler { 
-                navController.navigate("profile") 
+                safeNavigate("profile")
             }
             val onNotificationGuideClick = rememberNavigationHandler {
-                navController.navigate("notification_setup_guide")
+                safeNavigate("notification_setup_guide")
             }
             
             HabitHomeRoute(
@@ -190,7 +247,7 @@ fun HabitTrackerNavigation(
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastNavigationTime >= 500L) {
                         lastNavigationTime = currentTime
-                        navController.navigate("habit_details/$habitId")
+                        safeNavigate("habit_details/$habitId")
                     }
                 },
                 onTrashClick = onTrashClick,
@@ -283,28 +340,28 @@ fun HabitTrackerNavigation(
             
             // Debounced statistics navigation
             val onStatisticsClick = rememberNavigationHandler {
-                navController.navigate("statistics")
+                safeNavigate("statistics")
             }
             
             // Social features navigation
             val onSearchUsersClick = rememberNavigationHandler {
-                navController.navigate("searchUsers")
+                safeNavigate("searchUsers")
             }
             
             val onFriendsListClick = rememberNavigationHandler {
-                navController.navigate("friendsList")
+                safeNavigate("friendsList")
             }
             
             val onLeaderboardClick = rememberNavigationHandler {
-                navController.navigate("leaderboard")
+                safeNavigate("leaderboard")
             }
             
             val onNotificationGuideClick = rememberNavigationHandler {
-                navController.navigate("notification_setup_guide")
+                safeNavigate("notification_setup_guide")
             }
             
             val onLanguageSettingsClick = rememberNavigationHandler {
-                navController.navigate("language_selector")
+                safeNavigate("language_selector")
             }
             
             ProfileScreen(
@@ -379,7 +436,7 @@ fun HabitTrackerNavigation(
                 authViewModel = authViewModel,
                 onBackClick = onBackClick,
                 onFriendClick = { friendId ->
-                    navController.navigate("friendProfile/$friendId")
+                    safeNavigate("friendProfile/$friendId")
                 }
             )
         }
@@ -410,7 +467,7 @@ fun HabitTrackerNavigation(
                 val photoUrlEncoded = photoUrl?.let { 
                     java.net.URLEncoder.encode(it, "UTF-8") 
                 } ?: "null"
-                navController.navigate("chat/$id/$name/$avatar/$photoUrlEncoded")
+                safeNavigate("chat/$id/$name/$avatar/$photoUrlEncoded")
             }
             
             // Get FriendRepository from DI
@@ -450,7 +507,7 @@ fun HabitTrackerNavigation(
                     java.net.URLEncoder.encode(it, "UTF-8") 
                 } ?: "null"
                 
-                navController.navigate("chat/$friendId/$friendName/$friendAvatar/$photoUrlEncoded")
+                safeNavigate("chat/$friendId/$friendName/$friendAvatar/$photoUrlEncoded")
             }
             
             ChatListScreen(

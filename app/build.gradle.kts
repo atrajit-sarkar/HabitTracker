@@ -30,6 +30,10 @@ android {
         versionName = "4.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Add GitHub token from keystore.properties to BuildConfig
+        val githubToken = keystoreProperties.getProperty("GITHUB_TOKEN") ?: ""
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
     }
 
     signingConfigs {

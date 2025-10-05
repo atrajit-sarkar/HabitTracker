@@ -311,7 +311,15 @@ class MainActivity : ComponentActivity() {
     private fun initializeAvatarFeature() {
         try {
             // Retrieve token from secure encrypted storage
-            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(this)
+            var token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(this)
+            
+            // If no token is stored, try to use BuildConfig token (for first run)
+            if (token == null && BuildConfig.GITHUB_TOKEN.isNotEmpty()) {
+                token = BuildConfig.GITHUB_TOKEN
+                // Store it securely for future use
+                it.atraj.habittracker.avatar.SecureTokenStorage.storeToken(this, token)
+                Log.d("MainActivity", "✅ GitHub token stored from BuildConfig")
+            }
             
             if (token != null) {
                 // Initialize avatar feature with stored token
