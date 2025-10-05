@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.*
 import it.atraj.habittracker.util.clickableOnce
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,13 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -58,8 +58,6 @@ import coil.size.Size
 import com.airbnb.lottie.compose.*
 import it.atraj.habittracker.R
 import it.atraj.habittracker.ui.HabitViewModel
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun GlitteringProfilePhoto(
@@ -71,144 +69,72 @@ fun GlitteringProfilePhoto(
     onClick: () -> Unit,
     onLongPress: () -> Unit = {}
 ) {
-    // Animation states
+    // Optimized: Use derivedStateOf to reduce recompositions
+    val shouldAnimate by remember { derivedStateOf { avatarLoaded } }
+    
+    // Animation states - only animate when loaded
     val infiniteTransition = rememberInfiniteTransition(label = "glitter_animation")
     
-    // Rotating gradient animation
+    // Simplified rotation animation (reduced from 4 to 1 animation for performance)
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
+            animation = tween(4000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "rotation"
     )
     
-    // Pulsing scale animation for shimmer effect
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
+    // Simplified pulse (reduced complexity)
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
+            animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "scale"
-    )
-    
-    // Opacity animation for sparkles
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-    
-    // Multiple sparkle positions
-    val sparkle1Angle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sparkle1"
-    )
-    
-    val sparkle2Angle by infiniteTransition.animateFloat(
-        initialValue = 120f,
-        targetValue = 480f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sparkle2"
-    )
-    
-    val sparkle3Angle by infiniteTransition.animateFloat(
-        initialValue = 240f,
-        targetValue = 600f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sparkle3"
+        label = "pulse"
     )
     
     Box(
         modifier = modifier
-            .size(120.dp) // Increased size to accommodate glitter effect
+            .size(120.dp)
+            .graphicsLayer {
+                // Use graphicsLayer for better performance
+                if (shouldAnimate) {
+                    rotationZ = rotationAngle
+                }
+            }
             .drawBehind {
-                val centerX = size.width / 2
-                val centerY = size.height / 2
-                val radius = size.minDimension / 2 - 10.dp.toPx()
-                
-                // Draw rotating gradient border
-                val gradientColors = listOf(
-                    Color(0xFFFFD700), // Gold
-                    Color(0xFFFFE55C), // Light gold
-                    Color(0xFFFFFFFF), // White
-                    Color(0xFFFFE55C), // Light gold
-                    Color(0xFFFFD700), // Gold
-                    Color(0xFFFFA500), // Orange
-                    Color(0xFFFFD700)  // Gold
-                )
-                
-                val brush = Brush.sweepGradient(
-                    colors = gradientColors,
-                    center = Offset(centerX, centerY)
-                )
-                
-                // Draw outer glowing ring
-                drawCircle(
-                    brush = brush,
-                    radius = radius + 8.dp.toPx(),
-                    center = Offset(centerX, centerY),
-                    alpha = 0.6f,
-                    style = Stroke(width = 4.dp.toPx())
-                )
-                
-                // Draw middle pulsing ring
-                drawCircle(
-                    brush = brush,
-                    radius = (radius + 8.dp.toPx()) * scale,
-                    center = Offset(centerX, centerY),
-                    alpha = alpha * 0.4f,
-                    style = Stroke(width = 2.dp.toPx())
-                )
-                
-                // Draw sparkles at different positions
-                fun drawSparkle(angle: Float, distance: Float) {
-                    val radians = Math.toRadians(angle.toDouble())
-                    val sparkleX = centerX + (distance * cos(radians)).toFloat()
-                    val sparkleY = centerY + (distance * sin(radians)).toFloat()
+                if (shouldAnimate) {
+                    val centerX = size.width / 2
+                    val centerY = size.height / 2
+                    val radius = size.minDimension / 2 - 10.dp.toPx()
                     
-                    // Draw sparkle as a small star
-                    val sparkleSize = 6.dp.toPx()
-                    drawCircle(
-                        color = Color.White,
-                        radius = sparkleSize,
-                        center = Offset(sparkleX, sparkleY),
-                        alpha = alpha
+                    // Simplified gradient border (reduced colors for performance)
+                    val gradientColors = listOf(
+                        Color(0xFFFFD700), // Gold
+                        Color(0xFFFFE55C), // Light gold
+                        Color(0xFFFFFFFF), // White
+                        Color(0xFFFFD700)  // Gold
                     )
+                    
+                    val brush = Brush.sweepGradient(
+                        colors = gradientColors,
+                        center = Offset(centerX, centerY)
+                    )
+                    
+                    // Single glowing ring (reduced from multiple rings)
                     drawCircle(
-                        color = Color(0xFFFFD700),
-                        radius = sparkleSize * 0.6f,
-                        center = Offset(sparkleX, sparkleY),
-                        alpha = alpha * 0.8f
+                        brush = brush,
+                        radius = radius + 8.dp.toPx(),
+                        center = Offset(centerX, centerY),
+                        alpha = pulseAlpha,
+                        style = Stroke(width = 3.dp.toPx())
                     )
                 }
-                
-                // Draw multiple sparkles
-                val sparkleDistance = radius + 12.dp.toPx()
-                drawSparkle(sparkle1Angle, sparkleDistance)
-                drawSparkle(sparkle2Angle, sparkleDistance)
-                drawSparkle(sparkle3Angle, sparkleDistance)
             }
-            .rotate(rotationAngle)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onClick() },
@@ -224,17 +150,16 @@ fun GlitteringProfilePhoto(
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surface)
                 .border(
-                    4.dp,
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
-                        )
-                    ),
+                    3.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                     CircleShape
                 )
-                .rotate(-rotationAngle), // Counter-rotate to keep photo upright
+                .graphicsLayer {
+                    // Counter-rotate to keep photo upright
+                    if (shouldAnimate) {
+                        rotationZ = -rotationAngle
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             // Only show avatar content when data is loaded
@@ -404,7 +329,10 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(
+                    state = rememberScrollState(),
+                    flingBehavior = ScrollableDefaults.flingBehavior()
+                )
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -421,57 +349,64 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Background gradient layer (bottom)
+                    // Background gradient layer (bottom) - Optimized with remember
+                    val gradientBrush = remember {
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0x26000000), // Use hex colors to avoid theme lookups
+                                Color(0x26000000)
+                            )
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .matchParentSize()
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
-                                    )
-                                )
-                            )
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                     )
                     
                     // Animation overlay layer (middle) - fills entire card
+                    // Optimized: Only load animation composition when selected
                     if (selectedAnimation != "none") {
-                        val animationFile = when (selectedAnimation) {
-                            "sakura" -> "sakura_fall.json"
-                            "worldwide" -> "worldwide.json"
-                            "cute_anime_girl" -> "cute_anime_girl.json"
-                            "fireblast" -> "fireblast.json"
-                            else -> null
-                        }
-                        
-                        // Set alpha based on animation type for better text visibility
-                        val animationAlpha = when (selectedAnimation) {
-                            "cute_anime_girl" -> 0.5f // Dimmed for better text readability
-                            else -> 1f // Full opacity for other animations
-                        }
-                        
-                        animationFile?.let { file ->
-                            val composition by rememberLottieComposition(
-                                LottieCompositionSpec.Asset(file)
-                            )
+                        key(selectedAnimation) { // Add key to prevent re-composition issues
+                            val animationFile = when (selectedAnimation) {
+                                "sakura" -> "sakura_fall.json"
+                                "worldwide" -> "worldwide.json"
+                                "cute_anime_girl" -> "cute_anime_girl.json"
+                                "fireblast" -> "fireblast.json"
+                                else -> null
+                            }
                             
-                            val progress by animateLottieCompositionAsState(
-                                composition = composition,
-                                iterations = LottieConstants.IterateForever,
-                                isPlaying = true,
-                                speed = 1f, // Normal speed for smoother playback
-                                restartOnPlay = true
-                            )
+                            // Set alpha based on animation type for better text visibility
+                            val animationAlpha = when (selectedAnimation) {
+                                "cute_anime_girl" -> 0.5f // Dimmed for better text readability
+                                else -> 0.8f // Slightly reduced for performance
+                            }
                             
-                            LottieAnimation(
-                                composition = composition,
-                                progress = { progress },
-                                modifier = Modifier
-                                    .matchParentSize() // Fills entire card
-                                    .alpha(animationAlpha)
-                            )
+                            animationFile?.let { file ->
+                                val composition by rememberLottieComposition(
+                                    LottieCompositionSpec.Asset(file)
+                                )
+                                
+                                // Optimized: Use remembered speed value
+                                val animationSpeed = remember { 0.8f }
+                                
+                                val progress by animateLottieCompositionAsState(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    isPlaying = true,
+                                    speed = animationSpeed, // Reduced speed for smoother performance
+                                    restartOnPlay = true
+                                )
+                                
+                                LottieAnimation(
+                                    composition = composition,
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .matchParentSize() // Fills entire card
+                                        .alpha(animationAlpha)
+                                )
+                            }
                         }
                     }
                     

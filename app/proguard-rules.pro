@@ -71,15 +71,31 @@
 -dontwarn coil.**
 
 # ========== Data Classes (Keep for Firestore) ==========
--keep class com.example.habittracker.data.** { *; }
--keep class com.example.habittracker.auth.User { *; }
--keepclassmembers class com.example.habittracker.data.** {
+# Keep all data classes and their fields for proper serialization/deserialization
+-keep class it.atraj.habittracker.data.** { *; }
+-keep class it.atraj.habittracker.auth.** { *; }
+-keepclassmembers class it.atraj.habittracker.data.** {
+    public <init>(...);
+    public <fields>;
+}
+-keepclassmembers class it.atraj.habittracker.auth.** {
     public <init>(...);
     public <fields>;
 }
 
+# Keep field names for Firestore reflection
+-keepclassmembers class it.atraj.habittracker.data.local.Habit {
+    <fields>;
+}
+-keepclassmembers class it.atraj.habittracker.data.local.HabitAvatar {
+    <fields>;
+}
+-keepclassmembers class it.atraj.habittracker.data.firestore.** {
+    <fields>;
+}
+
 # ========== Serialization ==========
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*, InnerClasses, Signature, Exception
 -dontnote kotlinx.serialization.AnnotationsKt
 
 -keepclassmembers class kotlinx.serialization.json.** {
@@ -89,11 +105,11 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
--keep,includedescriptorclasses class com.example.habittracker.**$$serializer { *; }
--keepclassmembers class com.example.habittracker.** {
+-keep,includedescriptorclasses class it.atraj.habittracker.**$$serializer { *; }
+-keepclassmembers class it.atraj.habittracker.** {
     *** Companion;
 }
--keepclasseswithmembers class com.example.habittracker.** {
+-keepclasseswithmembers class it.atraj.habittracker.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
