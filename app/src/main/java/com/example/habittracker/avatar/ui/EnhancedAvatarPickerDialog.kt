@@ -228,12 +228,20 @@ private fun AvatarGridItem(
                 .clickable(onClick = onSelect),
             contentAlignment = Alignment.Center
         ) {
+            // Add GitHub token for private repo authentication
+            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+            val requestBuilder = ImageRequest.Builder(context)
+                .data(avatarItem.url)
+                .size(Size.ORIGINAL)
+                .crossfade(true)
+            
+            // Add Authorization header if token is available (for private repos)
+            if (token != null) {
+                requestBuilder.addHeader("Authorization", "token $token")
+            }
+            
             AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(avatarItem.url)
-                    .size(Size.ORIGINAL)
-                    .crossfade(true)
-                    .build(),
+                model = requestBuilder.build(),
                 contentDescription = "Avatar option",
                 modifier = Modifier
                     .fillMaxSize()

@@ -378,12 +378,20 @@ fun FriendCard(
                 )
             } else if (friend.customAvatar?.startsWith("https://") == true) {
                 // Custom avatar from GitHub (image URL)
+                // Add GitHub token for private repo authentication
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(friend.customAvatar)
+                    .size(Size.ORIGINAL)
+                    .crossfade(true)
+                
+                // Add Authorization header if token is available (for private repos)
+                if (token != null && friend.customAvatar.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(friend.customAvatar)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
-                        .build(),
+                    model = requestBuilder.build(),
                     contentDescription = "Custom avatar",
                     modifier = Modifier
                         .size(56.dp)

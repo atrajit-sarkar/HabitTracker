@@ -261,12 +261,20 @@ fun GlitteringProfilePhoto(
                         )
                     } else if (avatarValue.startsWith("https://")) {
                         // Custom avatar from GitHub (image URL)
+                        // Add GitHub token for private repo authentication
+                        val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                        val requestBuilder = ImageRequest.Builder(context)
+                            .data(avatarValue)
+                            .size(Size.ORIGINAL)
+                            .crossfade(true)
+                        
+                        // Add Authorization header if token is available (for private repos)
+                        if (token != null) {
+                            requestBuilder.addHeader("Authorization", "token $token")
+                        }
+                        
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(avatarValue)
-                                .size(Size.ORIGINAL) // Load original high-quality image
-                                .crossfade(true)
-                                .build(),
+                            model = requestBuilder.build(),
                             contentDescription = "Custom avatar",
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1257,12 +1265,21 @@ private fun EnlargedPhotoDialog(
         ) {
             if (photoUrl != null) {
                 val context = androidx.compose.ui.platform.LocalContext.current
+                
+                // Add GitHub token for private repo authentication if it's a GitHub URL
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(photoUrl)
+                    .size(Size.ORIGINAL)
+                    .crossfade(true)
+                
+                // Add Authorization header if token is available and it's a GitHub URL
+                if (token != null && photoUrl.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(photoUrl)
-                        .size(Size.ORIGINAL)
-                        .crossfade(true)
-                        .build(),
+                    model = requestBuilder.build(),
                     contentDescription = "Enlarged profile photo",
                     modifier = Modifier
                         .fillMaxWidth()

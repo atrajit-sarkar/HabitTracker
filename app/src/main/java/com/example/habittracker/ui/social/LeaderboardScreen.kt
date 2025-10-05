@@ -389,12 +389,20 @@ fun TopThreeCard(
             
             if (hasCustomImageAvatar) {
                 // Custom avatar from URL (e.g., GitHub)
+                // Add GitHub token for private repo authentication
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(entry.profile.customAvatar)
+                    .size(Size.ORIGINAL)
+                    .crossfade(true)
+                
+                // Add Authorization header if token is available (for private repos)
+                if (token != null && entry.profile.customAvatar?.contains("githubusercontent.com") == true) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(entry.profile.customAvatar)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
-                        .build(),
+                    model = requestBuilder.build(),
                     contentDescription = "Custom avatar",
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
@@ -555,12 +563,20 @@ fun LeaderboardEntryCard(
             
             if (hasCustomImageAvatar) {
                 // Custom avatar from URL (e.g., GitHub)
+                // Add GitHub token for private repo authentication
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(entry.profile.customAvatar)
+                    .size(Size.ORIGINAL)
+                    .crossfade(true)
+                
+                // Add Authorization header if token is available (for private repos)
+                if (token != null && entry.profile.customAvatar?.contains("githubusercontent.com") == true) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(entry.profile.customAvatar)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
-                        .build(),
+                    model = requestBuilder.build(),
                     contentDescription = "Custom avatar",
                     modifier = Modifier
                         .size(48.dp)
