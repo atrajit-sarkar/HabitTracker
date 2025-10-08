@@ -424,6 +424,8 @@ class HabitViewModel @Inject constructor(
 
     fun deleteHabit(habitId: Long) {
         viewModelScope.launch {
+            // Indicate deletion in progress so UI overlay stays visible
+            _uiState.update { it.copy(isDeleting = true) }
             val habit = withContext(Dispatchers.IO) {
                 habitRepository.getHabitById(habitId)
             }
@@ -441,6 +443,9 @@ class HabitViewModel @Inject constructor(
             
             // Update user's stats on leaderboard immediately
             updateUserStatsAsync()
+
+            // Clear deleting flag after operation completes
+            _uiState.update { it.copy(isDeleting = false) }
         }
     }
 
@@ -767,6 +772,8 @@ class HabitViewModel @Inject constructor(
     
     fun deleteSelectedHabits() {
         viewModelScope.launch {
+            // Indicate deletion in progress so UI can show overlay until all deletions finish
+            _uiState.update { it.copy(isDeleting = true) }
             val selectedIds = _uiState.value.selectedHabitIds.toList()
             val habitTitles = mutableListOf<String>()
             
@@ -794,9 +801,12 @@ class HabitViewModel @Inject constructor(
                     selectedHabitIds = emptySet()
                 )
             }
-            
+
             // Update user's stats on leaderboard immediately
             updateUserStatsAsync()
+
+            // Clear deleting flag when all deletions are done
+            _uiState.update { it.copy(isDeleting = false) }
         }
     }
     

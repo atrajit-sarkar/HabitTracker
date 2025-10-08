@@ -49,4 +49,6 @@ data class HabitScreenState(
     val snackbarMessage: String? = null,
     val isSelectionMode: Boolean = false,
     val selectedHabitIds: Set<Long> = emptySet()
+    ,
+    val isDeleting: Boolean = false
 )

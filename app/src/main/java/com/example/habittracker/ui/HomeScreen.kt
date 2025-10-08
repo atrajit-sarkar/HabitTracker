@@ -263,7 +263,6 @@ fun HabitHomeScreen(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var isDeletingHabit by remember { mutableStateOf(false) }
     val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
@@ -513,9 +512,8 @@ fun HabitHomeScreen(
                     isSelectionMode = state.isSelectionMode,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
                     onMarkCompleted = { onMarkHabitCompleted(habit.id) },
-                    onDelete = { 
+                    onDelete = {
                         habitCountBeforeDelete.value = state.habits.size
-                        isDeletingHabit = true
                         onDeleteHabit(habit.id)
                     },
                     onSeeDetails = { onHabitDetailsClick(habit.id) },
@@ -535,16 +533,9 @@ fun HabitHomeScreen(
     }
     }
     
-    // Global loading overlay for delete operations
-    if (isDeletingHabit) {
+    // Global loading overlay for delete operations controlled by ViewModel
+    if (state.isDeleting) {
         LoadingSandClockOverlay()
-    }
-    
-    // Auto-dismiss when habit count changes (deletion completed)
-    LaunchedEffect(state.habits.size) {
-        if (isDeletingHabit && state.habits.size < habitCountBeforeDelete.value) {
-            isDeletingHabit = false
-        }
     }
     
     // Delete confirmation dialog for multiple habits
@@ -573,18 +564,20 @@ fun HabitHomeScreen(
                 Text(text = message)
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmation = false
-                        onDeleteSelectedHabits()
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete")
-                }
-            },
+                    TextButton(
+                        onClick = {
+                            // Remember count before delete; ViewModel will set isDeleting
+                            habitCountBeforeDelete.value = state.habits.size
+                            showDeleteConfirmation = false
+                            onDeleteSelectedHabits()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete")
+                    }
+                },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmation = false }) {
                     Text("Cancel")

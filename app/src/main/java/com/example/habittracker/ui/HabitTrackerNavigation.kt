@@ -269,6 +269,16 @@ fun HabitTrackerNavigation(
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val coroutineScope = rememberCoroutineScope()
+            var saveTriggered by remember { mutableStateOf(false) }
+            
+            // Navigate back when save completes
+            LaunchedEffect(state.addHabitState.isSaving, saveTriggered) {
+                if (saveTriggered && !state.addHabitState.isSaving) {
+                    // Small delay to ensure UI updates are visible
+                    kotlinx.coroutines.delay(200)
+                    navController.popBackStack()
+                }
+            }
             
             // Debounced back navigation
             val onBackClick = rememberNavigationHandler {
@@ -276,11 +286,11 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            // Debounced save action - wait for save to complete before navigating
+            // Trigger save - navigation happens automatically via LaunchedEffect above
             val onSaveHabit = rememberNavigationHandler {
                 coroutineScope.launch {
+                    saveTriggered = true
                     viewModel.saveHabit()
-                    navController.popBackStack()
                 }
             }
             
