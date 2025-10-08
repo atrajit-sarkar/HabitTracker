@@ -43,7 +43,9 @@
     <string name="choose_emoji_label">Pick an emoji</string>
     <string name="background_color_label">Background color</string>
     <string name="create_new_habit">Create New Habit</string>
+    <string name="edit_habit">Edit Habit</string>
     <string name="create_habit">Create Habit</string>
+    <string name="update_habit">Update Habit</string>
     <string name="back">Back</string>
     <string name="details">Details</string>
     <string name="see_details">See Details</string>
@@ -269,9 +271,7 @@
     <string name="habit_not_found">Habit not found</string>
     
     <!-- Edit Mode -->
-    <string name="edit_habit">Edit Habit</string>
     <string name="add_new_habit">Add New Habit</string>
-    <string name="update_habit">Update Habit</string>
     
     <!-- Profile Screen -->
     <string name="your_statistics">Your Statistics</string>

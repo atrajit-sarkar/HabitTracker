@@ -269,27 +269,55 @@ class HabitViewModel @Inject constructor(
             // Log the notification sound being saved
             android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
             
-            val habit = Habit(
-                title = title,
-                description = addForm.description.trim(),
-                reminderHour = addForm.hour,
-                reminderMinute = addForm.minute,
-                reminderEnabled = addForm.reminderEnabled,
-                frequency = addForm.frequency,
-                dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
-                dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
-                monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                notificationSoundId = addForm.notificationSound.id,
-                notificationSoundName = addForm.notificationSound.displayName,
-                notificationSoundUri = addForm.notificationSound.uri,
-                avatar = addForm.avatar
-            )
+            val habit = if (addForm.isEditMode && addForm.editingHabitId != null) {
+                // Edit mode: get existing habit and update it
+                val existingHabit = withContext(Dispatchers.IO) {
+                    habitRepository.getHabitById(addForm.editingHabitId)
+                }
+                existingHabit.copy(
+                    title = title,
+                    description = addForm.description.trim(),
+                    reminderHour = addForm.hour,
+                    reminderMinute = addForm.minute,
+                    reminderEnabled = addForm.reminderEnabled,
+                    frequency = addForm.frequency,
+                    dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                    dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                    monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                    notificationSoundId = addForm.notificationSound.id,
+                    notificationSoundName = addForm.notificationSound.displayName,
+                    notificationSoundUri = addForm.notificationSound.uri,
+                    avatar = addForm.avatar
+                )
+            } else {
+                // Create mode: new habit
+                Habit(
+                    title = title,
+                    description = addForm.description.trim(),
+                    reminderHour = addForm.hour,
+                    reminderMinute = addForm.minute,
+                    reminderEnabled = addForm.reminderEnabled,
+                    frequency = addForm.frequency,
+                    dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                    dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                    monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                    notificationSoundId = addForm.notificationSound.id,
+                    notificationSoundName = addForm.notificationSound.displayName,
+                    notificationSoundUri = addForm.notificationSound.uri,
+                    avatar = addForm.avatar
+                )
+            }
             
             android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
             
             val savedHabit = withContext(Dispatchers.IO) {
-                val id = habitRepository.insertHabit(habit)
-                habit.copy(id = id)
+                if (addForm.isEditMode && addForm.editingHabitId != null) {
+                    habitRepository.updateHabit(habit)
+                    habit
+                } else {
+                    val id = habitRepository.insertHabit(habit)
+                    habit.copy(id = id)
+                }
             }
             
             android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
@@ -304,8 +332,8 @@ class HabitViewModel @Inject constructor(
             }
             _uiState.update { state ->
                 state.copy(
-                    snackbarMessage = state.habitSavedMessage(),
-                    addHabitState = AddHabitState(),
+                    snackbarMessage = if (addForm.isEditMode) "Habit updated" else state.habitSavedMessage(),
+                    addHabitState = AddHabitState(availableSounds = availableSounds),
                     isAddSheetVisible = false
                 )
             }
@@ -485,6 +513,9 @@ class HabitViewModel @Inject constructor(
         android.util.Log.d("HabitViewModel", 
             "Habit: ${habit.title}, lastCompletedDate: ${habit.lastCompletedDate}, today: $today, isCompleted: $isCompleted")
         
+        // Check if this habit is selected
+        val isSelected = _uiState.value.selectedHabitIds.contains(habit.id)
+        
         return HabitCardUi(
             id = habit.id,
             title = habit.title,
@@ -494,7 +525,8 @@ class HabitViewModel @Inject constructor(
             isCompletedToday = isCompleted,
             frequency = habit.frequency,
             frequencyText = frequencyText,
-            avatar = habit.avatar
+            avatar = habit.avatar,
+            isSelected = isSelected
         )
     }
 
@@ -662,6 +694,128 @@ class HabitViewModel @Inject constructor(
     fun refreshUserStats() {
         viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
+        }
+    }
+    
+    // Selection Mode Functions
+    fun toggleHabitSelection(habitId: Long) {
+        _uiState.update { state ->
+            val newSelectedIds = if (habitId in state.selectedHabitIds) {
+                state.selectedHabitIds - habitId
+            } else {
+                state.selectedHabitIds + habitId
+            }
+            
+            // Exit selection mode if no habits are selected
+            val isSelectionMode = newSelectedIds.isNotEmpty()
+            
+            // Update habits with selection state
+            val updatedHabits = state.habits.map { habit ->
+                habit.copy(isSelected = habit.id in newSelectedIds)
+            }
+            
+            state.copy(
+                selectedHabitIds = newSelectedIds,
+                isSelectionMode = isSelectionMode,
+                habits = updatedHabits
+            )
+        }
+    }
+    
+    fun startSelectionMode(habitId: Long) {
+        _uiState.update { state ->
+            val updatedHabits = state.habits.map { habit ->
+                habit.copy(isSelected = habit.id == habitId)
+            }
+            
+            state.copy(
+                isSelectionMode = true,
+                selectedHabitIds = setOf(habitId),
+                habits = updatedHabits
+            )
+        }
+    }
+    
+    fun exitSelectionMode() {
+        _uiState.update { state ->
+            val updatedHabits = state.habits.map { habit ->
+                habit.copy(isSelected = false)
+            }
+            
+            state.copy(
+                isSelectionMode = false,
+                selectedHabitIds = emptySet(),
+                habits = updatedHabits
+            )
+        }
+    }
+    
+    fun deleteSelectedHabits() {
+        viewModelScope.launch {
+            val selectedIds = _uiState.value.selectedHabitIds.toList()
+            val habitTitles = mutableListOf<String>()
+            
+            selectedIds.forEach { habitId ->
+                val habit = withContext(Dispatchers.IO) {
+                    habitRepository.getHabitById(habitId)
+                }
+                habitTitles.add(habit.title)
+                withContext(Dispatchers.IO) {
+                    habitRepository.moveToTrash(habitId)
+                }
+                reminderScheduler.cancel(habit.id)
+            }
+            
+            val message = if (selectedIds.size == 1) {
+                "\"${habitTitles.first()}\" moved to trash"
+            } else {
+                "${selectedIds.size} habits moved to trash"
+            }
+            
+            _uiState.update { state ->
+                state.copy(
+                    snackbarMessage = message,
+                    isSelectionMode = false,
+                    selectedHabitIds = emptySet()
+                )
+            }
+            
+            // Update user's stats on leaderboard immediately
+            updateUserStatsAsync()
+        }
+    }
+    
+    fun loadHabitForEdit(habitId: Long) {
+        viewModelScope.launch {
+            val habit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(habitId)
+            }
+            
+            // Find the notification sound or use default
+            val notificationSound = availableSounds.firstOrNull { 
+                it.id == habit.notificationSoundId 
+            } ?: NotificationSound.DEFAULT
+            
+            _uiState.update { state ->
+                state.copy(
+                    addHabitState = AddHabitState(
+                        title = habit.title,
+                        description = habit.description,
+                        hour = habit.reminderHour,
+                        minute = habit.reminderMinute,
+                        reminderEnabled = habit.reminderEnabled,
+                        frequency = habit.frequency,
+                        dayOfWeek = habit.dayOfWeek ?: 1,
+                        dayOfMonth = habit.dayOfMonth ?: 1,
+                        monthOfYear = habit.monthOfYear ?: 1,
+                        notificationSound = notificationSound,
+                        availableSounds = availableSounds,
+                        avatar = habit.avatar,
+                        isEditMode = true,
+                        editingHabitId = habitId
+                    )
+                )
+            }
         }
     }
 }

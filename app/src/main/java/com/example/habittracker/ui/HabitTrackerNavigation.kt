@@ -225,6 +225,11 @@ fun HabitTrackerNavigation(
             val onAddHabitClick = rememberNavigationHandler { 
                 safeNavigate("add_habit")
             }
+            val onEditHabitClick: (Long) -> Unit = { habitId ->
+                viewModel.loadHabitForEdit(habitId)
+                viewModel.exitSelectionMode()
+                safeNavigate("edit_habit/$habitId")
+            }
             val onTrashClick = rememberNavigationHandler { 
                 safeNavigate("trash")
             }
@@ -252,13 +257,57 @@ fun HabitTrackerNavigation(
                 },
                 onTrashClick = onTrashClick,
                 onProfileClick = onProfileClick,
-                onNotificationGuideClick = onNotificationGuideClick
+                onNotificationGuideClick = onNotificationGuideClick,
+                onEditHabitClick = onEditHabitClick,
+                onToggleHabitSelection = viewModel::toggleHabitSelection,
+                onStartSelectionMode = viewModel::startSelectionMode,
+                onExitSelectionMode = viewModel::exitSelectionMode,
+                onDeleteSelectedHabits = viewModel::deleteSelectedHabits
             )
         }
         
         composable("add_habit") {
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                viewModel.resetAddHabitState()
+                navController.popBackStack()
+            }
+            
+            // Debounced save action
+            val onSaveHabit = rememberNavigationHandler {
+                viewModel.saveHabit()
+                navController.popBackStack()
+            }
+            
+            AddHabitScreen(
+                state = state.addHabitState,
+                onHabitNameChange = viewModel::onHabitNameChange,
+                onHabitDescriptionChange = viewModel::onHabitDescriptionChange,
+                onHabitReminderToggleChange = viewModel::onHabitReminderToggle,
+                onHabitTimeChange = viewModel::onHabitTimeChange,
+                onHabitFrequencyChange = viewModel::onHabitFrequencyChange,
+                onHabitDayOfWeekChange = viewModel::onHabitDayOfWeekChange,
+                onHabitDayOfMonthChange = viewModel::onHabitDayOfMonthChange,
+                onHabitMonthOfYearChange = viewModel::onHabitMonthOfYearChange,
+                onAvatarChange = viewModel::onAvatarChange,
+                onNotificationSoundChange = viewModel::onNotificationSoundChange,
+                onBackClick = onBackClick,
+                onSaveHabit = onSaveHabit
+            )
+        }
+        
+        composable("edit_habit/{habitId}") { backStackEntry ->
+            val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: return@composable
+            val viewModel: HabitViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Load habit data for editing
+            LaunchedEffect(habitId) {
+                viewModel.loadHabitForEdit(habitId)
+            }
             
             // Debounced back navigation
             val onBackClick = rememberNavigationHandler {

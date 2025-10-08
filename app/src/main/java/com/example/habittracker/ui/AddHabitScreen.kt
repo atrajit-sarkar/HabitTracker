@@ -112,7 +112,7 @@ fun AddHabitScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(id = R.string.create_new_habit),
+                        text = stringResource(id = if (state.isEditMode) R.string.edit_habit else R.string.create_new_habit),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -167,7 +167,7 @@ fun AddHabitScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         } else {
-                            Text(text = stringResource(id = R.string.create_habit))
+                            Text(text = stringResource(id = if (state.isEditMode) R.string.update_habit else R.string.create_habit))
                         }
                     }
                 }

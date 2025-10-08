@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.text.format.DateFormat
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -14,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,8 +47,10 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -86,6 +90,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -144,7 +149,12 @@ fun HabitHomeRoute(
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onNotificationGuideClick: () -> Unit = {}
+    onNotificationGuideClick: () -> Unit = {},
+    onEditHabitClick: (Long) -> Unit = {},
+    onToggleHabitSelection: (Long) -> Unit = {},
+    onStartSelectionMode: (Long) -> Unit = {},
+    onExitSelectionMode: () -> Unit = {},
+    onDeleteSelectedHabits: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -220,7 +230,12 @@ fun HabitHomeRoute(
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         },
-        onDismissPermissionCard = { notificationCardDismissed = true }
+        onDismissPermissionCard = { notificationCardDismissed = true },
+        onEditHabitClick = onEditHabitClick,
+        onToggleHabitSelection = onToggleHabitSelection,
+        onStartSelectionMode = onStartSelectionMode,
+        onExitSelectionMode = onExitSelectionMode,
+        onDeleteSelectedHabits = onDeleteSelectedHabits
     )
 }
 
@@ -239,12 +254,23 @@ fun HabitHomeScreen(
     onProfileClick: () -> Unit,
     notificationPermissionVisible: Boolean,
     onRequestNotificationPermission: () -> Unit,
-    onDismissPermissionCard: () -> Unit
+    onDismissPermissionCard: () -> Unit,
+    onEditHabitClick: (Long) -> Unit = {},
+    onToggleHabitSelection: (Long) -> Unit = {},
+    onStartSelectionMode: (Long) -> Unit = {},
+    onExitSelectionMode: () -> Unit = {},
+    onDeleteSelectedHabits: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var isDeletingHabit by remember { mutableStateOf(false) }
     val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    // Handle back button to exit selection mode
+    androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
+        onExitSelectionMode()
+    }
 
     // Close drawer when returning to home screen
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -290,6 +316,58 @@ fun HabitHomeScreen(
     ) {
         Scaffold(
         topBar = {
+            if (state.isSelectionMode) {
+                // Selection mode top bar
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "${state.selectedHabitIds.size} selected",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onExitSelectionMode) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Exit selection mode"
+                            )
+                        }
+                    },
+                    actions = {
+                        // Edit button - only enabled when exactly one habit is selected
+                        IconButton(
+                            onClick = { 
+                                val selectedId = state.selectedHabitIds.firstOrNull()
+                                if (selectedId != null) {
+                                    onEditHabitClick(selectedId)
+                                }
+                            },
+                            enabled = state.selectedHabitIds.size == 1
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit habit",
+                                tint = if (state.selectedHabitIds.size == 1) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                        // Delete button
+                        IconButton(onClick = { showDeleteConfirmation = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete selected habits",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                )
+            } else {
+                // Normal top bar
             TopAppBar(
                 title = {
                     Text(
@@ -378,6 +456,7 @@ fun HabitHomeScreen(
                     }
                 }
             )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -431,6 +510,7 @@ fun HabitHomeScreen(
             items(state.habits, key = { it.id }) { habit ->
                 HabitCard(
                     habit = habit,
+                    isSelectionMode = state.isSelectionMode,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
                     onMarkCompleted = { onMarkHabitCompleted(habit.id) },
                     onDelete = { 
@@ -438,7 +518,13 @@ fun HabitHomeScreen(
                         isDeletingHabit = true
                         onDeleteHabit(habit.id)
                     },
-                    onSeeDetails = { onHabitDetailsClick(habit.id) }
+                    onSeeDetails = { onHabitDetailsClick(habit.id) },
+                    onLongPress = { onStartSelectionMode(habit.id) },
+                    onClick = {
+                        if (state.isSelectionMode) {
+                            onToggleHabitSelection(habit.id)
+                        }
+                    }
                 )
             }
 
@@ -459,6 +545,52 @@ fun HabitHomeScreen(
         if (isDeletingHabit && state.habits.size < habitCountBeforeDelete.value) {
             isDeletingHabit = false
         }
+    }
+    
+    // Delete confirmation dialog for multiple habits
+    if (showDeleteConfirmation) {
+        val count = state.selectedHabitIds.size
+        val message = if (count == 1) {
+            val habitTitle = state.habits.find { it.id in state.selectedHabitIds }?.title ?: "habit"
+            "Are you sure you want to delete \"$habitTitle\"? It will be moved to trash and can be restored within 30 days."
+        } else {
+            "Are you sure you want to delete $count habits? They will be moved to trash and can be restored within 30 days."
+        }
+        
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(text = if (count == 1) "Delete Habit?" else "Delete Habits?")
+            },
+            text = {
+                Text(text = message)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDeleteSelectedHabits()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -702,11 +834,14 @@ private fun gradientBackground(): Brush = Brush.verticalGradient(
 
 @Composable
 private fun HabitCard(
-    habit: HabitCardUi, // Assuming HabitCardUi contains all necessary fields like reminderTime
+    habit: HabitCardUi,
+    isSelectionMode: Boolean = false,
     onToggleReminder: (Boolean) -> Unit,
     onMarkCompleted: () -> Unit,
     onDelete: () -> Unit,
     onSeeDetails: () -> Unit,
+    onLongPress: () -> Unit = {},
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -727,15 +862,73 @@ private fun HabitCard(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        onClick()
+                    }
+                },
+                onLongClick = {
+                    if (!isSelectionMode) {
+                        onLongPress()
+                    }
+                }
+            ),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
-                .background(palette.brush, shape = RoundedCornerShape(28.dp))
+                .background(
+                    palette.brush, 
+                    shape = RoundedCornerShape(28.dp)
+                )
+                .then(
+                    if (habit.isSelected) {
+                        Modifier.border(
+                            width = 3.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                    } else Modifier
+                )
                 .padding(24.dp)
         ) {
+            // Selection checkbox overlay
+            if (isSelectionMode) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(32.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.9f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (habit.isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color = Color.Gray,
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+            }
+            
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -763,7 +956,7 @@ private fun HabitCard(
                                 },
                                 modifier = Modifier.weight(1f, fill = false)
                             )
-                            if (isTitleTruncated) {
+                            if (isTitleTruncated && !isSelectionMode) {
                                 IconButton(
                                     onClick = { showTitleDialog = true },
                                     modifier = Modifier.size(28.dp)
@@ -794,7 +987,7 @@ private fun HabitCard(
                                     },
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                if (isDescriptionTruncated) {
+                                if (isDescriptionTruncated && !isSelectionMode) {
                                     IconButton(
                                         onClick = { showDescriptionDialog = true },
                                         modifier = Modifier.size(24.dp)
@@ -809,13 +1002,6 @@ private fun HabitCard(
                                 }
                             }
                         }
-                    }
-                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.delete),
-                            tint = Color.White
-                        )
                     }
                 }
 
