@@ -271,9 +271,13 @@ class HabitViewModel @Inject constructor(
             
             val habit = if (addForm.isEditMode && addForm.editingHabitId != null) {
                 // Edit mode: get existing habit and update it
+                android.util.Log.d("HabitViewModel", "EDIT MODE: Updating habit ID=${addForm.editingHabitId}")
                 val existingHabit = withContext(Dispatchers.IO) {
                     habitRepository.getHabitById(addForm.editingHabitId)
                 }
+                android.util.Log.d("HabitViewModel", "Existing habit loaded: ${existingHabit.title}")
+                android.util.Log.d("HabitViewModel", "New values - Hour: ${addForm.hour}, Minute: ${addForm.minute}, Avatar: ${addForm.avatar}, Sound: ${addForm.notificationSound.displayName}")
+                
                 existingHabit.copy(
                     title = title,
                     description = addForm.description.trim(),
@@ -291,6 +295,7 @@ class HabitViewModel @Inject constructor(
                 )
             } else {
                 // Create mode: new habit
+                android.util.Log.d("HabitViewModel", "CREATE MODE: Creating new habit")
                 Habit(
                     title = title,
                     description = addForm.description.trim(),
@@ -791,10 +796,55 @@ class HabitViewModel @Inject constructor(
                 habitRepository.getHabitById(habitId)
             }
             
-            // Find the notification sound or use default
-            val notificationSound = availableSounds.firstOrNull { 
-                it.id == habit.notificationSoundId 
-            } ?: NotificationSound.DEFAULT
+            android.util.Log.d("HabitViewModel", "Loading habit for edit: ID=$habitId")
+            android.util.Log.d("HabitViewModel", "Habit data: title=${habit.title}, desc=${habit.description}")
+            android.util.Log.d("HabitViewModel", "Time: ${habit.reminderHour}:${habit.reminderMinute}, enabled=${habit.reminderEnabled}")
+            android.util.Log.d("HabitViewModel", "Frequency: ${habit.frequency}, dayOfWeek=${habit.dayOfWeek}, dayOfMonth=${habit.dayOfMonth}, monthOfYear=${habit.monthOfYear}")
+            android.util.Log.d("HabitViewModel", "Avatar: ${habit.avatar}")
+            android.util.Log.d("HabitViewModel", "Sound: id=${habit.notificationSoundId}, name=${habit.notificationSoundName}, uri=${habit.notificationSoundUri}")
+            
+            // Find the notification sound - try multiple matching strategies
+            val notificationSound = when {
+                // First, try exact ID match
+                habit.notificationSoundId == NotificationSound.DEFAULT_ID -> {
+                    android.util.Log.d("HabitViewModel", "Using default sound (default ID)")
+                    NotificationSound.DEFAULT
+                }
+                // Try to find by ID in available sounds
+                availableSounds.any { it.id == habit.notificationSoundId } -> {
+                    val sound = availableSounds.first { it.id == habit.notificationSoundId }
+                    android.util.Log.d("HabitViewModel", "Found sound by ID: ${sound.displayName}")
+                    sound
+                }
+                // Try to find by URI (more reliable for system sounds)
+                habit.notificationSoundUri.isNotEmpty() && availableSounds.any { it.uri == habit.notificationSoundUri } -> {
+                    val sound = availableSounds.first { it.uri == habit.notificationSoundUri }
+                    android.util.Log.d("HabitViewModel", "Found sound by URI: ${sound.displayName}")
+                    sound
+                }
+                // Try to find by display name (fallback)
+                availableSounds.any { it.displayName == habit.notificationSoundName } -> {
+                    val sound = availableSounds.first { it.displayName == habit.notificationSoundName }
+                    android.util.Log.d("HabitViewModel", "Found sound by name: ${sound.displayName}")
+                    sound
+                }
+                // If all else fails, recreate the sound object from stored data
+                habit.notificationSoundId != NotificationSound.DEFAULT_ID -> {
+                    android.util.Log.d("HabitViewModel", "Recreating sound from stored data: ${habit.notificationSoundName}")
+                    NotificationSound(
+                        id = habit.notificationSoundId,
+                        displayName = habit.notificationSoundName,
+                        uri = habit.notificationSoundUri
+                    )
+                }
+                // Last resort: use default
+                else -> {
+                    android.util.Log.d("HabitViewModel", "No match found, using default sound")
+                    NotificationSound.DEFAULT
+                }
+            }
+            
+            android.util.Log.d("HabitViewModel", "Selected notification sound: ${notificationSound.displayName} (ID: ${notificationSound.id})")
             
             _uiState.update { state ->
                 state.copy(
@@ -816,6 +866,8 @@ class HabitViewModel @Inject constructor(
                     )
                 )
             }
+            
+            android.util.Log.d("HabitViewModel", "Edit state updated successfully")
         }
     }
 }

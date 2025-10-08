@@ -226,7 +226,6 @@ fun HabitTrackerNavigation(
                 safeNavigate("add_habit")
             }
             val onEditHabitClick: (Long) -> Unit = { habitId ->
-                viewModel.loadHabitForEdit(habitId)
                 viewModel.exitSelectionMode()
                 safeNavigate("edit_habit/$habitId")
             }
