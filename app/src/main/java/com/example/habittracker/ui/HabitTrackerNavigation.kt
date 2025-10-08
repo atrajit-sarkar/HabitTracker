@@ -83,33 +83,33 @@ fun HabitTrackerNavigation(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        // Add smooth enter/exit transitions to prevent black screens
+        // Optimized transitions for better performance (reduced from 200ms to 100ms)
         enterTransition = { 
-            fadeIn(animationSpec = tween(200)) + 
+            fadeIn(animationSpec = tween(100)) + 
             slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = tween(200)
+                animationSpec = tween(100)
             )
         },
         exitTransition = { 
-            fadeOut(animationSpec = tween(200)) + 
+            fadeOut(animationSpec = tween(100)) + 
             slideOutOfContainer(
                 AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = tween(200)
+                animationSpec = tween(100)
             )
         },
         popEnterTransition = { 
-            fadeIn(animationSpec = tween(200)) + 
+            fadeIn(animationSpec = tween(100)) + 
             slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(200)
+                animationSpec = tween(100)
             )
         },
         popExitTransition = { 
-            fadeOut(animationSpec = tween(200)) + 
+            fadeOut(animationSpec = tween(100)) + 
             slideOutOfContainer(
                 AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(200)
+                animationSpec = tween(100)
             )
         }
     ) {

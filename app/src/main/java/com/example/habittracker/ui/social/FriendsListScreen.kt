@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.CachePolicy
 import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.ui.HabitViewModel
@@ -366,8 +367,9 @@ fun FriendCard(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(friend.photoUrl)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .crossfade(false) // Disable crossfade for better list performance
                         .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
@@ -382,8 +384,9 @@ fun FriendCard(
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(friend.customAvatar)
-                    .size(Size.ORIGINAL)
-                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .crossfade(false) // Disable crossfade for better list performance
                 
                 // Add Authorization header if token is available (for private repos)
                 if (token != null && friend.customAvatar.contains("githubusercontent.com")) {

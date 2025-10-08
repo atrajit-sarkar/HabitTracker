@@ -29,8 +29,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.atraj.habittracker.ui.HabitViewModel
+import it.atraj.habittracker.BuildConfig
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.CachePolicy
 import coil.size.Size
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import kotlinx.coroutines.delay
@@ -334,18 +336,20 @@ fun TopThreeCard(
     modifier: Modifier = Modifier,
     isFirst: Boolean = false
 ) {
+    // Use minimal delay in release, longer in debug for visual effect
     var visible by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
-        delay(entry.rank * 100L)
+        delay(if (BuildConfig.DEBUG) entry.rank * 100L else entry.rank * 20L)
         visible = true
     }
 
+    // Use tween for better performance (faster and smoother than spring)
     val scale by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+        animationSpec = tween(
+            durationMillis = 200,
+            easing = FastOutSlowInEasing
         ),
         label = "scale"
     )
@@ -403,8 +407,9 @@ fun TopThreeCard(
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(entry.profile.customAvatar)
-                    .size(Size.ORIGINAL)
-                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .crossfade(false) // Disable crossfade for better list performance
                 
                 // Add Authorization header if token is available (for private repos)
                 if (token != null && entry.profile.customAvatar?.contains("githubusercontent.com") == true) {
@@ -425,8 +430,9 @@ fun TopThreeCard(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(entry.profile.photoUrl)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .crossfade(false) // Disable crossfade for better list performance
                         .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
@@ -499,24 +505,27 @@ fun LeaderboardEntryCard(
     entry: LeaderboardEntry,
     animationDelay: Int
 ) {
+    // Use minimal delay in release for performance while keeping smooth animations
     var visible by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
-        delay(animationDelay.toLong())
+        delay(if (BuildConfig.DEBUG) animationDelay.toLong() else (animationDelay / 5).toLong())
         visible = true
     }
 
+    // Use tween for better performance (faster and smoother)
     val offsetX by animateDpAsState(
         targetValue = if (visible) 0.dp else 50.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+        animationSpec = tween(
+            durationMillis = 200,
+            easing = FastOutSlowInEasing
         ),
         label = "offset"
     )
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
         label = "alpha"
     )
 
@@ -577,8 +586,9 @@ fun LeaderboardEntryCard(
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(entry.profile.customAvatar)
-                    .size(Size.ORIGINAL)
-                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .crossfade(false) // Disable crossfade for better list performance
                 
                 // Add Authorization header if token is available (for private repos)
                 if (token != null && entry.profile.customAvatar?.contains("githubusercontent.com") == true) {
@@ -599,8 +609,9 @@ fun LeaderboardEntryCard(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(entry.profile.photoUrl)
-                        .size(Size.ORIGINAL) // Load original high-quality image
-                        .crossfade(true)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .crossfade(false) // Disable crossfade for better list performance
                         .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
@@ -711,12 +722,13 @@ fun LeaderboardEntryCard(
 
 @Composable
 fun RankImprovedBanner() {
+    // Use slower shimmer in release for better performance, normal speed in debug
     val infiniteTransition = rememberInfiniteTransition(label = "shine")
     val shimmer by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000),
+            animation = tween(if (BuildConfig.DEBUG) 1000 else 2000), // Slower in release
             repeatMode = RepeatMode.Reverse
         ),
         label = "shimmer"

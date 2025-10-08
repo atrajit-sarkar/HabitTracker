@@ -246,12 +246,41 @@ fun HabitHomeScreen(
     var isDeletingHabit by remember { mutableStateOf(false) }
     val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
 
+    // Close drawer when returning to home screen
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                // Close drawer when screen resumes (e.g., coming back from profile/trash)
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             DrawerContent(
-                onTrashClick = onTrashClick,
-                onProfileClick = onProfileClick,
+                onTrashClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250) // Wait for drawer close animation
+                        onTrashClick()
+                    }
+                },
+                onProfileClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250) // Wait for drawer close animation
+                        onProfileClick()
+                    }
+                },
                 onCloseDrawer = { 
                     scope.launch { drawerState.close() }
                 }
@@ -536,7 +565,6 @@ private fun DrawerContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickableOnce {
-                            onCloseDrawer()
                             onProfileClick()
                         },
                     colors = CardDefaults.cardColors(
@@ -602,7 +630,6 @@ private fun DrawerContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickableOnce {
-                            onCloseDrawer()
                             onTrashClick()
                         },
                     colors = CardDefaults.cardColors(

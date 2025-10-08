@@ -142,7 +142,7 @@ fun UpdateDialog(
 @Composable
 private fun UpdateIcon(isDownloading: Boolean) {
     Box(
-        modifier = Modifier.size(80.dp),
+        modifier = Modifier.size(120.dp),
         contentAlignment = Alignment.Center
     ) {
         if (isDownloading) {
@@ -162,7 +162,7 @@ private fun UpdateIcon(isDownloading: Boolean) {
             LottieAnimation(
                 composition = composition,
                 progress = { progress },
-                modifier = Modifier.size(80.dp)
+                modifier = Modifier.size(120.dp)
             )
         } else {
             // Static update icon
