@@ -268,6 +268,7 @@ fun HabitTrackerNavigation(
         composable("add_habit") {
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val coroutineScope = rememberCoroutineScope()
             
             // Debounced back navigation
             val onBackClick = rememberNavigationHandler {
@@ -275,10 +276,12 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            // Debounced save action
+            // Debounced save action - wait for save to complete before navigating
             val onSaveHabit = rememberNavigationHandler {
-                viewModel.saveHabit()
-                navController.popBackStack()
+                coroutineScope.launch {
+                    viewModel.saveHabit()
+                    navController.popBackStack()
+                }
             }
             
             AddHabitScreen(
@@ -302,10 +305,21 @@ fun HabitTrackerNavigation(
             val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: return@composable
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val coroutineScope = rememberCoroutineScope()
+            var saveTriggered by remember { mutableStateOf(false) }
             
             // Load habit data for editing
             LaunchedEffect(habitId) {
                 viewModel.loadHabitForEdit(habitId)
+            }
+            
+            // Navigate back when save completes
+            LaunchedEffect(state.addHabitState.isSaving, saveTriggered) {
+                if (saveTriggered && !state.addHabitState.isSaving) {
+                    // Small delay to ensure UI updates are visible
+                    kotlinx.coroutines.delay(200)
+                    navController.popBackStack()
+                }
             }
             
             // Debounced back navigation
@@ -314,10 +328,12 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            // Debounced save action
+            // Trigger save - navigation happens automatically via LaunchedEffect above
             val onSaveHabit = rememberNavigationHandler {
-                viewModel.saveHabit()
-                navController.popBackStack()
+                coroutineScope.launch {
+                    saveTriggered = true
+                    viewModel.saveHabit()
+                }
             }
             
             AddHabitScreen(

@@ -247,7 +247,7 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    fun saveHabit() {
+    suspend fun saveHabit() {
         val currentState = _uiState.value
         if (currentState.addHabitState.isSaving) return
         val title = currentState.addHabitState.title.trim()
@@ -262,90 +262,100 @@ class HabitViewModel @Inject constructor(
             }
             return
         }
-        viewModelScope.launch {
-            _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
-            val addForm = _uiState.value.addHabitState
-            
-            // Log the notification sound being saved
-            android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
-            
-            val habit = if (addForm.isEditMode && addForm.editingHabitId != null) {
-                // Edit mode: get existing habit and update it
-                android.util.Log.d("HabitViewModel", "EDIT MODE: Updating habit ID=${addForm.editingHabitId}")
-                val existingHabit = withContext(Dispatchers.IO) {
-                    habitRepository.getHabitById(addForm.editingHabitId)
-                }
-                android.util.Log.d("HabitViewModel", "Existing habit loaded: ${existingHabit.title}")
-                android.util.Log.d("HabitViewModel", "New values - Hour: ${addForm.hour}, Minute: ${addForm.minute}, Avatar: ${addForm.avatar}, Sound: ${addForm.notificationSound.displayName}")
-                
-                existingHabit.copy(
-                    title = title,
-                    description = addForm.description.trim(),
-                    reminderHour = addForm.hour,
-                    reminderMinute = addForm.minute,
-                    reminderEnabled = addForm.reminderEnabled,
-                    frequency = addForm.frequency,
-                    dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
-                    dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
-                    monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                    notificationSoundId = addForm.notificationSound.id,
-                    notificationSoundName = addForm.notificationSound.displayName,
-                    notificationSoundUri = addForm.notificationSound.uri,
-                    avatar = addForm.avatar
-                )
-            } else {
-                // Create mode: new habit
-                android.util.Log.d("HabitViewModel", "CREATE MODE: Creating new habit")
-                Habit(
-                    title = title,
-                    description = addForm.description.trim(),
-                    reminderHour = addForm.hour,
-                    reminderMinute = addForm.minute,
-                    reminderEnabled = addForm.reminderEnabled,
-                    frequency = addForm.frequency,
-                    dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
-                    dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
-                    monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
-                    notificationSoundId = addForm.notificationSound.id,
-                    notificationSoundName = addForm.notificationSound.displayName,
-                    notificationSoundUri = addForm.notificationSound.uri,
-                    avatar = addForm.avatar
-                )
+        
+        _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
+        val addForm = _uiState.value.addHabitState
+        
+        // Log the notification sound being saved
+        android.util.Log.d("HabitViewModel", "Saving habit with notification sound: ${addForm.notificationSound.displayName} (ID: ${addForm.notificationSound.id}, URI: ${addForm.notificationSound.uri})")
+        
+        val habit = if (addForm.isEditMode && addForm.editingHabitId != null) {
+            // Edit mode: get existing habit and update it
+            android.util.Log.d("HabitViewModel", "EDIT MODE: Updating habit ID=${addForm.editingHabitId}")
+            val existingHabit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(addForm.editingHabitId)
             }
+            android.util.Log.d("HabitViewModel", "Existing habit loaded: ${existingHabit.title}")
+            android.util.Log.d("HabitViewModel", "New values - Hour: ${addForm.hour}, Minute: ${addForm.minute}, Avatar: ${addForm.avatar}, Sound: ${addForm.notificationSound.displayName}")
             
-            android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
-            
-            val savedHabit = withContext(Dispatchers.IO) {
-                if (addForm.isEditMode && addForm.editingHabitId != null) {
-                    habitRepository.updateHabit(habit)
-                    habit
-                } else {
-                    val id = habitRepository.insertHabit(habit)
-                    habit.copy(id = id)
-                }
-            }
-            
-            android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
-            
-            // Force update notification channel with the new/changed sound
-            HabitReminderService.updateHabitChannel(context, savedHabit)
-            
-            if (savedHabit.reminderEnabled) {
-                reminderScheduler.schedule(savedHabit)
-            } else {
-                reminderScheduler.cancel(savedHabit.id)
-            }
-            _uiState.update { state ->
-                state.copy(
-                    snackbarMessage = if (addForm.isEditMode) "Habit updated" else state.habitSavedMessage(),
-                    addHabitState = AddHabitState(availableSounds = availableSounds),
-                    isAddSheetVisible = false
-                )
-            }
-            
-            // Update user's stats on leaderboard immediately after creating new habit
-            updateUserStatsAsync()
+            existingHabit.copy(
+                title = title,
+                description = addForm.description.trim(),
+                reminderHour = addForm.hour,
+                reminderMinute = addForm.minute,
+                reminderEnabled = addForm.reminderEnabled,
+                frequency = addForm.frequency,
+                dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                notificationSoundId = addForm.notificationSound.id,
+                notificationSoundName = addForm.notificationSound.displayName,
+                notificationSoundUri = addForm.notificationSound.uri,
+                avatar = addForm.avatar
+            )
+        } else {
+            // Create mode: new habit
+            android.util.Log.d("HabitViewModel", "CREATE MODE: Creating new habit")
+            Habit(
+                title = title,
+                description = addForm.description.trim(),
+                reminderHour = addForm.hour,
+                reminderMinute = addForm.minute,
+                reminderEnabled = addForm.reminderEnabled,
+                frequency = addForm.frequency,
+                dayOfWeek = if (addForm.frequency == HabitFrequency.WEEKLY) addForm.dayOfWeek else null,
+                dayOfMonth = if (addForm.frequency == HabitFrequency.MONTHLY) addForm.dayOfMonth else null,
+                monthOfYear = if (addForm.frequency == HabitFrequency.YEARLY) addForm.monthOfYear else null,
+                notificationSoundId = addForm.notificationSound.id,
+                notificationSoundName = addForm.notificationSound.displayName,
+                notificationSoundUri = addForm.notificationSound.uri,
+                avatar = addForm.avatar
+            )
         }
+        
+        android.util.Log.d("HabitViewModel", "Habit object created: soundId=${habit.notificationSoundId}, soundName=${habit.notificationSoundName}, soundUri=${habit.notificationSoundUri}")
+        android.util.Log.d("HabitViewModel", "Habit details - ID: ${habit.id}, Title: ${habit.title}, Hour: ${habit.reminderHour}, Minute: ${habit.reminderMinute}")
+        android.util.Log.d("HabitViewModel", "Habit avatar: ${habit.avatar}, Frequency: ${habit.frequency}")
+        
+        val savedHabit = withContext(Dispatchers.IO) {
+            if (addForm.isEditMode && addForm.editingHabitId != null) {
+                android.util.Log.d("HabitViewModel", "Calling habitRepository.updateHabit() for ID=${habit.id}")
+                try {
+                    habitRepository.updateHabit(habit)
+                    android.util.Log.d("HabitViewModel", "✅ habitRepository.updateHabit() completed successfully!")
+                } catch (e: Exception) {
+                    android.util.Log.e("HabitViewModel", "❌ Error updating habit in repository", e)
+                    throw e
+                }
+                habit
+            } else {
+                android.util.Log.d("HabitViewModel", "Calling habitRepository.insertHabit()")
+                val id = habitRepository.insertHabit(habit)
+                android.util.Log.d("HabitViewModel", "✅ Habit inserted with ID: $id")
+                habit.copy(id = id)
+            }
+        }
+        
+        android.util.Log.d("HabitViewModel", "Habit saved to database with ID: ${savedHabit.id}, calling updateHabitChannel...")
+        
+        // Force update notification channel with the new/changed sound
+        HabitReminderService.updateHabitChannel(context, savedHabit)
+        
+        if (savedHabit.reminderEnabled) {
+            reminderScheduler.schedule(savedHabit)
+        } else {
+            reminderScheduler.cancel(savedHabit.id)
+        }
+        _uiState.update { state ->
+            state.copy(
+                snackbarMessage = if (addForm.isEditMode) "Habit updated" else state.habitSavedMessage(),
+                addHabitState = AddHabitState(availableSounds = availableSounds),
+                isAddSheetVisible = false
+            )
+        }
+        
+        // Update user's stats on leaderboard immediately after creating new habit
+        updateUserStatsAsync()
     }
 
     fun dismissSnackbar() {

@@ -135,10 +135,14 @@ class FirestoreHabitRepository @Inject constructor(
     }
 
     override suspend fun updateHabit(habit: Habit) {
+        android.util.Log.d("FirestoreRepo", "updateHabit called for habit ID: ${habit.id}, title: ${habit.title}")
         val doc = findHabitDocument(habit.id)
             ?: throw NoSuchElementException("Habit not found for update")
+        android.util.Log.d("FirestoreRepo", "Found Firestore document: ${doc.id}")
         val firestoreHabit = habit.toFirestoreHabit(doc.id, habit.id)
+        android.util.Log.d("FirestoreRepo", "Converted to FirestoreHabit: ${firestoreHabit.title}, hour: ${firestoreHabit.reminderHour}, avatar: ${firestoreHabit.avatar}")
         doc.reference.set(firestoreHabit).await()
+        android.util.Log.d("FirestoreRepo", "✅ Firestore document updated successfully!")
     }
 
     override suspend fun deleteHabit(habit: Habit) {

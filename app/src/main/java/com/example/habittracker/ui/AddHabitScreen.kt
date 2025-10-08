@@ -93,18 +93,24 @@ fun AddHabitScreen(
 ) {
     val context = LocalContext.current
     val is24Hour = remember { DateFormat.is24HourFormat(context) }
-    val timePickerState = rememberTimePickerState(
-        initialHour = state.hour,
-        initialMinute = state.minute,
-        is24Hour = is24Hour
-    )
+    
+    // Use a key to recreate the time picker state when editing habit data loads
+    // This ensures the clock face displays the correct time
+    val timePickerState = remember(state.editingHabitId, state.hour, state.minute) {
+        androidx.compose.material3.TimePickerState(
+            initialHour = state.hour,
+            initialMinute = state.minute,
+            is24Hour = is24Hour
+        )
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LaunchedEffect(timePickerState.hour, timePickerState.minute) {
         onHabitTimeChange(timePickerState.hour, timePickerState.minute)
     }
 
-    Scaffold(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -270,6 +276,38 @@ fun AddHabitScreen(
 
             // Bottom spacing to avoid overlap with bottom bar
             Spacer(modifier = Modifier.height(100.dp))
+        }
+    }
+        
+        // Loading overlay when saving
+        if (state.isSaving) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(enabled = false) { },
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(32.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = if (state.isEditMode) "Updating habit..." else "Saving habit...",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
         }
     }
 }
