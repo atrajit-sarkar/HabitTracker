@@ -101,14 +101,18 @@ class ProfileStatsUpdater @Inject constructor(
         // Calculate completions today
         val completedToday = activeHabits.count { it.lastCompletedDate == today }
         
-        // Calculate TOTAL completions across all time (not just today)
+        // Fetch ALL completion data ONCE and cache it to avoid multiple database queries
+        val completionCache = mutableMapOf<Long, List<it.atraj.habittracker.data.local.HabitCompletion>>()
         var totalCompletions = 0
+        
         activeHabits.forEach { habit ->
             try {
                 val completions = habitRepository.getHabitCompletions(habit.id)
+                completionCache[habit.id] = completions
                 totalCompletions += completions.size
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching completions for habit ${habit.id}: ${e.message}")
+                completionCache[habit.id] = emptyList()
             }
         }
         
@@ -119,11 +123,11 @@ class ProfileStatsUpdater @Inject constructor(
             0
         }
         
-        // Calculate current streak (longest consecutive days)
-        val currentStreak = calculateCurrentStreak(activeHabits, today)
+        // Calculate current streak (longest consecutive days) using cached data
+        val currentStreak = calculateCurrentStreak(activeHabits, today, completionCache)
         
-        // Calculate this week's completions (Monday to Sunday)
-        val completedThisWeek = calculateWeekCompletions(activeHabits, today)
+        // Calculate this week's completions (Monday to Sunday) using cached data
+        val completedThisWeek = calculateWeekCompletions(activeHabits, today, completionCache)
         
         // Calculate leaderboard score (weighted cumulative score)
         // Formula: (Success Rate × 5) + (Total Habits × 3) + (Current Streak × 10) + (Total Completions × 2)
@@ -145,7 +149,11 @@ class ProfileStatsUpdater @Inject constructor(
         )
     }
 
-    private suspend fun calculateCurrentStreak(habits: List<Habit>, today: LocalDate): Int {
+    private suspend fun calculateCurrentStreak(
+        habits: List<Habit>, 
+        today: LocalDate,
+        completionCache: Map<Long, List<it.atraj.habittracker.data.local.HabitCompletion>>
+    ): Int {
         if (habits.isEmpty()) return 0
         
         Log.d(TAG, "calculateCurrentStreak: Calculating streak for ${habits.size} habits")
@@ -154,7 +162,7 @@ class ProfileStatsUpdater @Inject constructor(
         var maxStreak = 0
         
         habits.forEach { habit ->
-            val streak = calculateHabitStreak(habit, today)
+            val streak = calculateHabitStreak(habit, today, completionCache[habit.id] ?: emptyList())
             Log.d(TAG, "calculateCurrentStreak: Habit '${habit.title}' has streak: $streak")
             if (streak > maxStreak) {
                 maxStreak = streak
@@ -165,15 +173,11 @@ class ProfileStatsUpdater @Inject constructor(
         return maxStreak
     }
 
-    private suspend fun calculateHabitStreak(habit: Habit, today: LocalDate): Int {
-        // Fetch the completion history for this habit
-        val completions = try {
-            habitRepository.getHabitCompletions(habit.id)
-        } catch (e: Exception) {
-            Log.e(TAG, "calculateHabitStreak: Error fetching completions for habit ${habit.id}", e)
-            return 0
-        }
-        
+    private suspend fun calculateHabitStreak(
+        habit: Habit, 
+        today: LocalDate,
+        completions: List<it.atraj.habittracker.data.local.HabitCompletion>
+    ): Int {
         Log.d(TAG, "calculateHabitStreak: Habit '${habit.title}' has ${completions.size} total completions")
         
         if (completions.isEmpty()) return 0
@@ -214,7 +218,11 @@ class ProfileStatsUpdater @Inject constructor(
         return streak
     }
 
-    private suspend fun calculateWeekCompletions(habits: List<Habit>, today: LocalDate): Int {
+    private suspend fun calculateWeekCompletions(
+        habits: List<Habit>, 
+        today: LocalDate,
+        completionCache: Map<Long, List<it.atraj.habittracker.data.local.HabitCompletion>>
+    ): Int {
         if (habits.isEmpty()) return 0
         
         val startOfWeek = today.with(DayOfWeek.MONDAY)
@@ -225,7 +233,7 @@ class ProfileStatsUpdater @Inject constructor(
         var weekCompletions = 0
         habits.forEach { habit ->
             try {
-                val completions = habitRepository.getHabitCompletions(habit.id)
+                val completions = completionCache[habit.id] ?: emptyList()
                 val thisWeekCount = completions.count { completion ->
                     !completion.completedDate.isBefore(startOfWeek) && 
                     !completion.completedDate.isAfter(endOfWeek)

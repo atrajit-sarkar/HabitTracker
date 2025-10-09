@@ -413,49 +413,59 @@ object HabitReminderService {
                 canvas.drawCircle(centerX, centerY, radius, iconPaint)
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // Load custom image from URL
+                // For custom images in notifications, try to load from cache only (no network)
+                // This is fast and won't block the UI thread
                 try {
-                    val imageLoader = coil.ImageLoader(context)
-                    val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
-                    val requestBuilder = coil.request.ImageRequest.Builder(context)
+                    android.util.Log.d("HabitReminderService", "Attempting to load custom image from cache for notification: ${avatar.value}")
+                    
+                    val imageLoader = coil.ImageLoader.Builder(context)
+                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .build()
+                    
+                    // Only load from cache - disable network to prevent blocking
+                    val request = coil.request.ImageRequest.Builder(context)
                         .data(avatar.value)
                         .size(size)
                         .allowHardware(false) // Required for bitmap conversion
+                        .diskCachePolicy(coil.request.CachePolicy.READ_ONLY) // Only read from cache
+                        .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY) // Only read from cache
+                        .networkCachePolicy(coil.request.CachePolicy.DISABLED) // Disable network completely
+                        .build()
                     
-                    if (token != null && avatar.value.contains("githubusercontent.com")) {
-                        requestBuilder.addHeader("Authorization", "token $token")
-                    }
+                    // Try to get from cache synchronously (fast, no network)
+                    val drawable = imageLoader.diskCache?.get(avatar.value)?.use { snapshot ->
+                        android.graphics.BitmapFactory.decodeFile(snapshot.data.toFile().absolutePath)
+                    } ?: imageLoader.memoryCache?.get(coil.memory.MemoryCache.Key(avatar.value))?.bitmap
                     
-                    val result = kotlinx.coroutines.runBlocking {
-                        imageLoader.execute(requestBuilder.build())
-                    }
-                    
-                    if (result is coil.request.SuccessResult) {
-                        val loadedBitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                        if (loadedBitmap != null) {
-                            // Create circular bitmap from loaded image
-                            val scaledBitmap = Bitmap.createScaledBitmap(loadedBitmap, size, size, true)
-                            val circlePaint = Paint().apply {
-                                isAntiAlias = true
-                            }
-                            canvas.drawBitmap(scaledBitmap, 0f, 0f, circlePaint)
-                            return bitmap
+                    if (drawable != null) {
+                        android.util.Log.d("HabitReminderService", "Successfully loaded custom image from cache for notification")
+                        // Create circular bitmap from cached image
+                        val scaledBitmap = Bitmap.createScaledBitmap(drawable, size, size, true)
+                        val circlePaint = Paint().apply {
+                            isAntiAlias = true
                         }
+                        canvas.drawBitmap(scaledBitmap, 0f, 0f, circlePaint)
+                        return bitmap
+                    } else {
+                        android.util.Log.d("HabitReminderService", "Custom image not in cache, using fallback icon")
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("HabitReminderService", "Failed to load custom image for notification: ${e.message}")
+                    android.util.Log.e("HabitReminderService", "Error checking cache for custom image: ${e.message}", e)
                 }
                 
-                // Fallback if loading fails
+                // Fallback if not in cache - show a camera icon
+                android.util.Log.d("HabitReminderService", "Using fallback icon for custom image notification")
                 val iconPaint = Paint().apply {
                     color = android.graphics.Color.WHITE
                     isAntiAlias = true
-                    textSize = size * 0.4f
+                    textSize = size * 0.5f
                     textAlign = Paint.Align.CENTER
                     typeface = Typeface.DEFAULT_BOLD
                 }
                 val textY = size / 2f - (iconPaint.descent() + iconPaint.ascent()) / 2
-                canvas.drawText("IMG", size / 2f, textY, iconPaint)
+                // Use a camera emoji as placeholder for custom images
+                canvas.drawText("📷", size / 2f, textY, iconPaint)
             }
         }
         

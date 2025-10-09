@@ -374,8 +374,11 @@ class HabitViewModel @Inject constructor(
             )
         }
         
-        // Update user's stats on leaderboard immediately after creating new habit
-        updateUserStatsAsync()
+        // Update user's stats on leaderboard in background (non-blocking)
+        // Launch in separate coroutine to avoid blocking UI
+        viewModelScope.launch(Dispatchers.IO) {
+            updateUserStatsAsync()
+        }
     }
 
     fun dismissSnackbar() {
@@ -405,7 +408,9 @@ class HabitViewModel @Inject constructor(
     fun markHabitCompleted(habitId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedToday(habitId)
-            // Update stats after completion
+        }
+        // Update stats after completion in separate coroutine (non-blocking)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
@@ -413,7 +418,9 @@ class HabitViewModel @Inject constructor(
     fun markHabitCompletedForDate(habitId: Long, date: java.time.LocalDate) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedForDate(habitId, date)
-            // Update stats after completion
+        }
+        // Update stats after completion in separate coroutine (non-blocking)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
@@ -464,8 +471,10 @@ class HabitViewModel @Inject constructor(
                     isDeleting = false  // Clear immediately for instant UI response
                 )
             }
-            
-            // Update user's stats on leaderboard in background (non-blocking)
+        }
+        
+        // Update user's stats on leaderboard in background (non-blocking, separate coroutine)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
@@ -485,8 +494,10 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" restored")
             }
-            
-            // Update user's stats on leaderboard immediately
+        }
+        
+        // Update user's stats on leaderboard in background (non-blocking, separate coroutine)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
@@ -506,8 +517,10 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" permanently deleted")
             }
-            
-            // Update user's stats on leaderboard immediately
+        }
+        
+        // Update user's stats on leaderboard in background (non-blocking, separate coroutine)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
@@ -529,8 +542,10 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "Trash emptied")
             }
-            
-            // Update user's stats on leaderboard immediately
+        }
+        
+        // Update user's stats on leaderboard in background (non-blocking, separate coroutine)
+        viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
         }
     }
