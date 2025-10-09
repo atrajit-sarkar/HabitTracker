@@ -113,7 +113,17 @@ class MainActivity : ComponentActivity() {
         
         // Check if opened from habit notification
         val openHabitDetails = intent.getBooleanExtra("openHabitDetails", false)
-        val habitId = intent.getLongExtra("habitId", -1L)
+        var habitId = intent.getLongExtra("habitId", -1L)
+        
+        // Handle deep link from email (habittracker://habit/{habitId})
+        intent.data?.let { deepLinkUri ->
+            if (deepLinkUri.scheme == "habittracker" && deepLinkUri.host == "habit") {
+                deepLinkUri.pathSegments.firstOrNull()?.toLongOrNull()?.let { id ->
+                    habitId = id
+                    Log.d("MainActivity", "Deep link opened for habit ID: $habitId")
+                }
+            }
+        }
         
         val startDestination = when {
             openChat && friendId != null -> {
@@ -122,7 +132,7 @@ class MainActivity : ComponentActivity() {
                 } ?: "null"
                 "chat/$friendId/${friendName ?: "Friend"}/${friendAvatar ?: "😊"}/$photoUrlEncoded"
             }
-            openHabitDetails && habitId != -1L -> "habit_details/$habitId"
+            habitId != -1L -> "habit_details/$habitId"  // Works for both notification and deep link
             else -> "loading"
         }
         

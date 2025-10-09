@@ -34,6 +34,18 @@ android {
         // Add GitHub token from keystore.properties to BuildConfig
         val githubToken = keystoreProperties.getProperty("GITHUB_TOKEN") ?: ""
         buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
+        
+        // Add Email credentials from keystore.properties to BuildConfig
+        // SMTP_AUTH_EMAIL: The actual Gmail account for authentication
+        val smtpAuthEmail = keystoreProperties.getProperty("SMTP_AUTH_EMAIL") ?: ""
+        // EMAIL_APP_PASSWORD: App password for the Gmail account
+        val emailPassword = keystoreProperties.getProperty("EMAIL_APP_PASSWORD") ?: ""
+        // EMAIL_FROM_ADDRESS: Optional alias email
+        val emailFromAddress = keystoreProperties.getProperty("EMAIL_FROM_ADDRESS") ?: ""
+        
+        buildConfigField("String", "SMTP_AUTH_EMAIL", "\"$smtpAuthEmail\"")
+        buildConfigField("String", "EMAIL_APP_PASSWORD", "\"$emailPassword\"")
+        buildConfigField("String", "EMAIL_FROM_ADDRESS", "\"$emailFromAddress\"")
     }
 
     signingConfigs {
@@ -85,6 +97,11 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+            excludes += "/META-INF/NOTICE.md"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
         }
     }
 }
@@ -142,6 +159,10 @@ dependencies {
     
     // Lottie Animations
     implementation(libs.lottie.compose)
+    
+    // JavaMail for email notifications
+    implementation("com.sun.mail:android-mail:1.6.7")
+    implementation("com.sun.mail:android-activation:1.6.7")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

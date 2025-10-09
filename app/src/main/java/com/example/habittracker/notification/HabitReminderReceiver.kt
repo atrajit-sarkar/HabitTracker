@@ -3,6 +3,9 @@ package it.atraj.habittracker.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -11,12 +14,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.email.EmailReminderWorker
+import it.atraj.habittracker.email.SecureEmailStorage
+import it.atraj.habittracker.auth.AuthRepository
 
 @AndroidEntryPoint
 class HabitReminderReceiver : BroadcastReceiver() {
 
     @Inject lateinit var habitRepository: HabitRepository
     @Inject lateinit var reminderScheduler: HabitReminderScheduler
+    @Inject lateinit var emailStorage: SecureEmailStorage
+    @Inject lateinit var authRepository: AuthRepository
 
     override fun onReceive(context: Context, intent: Intent) {
         val habitId = intent.getLongExtra(HabitReminderSchedulerImpl.HABIT_ID_KEY, -1L)
@@ -35,10 +43,38 @@ class HabitReminderReceiver : BroadcastReceiver() {
         reminderScheduler.schedule(habit)
         val shouldNotify = !habit.isCompletedToday()
         if (shouldNotify) {
+            // Show in-app notification
             withContext(Dispatchers.Main) {
                 HabitReminderService.showHabitNotification(context, habit)
             }
+            
+            // Schedule email notification if configured
+            scheduleEmailNotification(context, habit)
         }
+    }
+    
+    private fun scheduleEmailNotification(context: Context, habit: Habit) {
+        // Only schedule if email notifications are enabled
+        if (!emailStorage.isConfigured()) {
+            return
+        }
+        
+        // Get user's display name for personalization
+        val userName = authRepository.currentUserSync?.displayName
+        
+        // Create work request to send email in background
+        val workRequest = OneTimeWorkRequestBuilder<EmailReminderWorker>()
+            .setInputData(
+                workDataOf(
+                    EmailReminderWorker.KEY_HABIT_ID to habit.id,
+                    EmailReminderWorker.KEY_USER_NAME to userName
+                )
+            )
+            .build()
+        
+        // Enqueue the work
+        WorkManager.getInstance(context)
+            .enqueue(workRequest)
     }
 }
 

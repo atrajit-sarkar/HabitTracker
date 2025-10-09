@@ -45,6 +45,7 @@ import it.atraj.habittracker.ui.chat.ChatListScreen
 import it.atraj.habittracker.ui.chat.ChatScreen
 import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
 import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
+import it.atraj.habittracker.email.ui.EmailSettingsScreen
 import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -438,6 +439,10 @@ fun HabitTrackerNavigation(
                 safeNavigate("language_selector")
             }
             
+            val onEmailSettingsClick = rememberNavigationHandler {
+                safeNavigate("email_settings")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -448,7 +453,8 @@ fun HabitTrackerNavigation(
                 onLeaderboardClick = onLeaderboardClick,
                 onNotificationGuideClick = onNotificationGuideClick,
                 onCheckForUpdates = onCheckForUpdates,
-                onLanguageSettingsClick = onLanguageSettingsClick
+                onLanguageSettingsClick = onLanguageSettingsClick,
+                onEmailSettingsClick = onEmailSettingsClick
             )
         }
         
@@ -483,6 +489,16 @@ fun HabitTrackerNavigation(
             
             LanguageSelectorScreen(
                 onBackClick = onBackClick
+            )
+        }
+        
+        composable("email_settings") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            EmailSettingsScreen(
+                onNavigateBack = onBackClick
             )
         }
         
