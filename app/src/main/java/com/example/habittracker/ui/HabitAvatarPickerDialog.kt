@@ -373,23 +373,26 @@ fun HabitAvatarPickerDialog(
                                             }
                                             
                                             // Star badge for custom images - indicates user-uploaded content
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.tertiaryContainer,
-                                                shape = CircleShape,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(4.dp)
-                                                    .size(24.dp),
-                                                shadowElevation = 2.dp
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Star,
-                                                    contentDescription = "Custom",
-                                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            // Only show for CUSTOM type (user-uploaded), not DEFAULT avatars
+                                            if (avatarItem.type == it.atraj.habittracker.avatar.AvatarType.CUSTOM) {
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                    shape = CircleShape,
                                                     modifier = Modifier
+                                                        .align(Alignment.TopStart)
                                                         .padding(4.dp)
-                                                        .fillMaxSize()
-                                                )
+                                                        .size(24.dp),
+                                                    shadowElevation = 2.dp
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Star,
+                                                        contentDescription = "Custom",
+                                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                        modifier = Modifier
+                                                            .padding(4.dp)
+                                                            .fillMaxSize()
+                                                    )
+                                                }
                                             }
                                         }
                                     }
