@@ -272,6 +272,38 @@ fun HabitHomeScreen(
     androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
         onExitSelectionMode()
     }
+    
+    val context = LocalContext.current
+    
+    // PRELOAD all avatar images in background for smooth scrolling
+    LaunchedEffect(state.habits.size) {
+        if (state.habits.isNotEmpty()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                state.habits.forEach { habit ->
+                    if (habit.avatar.type == HabitAvatarType.CUSTOM_IMAGE && habit.avatar.value.startsWith("http")) {
+                        try {
+                            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                            val imageLoader = coil.Coil.imageLoader(context)
+                            val request = coil.request.ImageRequest.Builder(context)
+                                .data(habit.avatar.value)
+                                .size(100)
+                                .memoryCacheKey("avatar_${habit.avatar.value.hashCode()}")
+                                .diskCacheKey("avatar_${habit.avatar.value.hashCode()}")
+                                .apply {
+                                    if (token != null && habit.avatar.value.contains("githubusercontent.com")) {
+                                        addHeader("Authorization", "token $token")
+                                    }
+                                }
+                                .build()
+                            imageLoader.execute(request)
+                        } catch (e: Exception) {
+                            // Silently fail
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Close drawer when returning to home screen
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -1039,26 +1071,13 @@ private fun HabitCard(
                 }
 
                 if (habit.isCompletedToday) {
-                    // OPTIMIZED: Only load Lottie when first completed, with proper key
+                    // OPTIMIZED: Only load Lottie once per habit, use static progress
                     val composition by rememberLottieComposition(
-                        spec = LottieCompositionSpec.Asset("man_with_task_list.json"),
-                        key = "completed_anim_${habit.id}" // Unique key per habit
+                        LottieCompositionSpec.Asset("man_with_task_list.json")
                     )
                     
-                    // Calculate target frame: 132 out of 241 total frames
-                    val targetProgress = 132f / 241f // ≈ 0.5477
-                    
-                    val animationProgress = remember(habit.id) { 
-                        mutableFloatStateOf(targetProgress) 
-                    }
-                    
-                    // Only animate once when first shown
-                    LaunchedEffect(habit.id, habit.isCompletedToday) {
-                        if (habit.isCompletedToday && animationProgress.floatValue < targetProgress) {
-                            // Animate to target
-                            animationProgress.floatValue = targetProgress
-                        }
-                    }
+                    // Calculate target frame: 132 out of 241 total frames - STATIC for performance
+                    val targetProgress = remember { 132f / 241f }
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1090,11 +1109,11 @@ private fun HabitCard(
                             modifier = Modifier.weight(1f)
                         )
                         
-                        // Lottie animation - use static progress for performance
+                        // Lottie animation - static frame for performance
                         composition?.let {
                             LottieAnimation(
                                 composition = it,
-                                progress = { animationProgress.floatValue },
+                                progress = { targetProgress },
                                 modifier = Modifier.size(60.dp)
                             )
                         }
@@ -1126,8 +1145,7 @@ private fun HabitCard(
                             // OPTIMIZED: Fanfare animation only when triggered
                             if (showFanfareAnimation) {
                                 val fanfareComposition by rememberLottieComposition(
-                                    spec = LottieCompositionSpec.Asset("Fanfare.json"),
-                                    key = "fanfare_${habit.id}" // Unique key
+                                    LottieCompositionSpec.Asset("Fanfare.json")
                                 )
                                 
                                 val fanfareProgress by animateLottieCompositionAsState(
@@ -1981,14 +1999,15 @@ private fun AvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // Optimized image loading with Coil
+                // HEAVILY OPTIMIZED image loading for smooth scrolling
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(avatar.value)
-                    .crossfade(300) // Smooth crossfade animation
-                    .size(size.value.toInt() * 2) // Load 2x size for better quality on high DPI
-                    .memoryCacheKey(avatar.value) // Enable memory caching
-                    .diskCacheKey(avatar.value) // Enable disk caching
+                    .crossfade(150) // Faster crossfade
+                    .size(100) // Fixed small size for list performance
+                    .memoryCacheKey("avatar_${avatar.value.hashCode()}")
+                    .diskCacheKey("avatar_${avatar.value.hashCode()}")
+                    .allowHardware(true) // Use hardware bitmaps for better performance
                 
                 if (token != null && avatar.value.contains("githubusercontent.com")) {
                     requestBuilder.addHeader("Authorization", "token $token")

@@ -23,21 +23,22 @@ class OptimizedImageLoader @Inject constructor(
         ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder(context)
-                    .maxSizePercent(0.25) // Use 25% of available RAM
+                    .maxSizePercent(0.30) // Increased to 30% for better caching
+                    .strongReferencesEnabled(true) // Keep strong references
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.02) // Use 2% of available disk
+                    .maxSizeBytes(50 * 1024 * 1024) // Fixed 50MB for avatar images
                     .build()
             }
-            // Enable aggressive caching for offline-first experience
-            .respectCacheHeaders(false)
-            .crossfade(true)
-            .crossfade(300)
-            // Bitmap configuration for quality vs memory
-            .bitmapConfig(Bitmap.Config.RGB_565) // Lower memory usage
+            // AGGRESSIVE caching for smooth scrolling
+            .respectCacheHeaders(false) // Always use cache
+            .crossfade(150) // Faster crossfade
+            // Use ARGB_8888 for better quality with custom images
+            .bitmapConfig(Bitmap.Config.ARGB_8888)
+            .allowHardware(true) // Use hardware bitmaps for performance
             .apply {
                 if (BuildConfig.DEBUG) {
                     logger(DebugLogger())
