@@ -53,12 +53,12 @@ fun LeaderboardScreen(
     var showRankImproved by remember { mutableStateOf(false) }
     var showRulesDialog by remember { mutableStateOf(false) }
 
-    // Refresh stats and reload leaderboard when screen is opened
+    // Load leaderboard when screen is opened
+    // Stats are automatically updated by ProfileStatsUpdater after each habit action,
+    // so no need to refresh here - just fetch the pre-calculated scores from Firebase
     LaunchedEffect(Unit) {
         authState.user?.let { 
             socialViewModel.setCurrentUser(it)
-            // Refresh user stats before loading leaderboard
-            habitViewModel.refreshUserStats()
             socialViewModel.loadLeaderboard()
         }
     }
@@ -67,8 +67,6 @@ fun LeaderboardScreen(
     LaunchedEffect(authState.user) {
         authState.user?.let { 
             socialViewModel.setCurrentUser(it)
-            // Refresh user stats before loading leaderboard
-            habitViewModel.refreshUserStats()
             socialViewModel.loadLeaderboard()
         }
     }
@@ -196,15 +194,17 @@ fun LeaderboardScreen(
                         .fillMaxSize()
                         .padding(paddingValues),
                     contentPadding = PaddingValues(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    // Enable hardware acceleration for smooth scrolling at 60fps
+                    flingBehavior = androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
                 ) {
                     // Header
-                    item {
+                    item(key = "header") {
                         LeaderboardHeader()
                     }
 
                     // Top 3
-                    item {
+                    item(key = "top3") {
                         if (socialState.leaderboard.size >= 3) {
                             TopThreeSection(
                                 entries = socialState.leaderboard.take(3)
@@ -228,7 +228,7 @@ fun LeaderboardScreen(
                     }
 
                     // Bottom spacing
-                    item {
+                    item(key = "bottom_spacer") {
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
@@ -336,23 +336,8 @@ fun TopThreeCard(
     modifier: Modifier = Modifier,
     isFirst: Boolean = false
 ) {
-    // Use minimal delay in release, longer in debug for visual effect
-    var visible by remember { mutableStateOf(false) }
-    
-    LaunchedEffect(Unit) {
-        delay(if (BuildConfig.DEBUG) entry.rank * 100L else entry.rank * 20L)
-        visible = true
-    }
-
-    // Use tween for better performance (faster and smoother than spring)
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
-        label = "scale"
-    )
+    // Remove staggered animations - show immediately for best performance
+    // Animations disabled for smooth 60fps scrolling
 
     val medalColor = when (entry.rank) {
         1 -> Color(0xFFFFD700) // Gold
@@ -362,7 +347,7 @@ fun TopThreeCard(
     }
 
     Card(
-        modifier = modifier.scale(scale),
+        modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (entry.isCurrentUser)
@@ -417,7 +402,9 @@ fun TopThreeCard(
                 }
                 
                 AsyncImage(
-                    model = requestBuilder.build(),
+                    model = requestBuilder
+                        .size(if (isFirst) 112 else 96) // 2x size for @2x density
+                        .build(),
                     contentDescription = "Custom avatar",
                     modifier = Modifier
                         .size(if (isFirst) 56.dp else 48.dp)
@@ -433,6 +420,7 @@ fun TopThreeCard(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .crossfade(false) // Disable crossfade for better list performance
+                        .size(if (isFirst) 112 else 96) // 2x size for @2x density
                         .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
@@ -505,35 +493,12 @@ fun LeaderboardEntryCard(
     entry: LeaderboardEntry,
     animationDelay: Int
 ) {
-    // Use minimal delay in release for performance while keeping smooth animations
-    var visible by remember { mutableStateOf(false) }
-    
-    LaunchedEffect(Unit) {
-        delay(if (BuildConfig.DEBUG) animationDelay.toLong() else (animationDelay / 5).toLong())
-        visible = true
-    }
-
-    // Use tween for better performance (faster and smoother)
-    val offsetX by animateDpAsState(
-        targetValue = if (visible) 0.dp else 50.dp,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
-        label = "offset"
-    )
-
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "alpha"
-    )
+    // Animations disabled for optimal performance and smooth 60fps scrolling
+    // Items appear instantly for better user experience
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .offset(x = offsetX)
-            .alpha(alpha),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (entry.isCurrentUser)
@@ -596,7 +561,9 @@ fun LeaderboardEntryCard(
                 }
                 
                 AsyncImage(
-                    model = requestBuilder.build(),
+                    model = requestBuilder
+                        .size(96) // 2x size for @2x density
+                        .build(),
                     contentDescription = "Custom avatar",
                     modifier = Modifier
                         .size(48.dp)
@@ -612,6 +579,7 @@ fun LeaderboardEntryCard(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .crossfade(false) // Disable crossfade for better list performance
+                        .size(96) // 2x size for @2x density
                         .build(),
                     contentDescription = "Profile picture",
                     modifier = Modifier
@@ -722,18 +690,7 @@ fun LeaderboardEntryCard(
 
 @Composable
 fun RankImprovedBanner() {
-    // Use slower shimmer in release for better performance, normal speed in debug
-    val infiniteTransition = rememberInfiniteTransition(label = "shine")
-    val shimmer by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(if (BuildConfig.DEBUG) 1000 else 2000), // Slower in release
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shimmer"
-    )
-
+    // Static gradient for best performance - no continuous animation
     Card(
         modifier = Modifier
             .fillMaxWidth(0.9f)
@@ -749,9 +706,9 @@ fun RankImprovedBanner() {
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            Color(0xFFFFD700).copy(alpha = 0.8f + shimmer * 0.2f),
-                            Color(0xFFFFA500).copy(alpha = 0.8f + shimmer * 0.2f),
-                            Color(0xFFFFD700).copy(alpha = 0.8f + shimmer * 0.2f)
+                            Color(0xFFFFD700).copy(alpha = 0.9f),
+                            Color(0xFFFFA500).copy(alpha = 0.9f),
+                            Color(0xFFFFD700).copy(alpha = 0.9f)
                         )
                     )
                 )

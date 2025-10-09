@@ -92,7 +92,7 @@ class SocialViewModel @Inject constructor(
         }
     }
 
-    fun updateUserStats(successRate: Int, totalHabits: Int, totalCompletions: Int, currentStreak: Int, leaderboardScore: Int) {
+    fun updateUserStats(successRate: Int, totalHabits: Int, totalCompletions: Int, currentStreak: Int, leaderboardScore: Int, completedThisWeek: Int) {
         viewModelScope.launch {
             val user = _uiState.value.currentUser ?: return@launch
             
@@ -103,7 +103,8 @@ class SocialViewModel @Inject constructor(
                 totalHabits = totalHabits,
                 totalCompletions = totalCompletions,
                 currentStreak = currentStreak,
-                leaderboardScore = leaderboardScore
+                leaderboardScore = leaderboardScore,
+                completedThisWeek = completedThisWeek
             )
         }
     }

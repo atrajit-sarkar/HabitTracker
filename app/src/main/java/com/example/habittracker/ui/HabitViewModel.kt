@@ -55,6 +55,26 @@ class HabitViewModel @Inject constructor(
             }
         }
         
+        // Reschedule all reminders on app startup
+        // This ensures reminders work after app reinstall
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val habits = habitRepository.getAllHabits()
+                var rescheduled = 0
+                habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
+                    try {
+                        reminderScheduler.schedule(habit)
+                        rescheduled++
+                    } catch (e: Exception) {
+                        android.util.Log.e("HabitViewModel", "Failed to reschedule ${habit.title}: ${e.message}")
+                    }
+                }
+                android.util.Log.d("HabitViewModel", "Rescheduled $rescheduled reminders on app startup")
+            } catch (e: Exception) {
+                android.util.Log.e("HabitViewModel", "Error rescheduling reminders on startup: ${e.message}")
+            }
+        }
+        
         // Load available notification sounds
         viewModelScope.launch(Dispatchers.IO) {
             availableSounds = NotificationSound.getAllAvailableSounds(context)
@@ -437,15 +457,16 @@ class HabitViewModel @Inject constructor(
             // Note: We don't delete the channel yet because user might restore from trash
             // Channel will be deleted on permanent deletion
             
+            // Clear deleting flag immediately after deletion completes
             _uiState.update { state ->
-                state.copy(snackbarMessage = "\"${habit.title}\" moved to trash")
+                state.copy(
+                    snackbarMessage = "\"${habit.title}\" moved to trash",
+                    isDeleting = false  // Clear immediately for instant UI response
+                )
             }
             
-            // Update user's stats on leaderboard immediately
+            // Update user's stats on leaderboard in background (non-blocking)
             updateUserStatsAsync()
-
-            // Clear deleting flag after operation completes
-            _uiState.update { it.copy(isDeleting = false) }
         }
     }
 
@@ -794,19 +815,18 @@ class HabitViewModel @Inject constructor(
                 "${selectedIds.size} habits moved to trash"
             }
             
+            // Clear deleting flag immediately after deletion completes
             _uiState.update { state ->
                 state.copy(
                     snackbarMessage = message,
                     isSelectionMode = false,
-                    selectedHabitIds = emptySet()
+                    selectedHabitIds = emptySet(),
+                    isDeleting = false  // Clear immediately for instant UI response
                 )
             }
 
-            // Update user's stats on leaderboard immediately
+            // Update user's stats on leaderboard in background (non-blocking)
             updateUserStatsAsync()
-
-            // Clear deleting flag when all deletions are done
-            _uiState.update { it.copy(isDeleting = false) }
         }
     }
     

@@ -367,7 +367,8 @@ class FriendRepository @Inject constructor(
         totalHabits: Int,
         totalCompletions: Int,
         currentStreak: Int,
-        leaderboardScore: Int
+        leaderboardScore: Int,
+        completedThisWeek: Int
     ): Result<Unit> {
         return try {
             val profileDoc = firestore.collection(USER_PROFILES_COLLECTION).document(userId)
@@ -387,12 +388,13 @@ class FriendRepository @Inject constructor(
                 "totalCompletions" to totalCompletions,
                 "currentStreak" to currentStreak,
                 "leaderboardScore" to leaderboardScore,
+                "completedThisWeek" to completedThisWeek,
                 "updatedAt" to System.currentTimeMillis()
             )
             
             profileDoc.update(updates).await()
             
-            Log.d(TAG, "updateUserStats: Stats updated for $userId - SR: $successRate%, Habits: $totalHabits, Score: $leaderboardScore")
+            Log.d(TAG, "updateUserStats: Stats updated for $userId - SR: $successRate%, Habits: $totalHabits, Score: $leaderboardScore, ThisWeek: $completedThisWeek")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating user stats: ${e.message}", e)
@@ -440,6 +442,7 @@ class FriendRepository @Inject constructor(
                     "totalCompletions" to 0,
                     "currentStreak" to 0,
                     "leaderboardScore" to 0,
+                    "completedThisWeek" to 0,
                     "updatedAt" to System.currentTimeMillis()
                 )
                 profileDoc.set(profile).await()

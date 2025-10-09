@@ -303,9 +303,26 @@ fun ProfileScreen(
     // Calculate stats
     val activeHabits = habitState.habits.size
     val totalCompletions = habitState.habits.count { it.isCompletedToday }
-    val completedThisWeek = habitState.habits.count { it.isCompletedToday }
     val completionPercentage = if (activeHabits > 0) 
-        (completedThisWeek * 100) / activeHabits else 0
+        (totalCompletions * 100) / activeHabits else 0
+    
+    // Fetch pre-calculated completedThisWeek from Firebase (optimized like leaderboard)
+    var completedThisWeek by remember { mutableStateOf(0) }
+    
+    LaunchedEffect(state.user?.uid) {
+        state.user?.let { user ->
+            try {
+                // Fetch the user's public profile which contains pre-calculated completedThisWeek
+                val profile = it.atraj.habittracker.data.firestore.FriendRepository(
+                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                ).getFriendProfile(user.uid)
+                
+                completedThisWeek = profile?.completedThisWeek ?: 0
+            } catch (e: Exception) {
+                // Silently handle errors
+            }
+        }
+    }
 
     Scaffold(
         topBar = {

@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,7 +50,7 @@ class ProfileStatsUpdater @Inject constructor(
         
         val stats = calculateStats(habits)
         
-        Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
+        Log.d(TAG, "updateUserStats: Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}, ThisWeek: ${stats.completedThisWeek}")
         
         // Use updateUserStats instead of updateUserPublicProfile to avoid overwriting displayName/photoUrl
         friendRepository.updateUserStats(
@@ -58,7 +59,8 @@ class ProfileStatsUpdater @Inject constructor(
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
             currentStreak = stats.currentStreak,
-            leaderboardScore = stats.leaderboardScore
+            leaderboardScore = stats.leaderboardScore,
+            completedThisWeek = stats.completedThisWeek
         )
         
         Log.d(TAG, "updateUserStats: Profile stats updated in Firestore")
@@ -75,7 +77,7 @@ class ProfileStatsUpdater @Inject constructor(
         
         val stats = calculateStats(habits)
         
-        Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}")
+        Log.d(TAG, "updateUserStats (legacy): Calculated stats - SR: ${stats.successRate}%, Habits: ${stats.totalHabits}, Completions: ${stats.totalCompletions}, Streak: ${stats.currentStreak}, Score: ${stats.leaderboardScore}, ThisWeek: ${stats.completedThisWeek}")
         
         // Use updateUserStats instead of updateUserPublicProfile to avoid overwriting displayName/photoUrl
         friendRepository.updateUserStats(
@@ -84,7 +86,8 @@ class ProfileStatsUpdater @Inject constructor(
             totalHabits = stats.totalHabits,
             totalCompletions = stats.totalCompletions,
             currentStreak = stats.currentStreak,
-            leaderboardScore = stats.leaderboardScore
+            leaderboardScore = stats.leaderboardScore,
+            completedThisWeek = stats.completedThisWeek
         )
         
         Log.d(TAG, "updateUserStats (legacy): Profile stats updated in Firestore")
@@ -119,6 +122,9 @@ class ProfileStatsUpdater @Inject constructor(
         // Calculate current streak (longest consecutive days)
         val currentStreak = calculateCurrentStreak(activeHabits, today)
         
+        // Calculate this week's completions (Monday to Sunday)
+        val completedThisWeek = calculateWeekCompletions(activeHabits, today)
+        
         // Calculate leaderboard score (weighted cumulative score)
         // Formula: (Success Rate × 5) + (Total Habits × 3) + (Current Streak × 10) + (Total Completions × 2)
         // - Success Rate (0-100) × 5 = 0-500 points (consistency is very important)
@@ -127,14 +133,15 @@ class ProfileStatsUpdater @Inject constructor(
         // - Total Completions × 2 = rewards overall dedication
         val leaderboardScore = (successRate * 5) + (totalHabits * 3) + (currentStreak * 10) + (totalCompletions * 2)
         
-        Log.d(TAG, "calculateStats: Habits=$totalHabits, TodayCompleted=$completedToday, TotalCompletions=$totalCompletions, SuccessRate=$successRate%, Streak=$currentStreak, Score=$leaderboardScore")
+        Log.d(TAG, "calculateStats: Habits=$totalHabits, TodayCompleted=$completedToday, TotalCompletions=$totalCompletions, SuccessRate=$successRate%, Streak=$currentStreak, ThisWeek=$completedThisWeek, Score=$leaderboardScore")
         
         return UserStats(
             totalHabits = totalHabits,
             totalCompletions = totalCompletions,
             successRate = successRate,
             currentStreak = currentStreak,
-            leaderboardScore = leaderboardScore
+            leaderboardScore = leaderboardScore,
+            completedThisWeek = completedThisWeek
         )
     }
 
@@ -207,11 +214,39 @@ class ProfileStatsUpdater @Inject constructor(
         return streak
     }
 
+    private suspend fun calculateWeekCompletions(habits: List<Habit>, today: LocalDate): Int {
+        if (habits.isEmpty()) return 0
+        
+        val startOfWeek = today.with(DayOfWeek.MONDAY)
+        val endOfWeek = startOfWeek.plusDays(6) // Sunday
+        
+        Log.d(TAG, "calculateWeekCompletions: Week range $startOfWeek to $endOfWeek")
+        
+        var weekCompletions = 0
+        habits.forEach { habit ->
+            try {
+                val completions = habitRepository.getHabitCompletions(habit.id)
+                val thisWeekCount = completions.count { completion ->
+                    !completion.completedDate.isBefore(startOfWeek) && 
+                    !completion.completedDate.isAfter(endOfWeek)
+                }
+                weekCompletions += thisWeekCount
+                Log.d(TAG, "calculateWeekCompletions: Habit '${habit.title}' = $thisWeekCount completions this week")
+            } catch (e: Exception) {
+                Log.e(TAG, "calculateWeekCompletions: Error for habit ${habit.id}", e)
+            }
+        }
+        
+        Log.d(TAG, "calculateWeekCompletions: Total = $weekCompletions")
+        return weekCompletions
+    }
+    
     private data class UserStats(
         val totalHabits: Int,
         val totalCompletions: Int,
         val successRate: Int,
         val currentStreak: Int,
-        val leaderboardScore: Int
+        val leaderboardScore: Int,
+        val completedThisWeek: Int
     )
 }
