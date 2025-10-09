@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - Redirecting...</title>
+    <script>
+        // GitHub Pages 404 handler
+        // This redirects all routes (like /habit/123) to index.html with the path preserved
+        
+        // Get the current path
+        const path = window.location.pathname;
+        
+        // Redirect to index.html with the path as a query parameter
+        // The index.html will read this and handle the deep link appropriately
+        sessionStorage.setItem('redirectPath', path);
+        window.location.replace('/');
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>
+

@@ -4,9 +4,9 @@
 
 Users were receiving **2 identical emails** for each habit reminder.
 
-## Root Cause
+## Root Causes
 
-**Gmail SMTP Connection Behavior:**
+### Root Cause #1: Gmail SMTP Connection Behavior
 
 1. Email is sent successfully to Gmail (DATA phase completes)
 2. Gmail receives the email and queues it for delivery
@@ -17,9 +17,23 @@ Users were receiving **2 identical emails** for each habit reminder.
 
 This is a quirky behavior of Gmail SMTP that happens occasionally.
 
-## The Fix
+### Root Cause #2: Multiple Simultaneous Work Requests
 
-### 1. **Graceful Connection Closure Handling** (AndroidSMTPClient.kt)
+1. Habit reminder alarm fires → Triggers `HabitReminderReceiver`
+2. Multiple system events can fire near-simultaneously:
+   - Normal alarm firing
+   - Boot events (BootReceiver reschedules all alarms)
+   - Time change events (TimeChangeReceiver reschedules alarms)
+   - Alarm verification (AlarmVerificationWorker checks alarms)
+3. Each trigger creates a **new** `OneTimeWorkRequest` for email
+4. All requests enqueue separately in WorkManager
+5. Multiple workers run in parallel → Multiple emails sent
+
+The old code used `WorkManager.enqueue()` which doesn't check for duplicates.
+
+## The Fixes
+
+### Fix #1: **Graceful Connection Closure Handling** (AndroidSMTPClient.kt)
 
 ```kotlin
 // In sendMessage()
@@ -33,7 +47,7 @@ try {
 }
 ```
 
-### 2. **No WorkManager Retries** (EmailReminderWorker.kt)
+### Fix #2: **No WorkManager Retries** (EmailReminderWorker.kt)
 
 ```kotlin
 is EmailResult.Error -> {
@@ -47,6 +61,32 @@ is EmailResult.Error -> {
 - If we got far enough to send DATA, Gmail likely received it
 - Retrying sends another email
 - Better to miss 1 email than send 2
+
+### Fix #3: **WorkManager Unique Work Deduplication** (HabitReminderReceiver.kt)
+
+```kotlin
+// OLD CODE (caused duplicates):
+WorkManager.getInstance(context).enqueue(workRequest)
+
+// NEW CODE (prevents duplicates):
+val workName = "${EmailReminderWorker.WORK_NAME_PREFIX}${habit.id}"
+WorkManager.getInstance(context)
+    .enqueueUniqueWork(
+        workName,
+        ExistingWorkPolicy.REPLACE,
+        workRequest
+    )
+```
+
+**How it works:**
+- Each habit gets a unique work name: `"email_reminder_<habitId>"`
+- `REPLACE` policy: If work already exists, replace it with new request
+- Multiple rapid triggers for same habit → Only **one** email sent
+
+**Why REPLACE policy?**
+- `KEEP`: Would ignore new requests (could miss legitimate reminders)
+- `APPEND`: Would queue all requests (defeats the purpose)
+- `REPLACE`: Ensures latest request runs while preventing duplicates
 
 ## Changes Made
 
@@ -73,6 +113,17 @@ is EmailResult.Error -> {
    - No longer retries on exceptions
    - Returns success to prevent duplicates
    - Still logs for troubleshooting
+
+### File: `HabitReminderReceiver.kt`
+
+1. **Added import: `androidx.work.ExistingWorkPolicy`**
+   - Required for unique work functionality
+
+2. **Modified scheduleEmailNotification() method**
+   - Generate unique work name per habit: `"email_reminder_<habitId>"`
+   - Use `enqueueUniqueWork()` instead of `enqueue()`
+   - Apply `REPLACE` policy to deduplicate simultaneous requests
+   - Added logging to track work scheduling
 
 ## Testing
 
@@ -119,8 +170,9 @@ User sends test email
 
 ## Logs to Look For
 
-### Success (Normal):
+### Success (Normal with deduplication):
 ```
+HabitReminderReceiver: Scheduling unique email work: email_reminder_123 for habit: Exercise
 AndroidSMTPClient: Message body sent, waiting for response...
 AndroidSMTPClient: Connection closed after sending message body. Email likely sent successfully.
 AndroidSMTPClient: Connection closed during disconnect (this is normal)
@@ -161,9 +213,17 @@ For now, the current fix is sufficient and maintains simplicity.
 
 ## Summary
 
-**Problem:** 2 duplicate emails per reminder
-**Cause:** WorkManager retrying after Gmail closes connection
-**Solution:** Don't retry on errors (email was already sent)
+**Problem:** 2+ duplicate emails per reminder
+
+**Causes:** 
+1. WorkManager retrying after Gmail closes connection
+2. Multiple system events triggering simultaneous work requests
+
+**Solutions:** 
+1. Gracefully handle Gmail connection abort (email was already sent)
+2. Disable WorkManager retries to prevent re-sending
+3. Use unique work names with REPLACE policy to deduplicate requests
+
 **Result:** 1 email per reminder ✅
 
 ---

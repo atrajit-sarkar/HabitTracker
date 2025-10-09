@@ -3,6 +3,8 @@ package it.atraj.habittracker.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -72,9 +74,17 @@ class HabitReminderReceiver : BroadcastReceiver() {
             )
             .build()
         
-        // Enqueue the work
+        // Use unique work with REPLACE policy to prevent duplicate emails
+        // If multiple alarms fire simultaneously (e.g., after boot, time change),
+        // only the latest work request will be kept
+        val workName = "${EmailReminderWorker.WORK_NAME_PREFIX}${habit.id}"
+        Log.d("HabitReminderReceiver", "Scheduling unique email work: $workName for habit: ${habit.title}")
         WorkManager.getInstance(context)
-            .enqueue(workRequest)
+            .enqueueUniqueWork(
+                workName,
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
     }
 }
 

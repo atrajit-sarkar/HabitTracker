@@ -126,7 +126,16 @@
     
     <script>
         // Check if this is a deep link to a specific habit or just the home page
-        const path = window.location.pathname;
+        // Handle both direct access and 404 redirects from GitHub Pages
+        let path = window.location.pathname;
+        
+        // Check if we were redirected from 404.html
+        const redirectPath = sessionStorage.getItem('redirectPath');
+        if (redirectPath) {
+            path = redirectPath;
+            sessionStorage.removeItem('redirectPath');
+        }
+        
         const habitMatch = path.match(/\/habit\/(\d+)/);
         
         let appUrl;
