@@ -149,8 +149,7 @@ class AndroidSMTPClient(
         message.append("Content-Type: text/plain; charset=UTF-8$CRLF")
         message.append("Content-Transfer-Encoding: 7bit$CRLF")
         message.append(CRLF)
-        message.append(textBody.replace("\n", CRLF))
-        message.append(CRLF)
+        message.append(prepareBodyForSMTP(textBody, CRLF))
         message.append(CRLF)
         
         // HTML part
@@ -158,8 +157,7 @@ class AndroidSMTPClient(
         message.append("Content-Type: text/html; charset=UTF-8$CRLF")
         message.append("Content-Transfer-Encoding: 7bit$CRLF")
         message.append(CRLF)
-        message.append(htmlBody.replace("\n", CRLF))
-        message.append(CRLF)
+        message.append(prepareBodyForSMTP(htmlBody, CRLF))
         message.append(CRLF)
         
         message.append("--$boundary--$CRLF")
@@ -177,6 +175,38 @@ class AndroidSMTPClient(
         Log.d(TAG, "DATA response: $dataResponse")
     }
 
+    /**
+     * Prepare body text for SMTP transmission
+     * - Normalize line endings to CRLF
+     * - Apply dot stuffing (escape lines starting with '.')
+     */
+    private fun prepareBodyForSMTP(body: String, CRLF: String): String {
+        // First, normalize all line endings to LF only
+        val normalized = body.replace("\r\n", "\n").replace("\r", "\n")
+        
+        // Split into lines and process each line
+        val lines = normalized.split("\n")
+        val result = StringBuilder()
+        
+        for ((index, line) in lines.withIndex()) {
+            // SMTP dot stuffing: lines starting with '.' must be escaped as '..'
+            val processedLine = if (line.startsWith(".")) {
+                ".$line"
+            } else {
+                line
+            }
+            
+            result.append(processedLine)
+            
+            // Add CRLF except after the last line (it will be added by caller)
+            if (index < lines.size - 1) {
+                result.append(CRLF)
+            }
+        }
+        
+        return result.toString()
+    }
+    
     private fun disconnect() {
         try {
             sendCommand("QUIT")

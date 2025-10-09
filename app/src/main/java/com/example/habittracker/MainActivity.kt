@@ -115,12 +115,27 @@ class MainActivity : ComponentActivity() {
         val openHabitDetails = intent.getBooleanExtra("openHabitDetails", false)
         var habitId = intent.getLongExtra("habitId", -1L)
         
-        // Handle deep link from email (habittracker://habit/{habitId})
+        // Handle deep link from email
+        // Supports both: habittracker://habit/{habitId} and https://atraj.it/habittracker/habit/{habitId}
         intent.data?.let { deepLinkUri ->
+            Log.d("MainActivity", "Deep link received: $deepLinkUri")
+            
+            // Handle custom scheme: habittracker://habit/{habitId}
             if (deepLinkUri.scheme == "habittracker" && deepLinkUri.host == "habit") {
                 deepLinkUri.pathSegments.firstOrNull()?.toLongOrNull()?.let { id ->
                     habitId = id
-                    Log.d("MainActivity", "Deep link opened for habit ID: $habitId")
+                    Log.d("MainActivity", "Custom scheme deep link opened for habit ID: $habitId")
+                }
+            }
+            // Handle HTTPS scheme: https://habittracker.atraj.it/habit/{habitId}
+            else if (deepLinkUri.scheme == "https" && deepLinkUri.host == "habittracker.atraj.it") {
+                val pathSegments = deepLinkUri.pathSegments
+                // Path format: /habit/{habitId}
+                if (pathSegments.size >= 2 && pathSegments[0] == "habit") {
+                    pathSegments[1].toLongOrNull()?.let { id ->
+                        habitId = id
+                        Log.d("MainActivity", "HTTPS deep link opened for habit ID: $habitId")
+                    }
                 }
             }
         }

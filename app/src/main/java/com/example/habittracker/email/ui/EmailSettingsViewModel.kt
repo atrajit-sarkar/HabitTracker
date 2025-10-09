@@ -8,6 +8,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.atraj.habittracker.auth.AuthRepository
 import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.data.local.Habit
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
 import it.atraj.habittracker.email.EmailNotificationService
 import it.atraj.habittracker.email.EmailResult
 import it.atraj.habittracker.email.SecureEmailStorage
@@ -50,7 +52,15 @@ class EmailSettingsViewModel @Inject constructor(
     private fun loadSettings() {
         viewModelScope.launch {
             val isEnabled = secureEmailStorage.emailNotificationsEnabled
-            val email = secureEmailStorage.userEmail ?: ""
+            // Try to get saved email first, if not found use the user's login email
+            val savedEmail = secureEmailStorage.userEmail
+            val loginEmail = authRepository.currentUserSync?.email
+            val email = savedEmail ?: loginEmail ?: ""
+            
+            // If we're using login email and it's not saved yet, save it
+            if (savedEmail == null && loginEmail != null) {
+                secureEmailStorage.userEmail = loginEmail
+            }
             
             _uiState.update {
                 it.copy(
@@ -171,11 +181,16 @@ class EmailSettingsViewModel @Inject constructor(
         val now = LocalTime.now()
         return Habit(
             id = 1L, // Dummy ID for test
-            title = "Test Habit Reminder",
+            title = "Hello Test",
             description = "This is a test email to verify your email notifications are working correctly!",
             reminderHour = now.hour,
             reminderMinute = now.minute,
-            reminderEnabled = true
+            reminderEnabled = true,
+            avatar = HabitAvatar(
+                type = HabitAvatarType.EMOJI,
+                value = "✨",
+                backgroundColor = "#667eea"
+            )
         )
     }
 

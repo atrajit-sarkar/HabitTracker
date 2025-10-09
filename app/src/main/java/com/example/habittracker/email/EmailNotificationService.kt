@@ -96,11 +96,12 @@ class EmailNotificationService @Inject constructor(
     
     /**
      * Create a deep link to open the habit details screen in the app
+     * Using HTTPS URL for better email client compatibility (Gmail blocks custom schemes)
      */
     private fun createHabitDeepLink(habitId: Long): String {
-        // Android App Links format
-        // This will open the app directly to the habit details screen
-        return "habittracker://habit/$habitId"
+        // Use HTTPS deep link with habittracker subdomain
+        // This works better in email clients like Gmail
+        return "https://habittracker.atraj.it/habit/$habitId"
     }
     
     companion object {
