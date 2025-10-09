@@ -43,12 +43,18 @@ class EmailReminderWorker @AssistedInject constructor(
                 is EmailResult.Success -> Result.success()
                 is EmailResult.NotConfigured -> Result.success() // Not an error, user hasn't configured email
                 is EmailResult.NoRecipient -> Result.success() // Not an error, user hasn't set their email
-                is EmailResult.Error -> Result.retry() // Retry on errors (network issues, etc.)
+                is EmailResult.Error -> {
+                    // Don't retry - if we got far enough to send data, Gmail likely received it
+                    // Retrying causes duplicate emails
+                    android.util.Log.w("EmailReminderWorker", "Email send error (not retrying to avoid duplicates): ${result.message}")
+                    Result.success() // Treat as success to avoid retries
+                }
             }
             
         } catch (e: Exception) {
-            // On error, retry the work
-            Result.retry()
+            // Don't retry - prevents duplicate emails if SMTP succeeded but response failed
+            android.util.Log.w("EmailReminderWorker", "Email worker exception (not retrying): ${e.message}")
+            Result.success() // Treat as success to avoid retries and duplicate emails
         }
     }
 

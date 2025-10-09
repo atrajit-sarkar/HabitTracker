@@ -61,6 +61,17 @@
                     android:host="habit" />
             </intent-filter>
             
+            <!-- Deep link for app home (habittracker://app) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <data
+                    android:scheme="habittracker"
+                    android:host="app" />
+            </intent-filter>
+            
             <!-- HTTPS deep link for email notifications (better email client support) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

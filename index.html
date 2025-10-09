@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - Deep Link</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 48px 32px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        
+        p {
+            font-size: 18px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        .download-section {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        
+        .download-section h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 8px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .footer {
+            margin-top: 32px;
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🎯</div>
+        <h1>Habit Tracker</h1>
+        <p>To view this habit, please open the link in the Habit Tracker app.</p>
+        
+        <div id="app-check">
+            <p style="font-size: 16px; color: #888; margin-bottom: 16px;">
+                If the app doesn't open automatically, tap the button below:
+            </p>
+            <a href="#" id="open-app-btn" class="button">📱 Open App</a>
+        </div>
+        
+        <div class="download-section">
+            <h2>Don't have the app?</h2>
+            <p style="font-size: 14px; margin-bottom: 16px;">Download Habit Tracker to start building better habits today!</p>
+            <a href="https://play.google.com/store/apps/details?id=it.atraj.habittracker" class="button" target="_blank">
+                Download on Google Play
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Habit Tracker by <a href="https://atraj.it" target="_blank">Atrajit Sarkar</a>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Check if this is a deep link to a specific habit or just the home page
+        const path = window.location.pathname;
+        const habitMatch = path.match(/\/habit\/(\d+)/);
+        
+        let appUrl;
+        let pageMessage;
+        
+        if (habitMatch && habitMatch[1]) {
+            // Deep link to specific habit
+            const habitId = habitMatch[1];
+            appUrl = `habittracker://habit/${habitId}`;
+            pageMessage = 'To view this habit, please open the link in the Habit Tracker app.';
+        } else {
+            // Root URL - just open the app home
+            appUrl = 'habittracker://app';
+            pageMessage = 'Open the Habit Tracker app to start building better habits!';
+        }
+        
+        // Update the page message
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageElement = document.querySelector('.container > p');
+            if (messageElement) {
+                messageElement.textContent = pageMessage;
+            }
+            
+            // Set the button href
+            document.getElementById('open-app-btn').href = appUrl;
+            
+            // Try to open app automatically on page load
+            setTimeout(function() {
+                window.location.href = appUrl;
+            }, 100);
+            
+            // Show a message if user is still on the page after 2 seconds
+            setTimeout(function() {
+                const appCheck = document.getElementById('app-check');
+                if (appCheck) {
+                    const notice = document.createElement('p');
+                    notice.style.fontSize = '14px';
+                    notice.style.color = '#e74c3c';
+                    notice.style.marginTop = '16px';
+                    notice.textContent = 'App not installed? Download it below!';
+                    appCheck.appendChild(notice);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,63 @@
+=================================================================
+YOUR HABIT TRACKER APP SHA256 FINGERPRINTS
+=================================================================
+
+📱 DEBUG BUILD (for testing):
+────────────────────────────────────────────────────────────────
+SHA-256: 6E:81:62:72:13:0E:DF:6E:A9:2A:72:C8:0F:F0:CC:C1:7D:AF:59:B8:EA:9B:FD:F7:C6:C0:05:9F:2B:B3:0F:30
+
+Without colons (for assetlinks.json):
+6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30
+
+
+🚀 RELEASE BUILD (for Play Store):
+────────────────────────────────────────────────────────────────
+SHA-256: B7:DA:B4:52:DE:23:F9:5C:E3:97:4B:9E:EF:BA:6B:39:C7:1B:E9:BB:62:B0:0D:B3:CF:92:A5:F3:10:46:F5:F3
+
+Without colons (for assetlinks.json):
+B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3
+
+
+📋 KEYSTORE INFORMATION:
+────────────────────────────────────────────────────────────────
+Debug Keystore:  C:\Users\atraj\.android\debug.keystore
+Release Keystore: E:\CodingWorld\AndroidAppDev\HabitTracker\habittracker-release-key.jks
+Release Alias: habittracker
+Valid Until: February 20, 2053 ✅
+
+
+🔐 USE THESE IN assetlinks.json:
+────────────────────────────────────────────────────────────────
+
+For TESTING (debug builds):
+"sha256_cert_fingerprints": [
+  "6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30"
+]
+
+
+For PRODUCTION (Play Store release):
+"sha256_cert_fingerprints": [
+  "B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3"
+]
+
+
+For BOTH (recommended):
+"sha256_cert_fingerprints": [
+  "6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30",
+  "B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3"
+]
+
+
+📝 NEXT STEPS:
+────────────────────────────────────────────────────────────────
+1. I've already updated assetlinks.json with BOTH fingerprints
+2. Deploy assetlinks.json to your web server
+3. Test with debug build first
+4. When you publish to Play Store, it will work automatically!
+
+
+=================================================================
+Generated: 2025-01-09
+App Package: it.atraj.habittracker
+=================================================================
+

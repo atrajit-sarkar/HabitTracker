@@ -1,0 +1,257 @@
+═══════════════════════════════════════════════════════════════
+  GITHUB PAGES DEPLOYMENT - STEP BY STEP INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+📁 WHAT'S IN THIS FOLDER:
+
+All files needed for GitHub Pages deployment are in this folder:
+
+  E:\CodingWorld\AndroidAppDev\HabitTracker\github-pages-deploy\
+  
+  ├── index.html              ← Landing page (ready!)
+  ├── .well-known/
+  │   └── assetlinks.json    ← Verification file (with YOUR fingerprints!)
+  ├── CNAME                   ← Custom domain (habittracker.atraj.it)
+  ├── README.md               ← GitHub repo description
+  └── DEPLOY_INSTRUCTIONS.txt ← This file
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 1: CREATE GITHUB REPOSITORY
+═══════════════════════════════════════════════════════════════
+
+1. Go to: https://github.com/new
+
+2. Fill in:
+   ✓ Repository name: habittracker-deeplink
+   ✓ Description: Deep link handler for Habit Tracker app
+   ✓ Public: YES (must be public for GitHub Pages)
+   ✓ Initialize with README: NO (we have one already)
+
+3. Click: "Create repository"
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 2: UPLOAD ALL FILES
+═══════════════════════════════════════════════════════════════
+
+METHOD A: Drag & Drop (Easiest)
+────────────────────────────────
+
+1. Open your new repository on GitHub
+
+2. Click: "uploading an existing file"
+
+3. Drag ALL files from this folder:
+   - index.html
+   - CNAME
+   - README.md
+   - The entire .well-known folder
+
+4. Write commit message: "Initial commit - Deep link setup"
+
+5. Click: "Commit changes"
+
+
+METHOD B: GitHub Desktop
+─────────────────────────
+
+1. Clone your new repository
+
+2. Copy all files from this folder to the cloned repo
+
+3. Commit with message: "Initial commit"
+
+4. Push to GitHub
+
+
+METHOD C: Git Command Line
+───────────────────────────
+
+Open terminal in this folder and run:
+
+  git init
+  git add .
+  git commit -m "Initial commit - Deep link setup"
+  git remote add origin https://github.com/YOUR_USERNAME/habittracker-deeplink.git
+  git branch -M main
+  git push -u origin main
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 3: ENABLE GITHUB PAGES
+═══════════════════════════════════════════════════════════════
+
+1. Go to your repository on GitHub
+
+2. Click: Settings (top menu)
+
+3. Click: Pages (left sidebar)
+
+4. Under "Source":
+   ✓ Branch: main
+   ✓ Folder: / (root)
+
+5. Click: Save
+
+6. Wait 2-3 minutes
+
+7. Refresh the page
+
+8. You should see: "Your site is live at https://YOUR_USERNAME.github.io/habittracker-deeplink/"
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 4: CONFIGURE DNS (IMPORTANT!)
+═══════════════════════════════════════════════════════════════
+
+Go to your domain provider (where you manage atraj.it):
+
+Add a CNAME record:
+───────────────────
+
+  Type: CNAME
+  Name: habittracker
+  Value: YOUR_GITHUB_USERNAME.github.io
+  TTL: 3600
+
+Example:
+  Type: CNAME
+  Name: habittracker
+  Value: atrajit-sarkar.github.io
+  TTL: 3600
+
+Save the DNS record.
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 5: WAIT FOR DNS PROPAGATION
+═══════════════════════════════════════════════════════════════
+
+⏱️ DNS changes take 10-30 minutes (can be up to 24 hours)
+
+Check if DNS is ready:
+  1. Open Command Prompt
+  2. Run: nslookup habittracker.atraj.it
+  3. Should show GitHub IP address
+
+Clear DNS cache:
+  Run: ipconfig /flushdns
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 6: VERIFY DEPLOYMENT
+═══════════════════════════════════════════════════════════════
+
+After DNS propagates, test these URLs:
+
+1. Landing page:
+   https://habittracker.atraj.it
+   Should show: Beautiful Habit Tracker page
+
+2. Verification file:
+   https://habittracker.atraj.it/.well-known/assetlinks.json
+   Should show: JSON with your fingerprints
+
+3. Deep link (on phone):
+   https://habittracker.atraj.it/habit/1
+   Should show: "Open with Habit Tracker" dialog
+
+
+═══════════════════════════════════════════════════════════════
+  STEP 7: TEST EMAIL DEEP LINK
+═══════════════════════════════════════════════════════════════
+
+1. Open Habit Tracker app
+
+2. Go to: Profile → Email Settings
+
+3. Enable email notifications
+
+4. Click: "Send Test Email"
+
+5. Open email on your phone
+
+6. Click: "✅ OPEN HABIT TRACKER" button
+
+7. Should prompt: "Open with Habit Tracker"
+
+8. Tap Habit Tracker
+
+9. App opens! 🎉
+
+
+═══════════════════════════════════════════════════════════════
+  TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+❌ "404 Not Found"
+  → Wait 5 more minutes for GitHub to build
+  → Check GitHub Pages is enabled
+  → Make sure branch is "main" not "master"
+
+❌ "assetlinks.json not found"
+  → Check .well-known folder uploaded correctly
+  → Folder name must be exactly: .well-known
+  → File must be inside: .well-known/assetlinks.json
+
+❌ "DNS not resolving"
+  → Wait longer (can take 24 hours)
+  → Clear DNS cache: ipconfig /flushdns
+  → Check CNAME record is correct
+
+❌ "App doesn't open from link"
+  → Wait for DNS to fully propagate
+  → Reinstall app
+  → Check assetlinks.json is accessible
+  → Verify using HTTPS (not HTTP)
+
+
+═══════════════════════════════════════════════════════════════
+  CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+Before marking as done, verify:
+
+  ☐ Repository created on GitHub
+  ☐ All 4 files uploaded (including .well-known folder)
+  ☐ GitHub Pages enabled
+  ☐ DNS CNAME record added
+  ☐ Wait 30 minutes
+  ☐ habittracker.atraj.it loads landing page
+  ☐ .well-known/assetlinks.json accessible
+  ☐ Test email link opens app
+  ☐ Everything works!
+
+
+═══════════════════════════════════════════════════════════════
+  SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Files in this folder: READY TO UPLOAD ✓
+Your SHA256 fingerprints: ALREADY INCLUDED ✓
+CNAME file: CONFIGURED ✓
+Landing page: BEAUTIFUL ✓
+
+Just upload to GitHub and add DNS record!
+
+Time needed: 5 minutes upload + 30 minutes DNS = 35 minutes total
+
+═══════════════════════════════════════════════════════════════
+  QUICK REFERENCE
+═══════════════════════════════════════════════════════════════
+
+Repository: habittracker-deeplink
+Domain: habittracker.atraj.it
+DNS: CNAME → YOUR_USERNAME.github.io
+
+Files to upload:
+  ✓ index.html
+  ✓ .well-known/assetlinks.json
+  ✓ CNAME
+  ✓ README.md
+
+All ready in this folder!
+
+═══════════════════════════════════════════════════════════════
+
