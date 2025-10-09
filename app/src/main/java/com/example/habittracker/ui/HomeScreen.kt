@@ -1039,40 +1039,24 @@ private fun HabitCard(
                 }
 
                 if (habit.isCompletedToday) {
-                    // Lottie animation composition
+                    // OPTIMIZED: Only load Lottie when first completed, with proper key
                     val composition by rememberLottieComposition(
-                        LottieCompositionSpec.Asset("man_with_task_list.json")
+                        spec = LottieCompositionSpec.Asset("man_with_task_list.json"),
+                        key = "completed_anim_${habit.id}" // Unique key per habit
                     )
                     
                     // Calculate target frame: 132 out of 241 total frames
                     val targetProgress = 132f / 241f // ≈ 0.5477
                     
-                    val rawAnimationProgress by animateLottieCompositionAsState(
-                        composition = composition,
-                        iterations = 1, // Play only once
-                        isPlaying = showCompletionAnimation,
-                        speed = 1f,
-                        restartOnPlay = false
-                    )
-                    
-                    // Clamp progress to stop at frame 132
-                    val animationProgress = if (rawAnimationProgress > targetProgress) {
-                        targetProgress
-                    } else {
-                        rawAnimationProgress
+                    val animationProgress = remember(habit.id) { 
+                        mutableFloatStateOf(targetProgress) 
                     }
                     
-                    // Stop animation when target frame is reached
-                    LaunchedEffect(rawAnimationProgress) {
-                        if (rawAnimationProgress >= targetProgress) {
-                            showCompletionAnimation = false
-                        }
-                    }
-                    
-                    // Trigger animation when habit becomes completed
-                    LaunchedEffect(habit.isCompletedToday) {
-                        if (habit.isCompletedToday && !showCompletionAnimation) {
-                            showCompletionAnimation = true
+                    // Only animate once when first shown
+                    LaunchedEffect(habit.id, habit.isCompletedToday) {
+                        if (habit.isCompletedToday && animationProgress.floatValue < targetProgress) {
+                            // Animate to target
+                            animationProgress.floatValue = targetProgress
                         }
                     }
                     
@@ -1106,12 +1090,14 @@ private fun HabitCard(
                             modifier = Modifier.weight(1f)
                         )
                         
-                        // Lottie animation
-                        LottieAnimation(
-                            composition = composition,
-                            progress = { animationProgress },
-                            modifier = Modifier.size(60.dp)
-                        )
+                        // Lottie animation - use static progress for performance
+                        composition?.let {
+                            LottieAnimation(
+                                composition = it,
+                                progress = { animationProgress.floatValue },
+                                modifier = Modifier.size(60.dp)
+                            )
+                        }
                     }
                 } else {
                     Row(
@@ -1137,17 +1123,18 @@ private fun HabitCard(
                                 Text(text = stringResource(R.string.done), fontWeight = FontWeight.SemiBold)
                             }
                             
-                            // Fanfare animation overlay
+                            // OPTIMIZED: Fanfare animation only when triggered
                             if (showFanfareAnimation) {
                                 val fanfareComposition by rememberLottieComposition(
-                                    LottieCompositionSpec.Asset("Fanfare.json")
+                                    spec = LottieCompositionSpec.Asset("Fanfare.json"),
+                                    key = "fanfare_${habit.id}" // Unique key
                                 )
                                 
                                 val fanfareProgress by animateLottieCompositionAsState(
                                     composition = fanfareComposition,
                                     iterations = 1,
-                                    isPlaying = showFanfareAnimation,
-                                    speed = 1.2f,
+                                    isPlaying = true,
+                                    speed = 1.5f, // Faster animation
                                     restartOnPlay = false
                                 )
                                 
@@ -1158,17 +1145,19 @@ private fun HabitCard(
                                     }
                                 }
                                 
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(60.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    LottieAnimation(
-                                        composition = fanfareComposition,
-                                        progress = { fanfareProgress },
-                                        modifier = Modifier.size(120.dp)
-                                    )
+                                if (fanfareComposition != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(60.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        LottieAnimation(
+                                            composition = fanfareComposition,
+                                            progress = { fanfareProgress },
+                                            modifier = Modifier.size(120.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1992,12 +1981,14 @@ private fun AvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // Load custom image from URL using Coil
+                // Optimized image loading with Coil
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(avatar.value)
-                    .crossfade(true)
-                    .size(Size.ORIGINAL)
+                    .crossfade(300) // Smooth crossfade animation
+                    .size(size.value.toInt() * 2) // Load 2x size for better quality on high DPI
+                    .memoryCacheKey(avatar.value) // Enable memory caching
+                    .diskCacheKey(avatar.value) // Enable disk caching
                 
                 if (token != null && avatar.value.contains("githubusercontent.com")) {
                     requestBuilder.addHeader("Authorization", "token $token")

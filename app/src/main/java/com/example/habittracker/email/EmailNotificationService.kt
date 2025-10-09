@@ -10,6 +10,7 @@ import javax.inject.Singleton
 /**
  * Service to send email notifications via Gmail SMTP.
  * Uses custom Android-compatible SMTP client.
+ * Note: Email clients don't support Base64 images, so we use emoji fallbacks.
  */
 @Singleton
 class EmailNotificationService @Inject constructor(
@@ -40,7 +41,7 @@ class EmailNotificationService @Inject constructor(
             // Create deep link to habit details
             val deepLink = createHabitDeepLink(habit.id)
             
-            // Generate email content
+            // Generate email content with smart emoji fallback
             val subject = EmailTemplate.generateSubject(habit)
             val htmlBody = EmailTemplate.generateHabitReminderEmail(habit, userName, deepLink)
             val textBody = EmailTemplate.generatePlainTextEmail(habit, userName, deepLink)

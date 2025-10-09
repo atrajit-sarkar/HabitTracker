@@ -437,12 +437,14 @@ private fun TrashAvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // Load custom image from URL using Coil
+                // Optimized image loading with Coil
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = coil.request.ImageRequest.Builder(context)
                     .data(avatar.value)
-                    .crossfade(true)
-                    .size(coil.size.Size.ORIGINAL)
+                    .crossfade(300) // Smooth crossfade animation
+                    .size(size.value.toInt() * 2) // Load 2x size for better quality on high DPI
+                    .memoryCacheKey(avatar.value) // Enable memory caching
+                    .diskCacheKey(avatar.value) // Enable disk caching
                 
                 if (token != null && avatar.value.contains("githubusercontent.com")) {
                     requestBuilder.addHeader("Authorization", "token $token")

@@ -1,5 +1,6 @@
 package it.atraj.habittracker.email
 
+import android.util.Log
 import it.atraj.habittracker.data.local.Habit
 import it.atraj.habittracker.data.local.HabitAvatarType
 import java.time.LocalTime
@@ -10,74 +11,71 @@ import java.time.format.DateTimeFormatter
  * Compatible with mobile Gmail and other email clients.
  */
 object EmailTemplate {
+    private const val TAG = "EmailTemplate"
     
     /**
-     * Get habit avatar display for email.
-     * Returns emoji text or null if it's an image URL
+     * Get a smart fallback emoji based on habit title or default
      */
-    private fun getHabitEmojiText(habit: Habit): String? {
-        return when (habit.avatar.type) {
-            HabitAvatarType.EMOJI -> {
-                // Only use if it's actually an emoji (not a URL)
-                val value = habit.avatar.value
-                if (value.startsWith("http://") || value.startsWith("https://")) {
-                    null // Will use image instead
-                } else {
-                    value
-                }
-            }
-            HabitAvatarType.CUSTOM_IMAGE -> null // Will use image
-            else -> "🎯" // Default emoji for other types
+    private fun getSmartFallbackEmoji(habit: Habit): String {
+        // Try to extract emoji from title first
+        val titleEmoji = habit.title.firstOrNull { it.toString().matches(Regex("[\uD83C-\uDBFF\uDC00-\uDFFF]+")) }
+        if (titleEmoji != null) {
+            return titleEmoji.toString()
+        }
+        
+        // Use keyword-based fallback
+        val lowerTitle = habit.title.lowercase()
+        return when {
+            lowerTitle.contains("exercise") || lowerTitle.contains("workout") || lowerTitle.contains("gym") -> "💪"
+            lowerTitle.contains("read") || lowerTitle.contains("book") -> "📚"
+            lowerTitle.contains("run") || lowerTitle.contains("jog") -> "🏃"
+            lowerTitle.contains("meditat") || lowerTitle.contains("yoga") -> "🧘"
+            lowerTitle.contains("water") || lowerTitle.contains("drink") -> "💧"
+            lowerTitle.contains("eat") || lowerTitle.contains("meal") || lowerTitle.contains("diet") -> "🥗"
+            lowerTitle.contains("sleep") || lowerTitle.contains("rest") -> "😴"
+            lowerTitle.contains("music") || lowerTitle.contains("practice") -> "🎵"
+            lowerTitle.contains("draw") || lowerTitle.contains("paint") || lowerTitle.contains("art") -> "🎨"
+            lowerTitle.contains("work") || lowerTitle.contains("study") -> "💼"
+            lowerTitle.contains("plant") || lowerTitle.contains("garden") -> "🌱"
+            lowerTitle.contains("write") || lowerTitle.contains("journal") -> "📝"
+            else -> "🎯" // Default fallback
         }
     }
     
     /**
      * Get habit avatar as HTML (either emoji text or img tag)
+     * For custom images from private repos, uses smart emoji fallback
+     * since email clients don't support Base64 embedded images.
      */
-    private fun getHabitAvatarHtml(habit: Habit, size: String = "48px"): String {
+    private fun getHabitAvatarHtml(
+        habit: Habit, 
+        size: String = "48px"
+    ): String {
         return when (habit.avatar.type) {
             HabitAvatarType.EMOJI -> {
                 val value = habit.avatar.value
                 if (value.startsWith("http://") || value.startsWith("https://")) {
-                    // It's a URL, show as image
+                    // Public URL emoji/image
                     "<img src=\"$value\" alt=\"Habit Avatar\" style=\"width: $size; height: $size; border-radius: 50%; object-fit: cover;\" />"
                 } else {
-                    // It's an emoji
+                    // Regular emoji character
                     value
                 }
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                val imageUrl = habit.avatar.value
-                if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-                    "<img src=\"$imageUrl\" alt=\"Habit Avatar\" style=\"width: $size; height: $size; border-radius: 50%; object-fit: cover;\" />"
-                } else {
-                    "🎯" // Fallback emoji
-                }
+                // For custom images, use smart emoji fallback
+                // Email clients don't reliably support private URLs or Base64 images
+                getSmartFallbackEmoji(habit)
             }
-            else -> "🎯" // Default emoji
+            else -> getSmartFallbackEmoji(habit)
         }
     }
     
-    /**
-     * Get habit avatar for plain text email (emoji only, no images)
-     */
-    private fun getHabitAvatarPlainText(habit: Habit): String {
-        return when (habit.avatar.type) {
-            HabitAvatarType.EMOJI -> {
-                val value = habit.avatar.value
-                if (value.startsWith("http://") || value.startsWith("https://")) {
-                    "🎯" // Fallback emoji for images in plain text
-                } else {
-                    value
-                }
-            }
-            else -> "🎯" // Default emoji
-        }
-    }
     
     /**
      * Generate a habit reminder email with a direct link to the habit details.
      * Note: Gmail blocks JavaScript and form submissions, so we use deep links instead.
+     * Custom images use smart emoji fallbacks for better email client compatibility.
      */
     fun generateHabitReminderEmail(
         habit: Habit,
@@ -233,7 +231,19 @@ object EmailTemplate {
         val time = LocalTime.of(habit.reminderHour, habit.reminderMinute)
         val timeStr = time.format(DateTimeFormatter.ofPattern("h:mm a"))
         val displayName = userName ?: "there"
-        val habitEmoji = getHabitAvatarPlainText(habit)
+        
+        // Get emoji for plain text (extract from avatar or use smart fallback)
+        val habitEmoji = when (habit.avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                val value = habit.avatar.value
+                if (value.startsWith("http://") || value.startsWith("https://")) {
+                    getSmartFallbackEmoji(habit) // URL in plain text - use fallback
+                } else {
+                    value // Actual emoji
+                }
+            }
+            else -> getSmartFallbackEmoji(habit)
+        }
         
         return """
 $habitEmoji HABIT REMINDER
@@ -261,7 +271,18 @@ You can disable email notifications in the app settings
      * Generate email subject line
      */
     fun generateSubject(habit: Habit): String {
-        return "${getHabitAvatarPlainText(habit)} Time for: ${habit.title}"
+        val emoji = when (habit.avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                val value = habit.avatar.value
+                if (value.startsWith("http://") || value.startsWith("https://")) {
+                    getSmartFallbackEmoji(habit)
+                } else {
+                    value
+                }
+            }
+            else -> getSmartFallbackEmoji(habit)
+        }
+        return "$emoji Time for: ${habit.title}"
     }
 }
 
