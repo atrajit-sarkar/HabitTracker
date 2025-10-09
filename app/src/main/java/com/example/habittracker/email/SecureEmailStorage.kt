@@ -103,9 +103,9 @@ class SecureEmailStorage @Inject constructor(
         private const val KEY_SMTP_PORT = "smtp_port"
         
         // Gmail SMTP configuration
-        // Using port 465 (SSL) instead of 587 (STARTTLS) for better Android compatibility
+        // Using port 587 (STARTTLS) with network security config
         private const val DEFAULT_SMTP_HOST = "smtp.gmail.com"
-        private const val DEFAULT_SMTP_PORT = 465
+        private const val DEFAULT_SMTP_PORT = 587
     }
 }
 

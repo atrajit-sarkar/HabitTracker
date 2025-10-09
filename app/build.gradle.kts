@@ -99,9 +99,6 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/LICENSE-notice.md"
-            excludes += "/META-INF/NOTICE.md"
-            excludes += "/META-INF/NOTICE"
-            excludes += "/META-INF/NOTICE.txt"
         }
     }
 }
@@ -154,15 +151,14 @@ dependencies {
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
     
-    // OkHttp for update checks
+    // OkHttp for update checks and SMTP
     implementation(libs.okhttp)
     
     // Lottie Animations
     implementation(libs.lottie.compose)
     
-    // JavaMail for email notifications
-    implementation("com.sun.mail:android-mail:1.6.7")
-    implementation("com.sun.mail:android-activation:1.6.7")
+    // Apache Commons Codec for Base64 encoding (for SMTP)
+    implementation("commons-codec:commons-codec:1.15")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

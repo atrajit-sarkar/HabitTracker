@@ -4,20 +4,12 @@ import android.util.Log
 import it.atraj.habittracker.data.local.Habit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Properties
 import javax.inject.Inject
 import javax.inject.Singleton
-import javax.mail.Authenticator
-import javax.mail.Message
-import javax.mail.PasswordAuthentication
-import javax.mail.Session
-import javax.mail.Transport
-import javax.mail.internet.InternetAddress
-import javax.mail.internet.MimeMessage
 
 /**
  * Service to send email notifications via Gmail SMTP.
- * Uses JavaMail API with TLS encryption.
+ * Uses custom Android-compatible SMTP client.
  */
 @Singleton
 class EmailNotificationService @Inject constructor(
@@ -79,84 +71,28 @@ class EmailNotificationService @Inject constructor(
         htmlBody: String,
         textBody: String
     ) {
-        // Use Gmail SMTP SSL (port 465) instead of STARTTLS (port 587)
-        // SSL is more reliable on Android than STARTTLS
-        val props = Properties().apply {
-            put("mail.smtp.host", "smtp.gmail.com")
-            put("mail.smtp.port", "465") // SSL port
-            put("mail.smtp.auth", "true")
-            
-            // Enable SSL
-            put("mail.smtp.ssl.enable", "true")
-            put("mail.smtp.ssl.trust", "smtp.gmail.com")
-            put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3")
-            
-            // Socket factory for SSL
-            put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
-            put("mail.smtp.socketFactory.port", "465")
-            put("mail.smtp.socketFactory.fallback", "false")
-            
-            // Disable STARTTLS (we're using SSL instead)
-            put("mail.smtp.starttls.enable", "false")
-            
-            // Timeout settings
-            put("mail.smtp.connectiontimeout", "30000") // 30 seconds
-            put("mail.smtp.timeout", "30000") // 30 seconds
-            put("mail.smtp.writetimeout", "30000") // 30 seconds
-            
-            // Debug logging
-            put("mail.debug", "true")
-        }
+        // Use custom Android-compatible SMTP client
+        val client = AndroidSMTPClient(
+            host = "smtp.gmail.com",
+            port = 587,
+            username = secureEmailStorage.senderEmail,
+            password = secureEmailStorage.senderPassword
+        )
         
-        // Create authenticated session
-        val session = Session.getInstance(props, object : Authenticator() {
-            override fun getPasswordAuthentication(): PasswordAuthentication {
-                return PasswordAuthentication(
-                    secureEmailStorage.senderEmail,
-                    secureEmailStorage.senderPassword
-                )
-            }
-        })
+        // Determine from address (use alias if configured)
+        val fromAddress = secureEmailStorage.fromEmail ?: secureEmailStorage.senderEmail
         
-        // Enable debug mode in development
-        session.debug = false // Set to true for debugging
-        
-        // Create message
-        val message = MimeMessage(session).apply {
-            // Use alias email if configured, otherwise use sender email
-            val fromAddress = secureEmailStorage.fromEmail ?: secureEmailStorage.senderEmail
-            setFrom(InternetAddress(fromAddress, "Habit Tracker"))
-            setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail))
-            setSubject(subject, "UTF-8")
-            
-            // Set both HTML and plain text content for better compatibility
-            setContent(createMultipartContent(htmlBody, textBody))
-        }
-        
-        // Send the message
-        Transport.send(message)
+        // Send the email
+        client.sendEmail(
+            from = fromAddress,
+            fromName = "Habit Tracker",
+            to = recipientEmail,
+            subject = subject,
+            htmlBody = htmlBody,
+            textBody = textBody
+        )
     }
     
-    /**
-     * Create multipart content with both HTML and plain text versions
-     */
-    private fun createMultipartContent(htmlBody: String, textBody: String): javax.mail.Multipart {
-        val multipart = javax.mail.internet.MimeMultipart("alternative")
-        
-        // Add plain text part (lower priority)
-        val textPart = javax.mail.internet.MimeBodyPart().apply {
-            setText(textBody, "UTF-8")
-        }
-        multipart.addBodyPart(textPart)
-        
-        // Add HTML part (higher priority)
-        val htmlPart = javax.mail.internet.MimeBodyPart().apply {
-            setContent(htmlBody, "text/html; charset=UTF-8")
-        }
-        multipart.addBodyPart(htmlPart)
-        
-        return multipart
-    }
     
     /**
      * Create a deep link to open the habit details screen in the app

@@ -22,6 +22,7 @@ object EmailTemplate {
         val time = LocalTime.of(habit.reminderHour, habit.reminderMinute)
         val timeStr = time.format(DateTimeFormatter.ofPattern("h:mm a"))
         val displayName = userName ?: "there"
+        val habitEmoji = habit.avatar.value
         
         return """
 <!DOCTYPE html>
