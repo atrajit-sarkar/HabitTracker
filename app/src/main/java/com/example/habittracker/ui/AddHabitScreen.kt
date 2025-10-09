@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,10 +66,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import it.atraj.habittracker.R
 import it.atraj.habittracker.data.local.HabitAvatar
 import it.atraj.habittracker.data.local.HabitAvatarType
@@ -105,9 +110,9 @@ fun AddHabitScreen(
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    LaunchedEffect(timePickerState.hour, timePickerState.minute) {
-        onHabitTimeChange(timePickerState.hour, timePickerState.minute)
-    }
+    // Disable reactive updates - only update on save to prevent TimePicker glitches
+    // The TimePicker state will be read when the user saves the habit
+    // This completely eliminates the feedback loop that causes mode switching
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -163,7 +168,11 @@ fun AddHabitScreen(
                         Text(text = stringResource(id = R.string.cancel))
                     }
                     FilledTonalButton(
-                        onClick = onSaveHabit,
+                        onClick = {
+                            // Update time from picker state before saving
+                            onHabitTimeChange(timePickerState.hour, timePickerState.minute)
+                            onSaveHabit()
+                        },
                         modifier = Modifier.weight(1f),
                         enabled = !state.isSaving && state.title.isNotBlank()
                     ) {
@@ -213,11 +222,71 @@ fun AddHabitScreen(
                 maxLines = 4
             )
 
-            // Avatar Selection
-            AvatarSelector(
-                selectedAvatar = state.avatar,
-                onAvatarChange = onAvatarChange
-            )
+            // Avatar Selection with custom image support
+            var showAvatarPicker by remember { mutableStateOf(false) }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.avatar_label),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    
+                    // Current avatar display (clickable to open picker)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .clickable { showAvatarPicker = true }
+                    ) {
+                        AvatarDisplay(
+                            avatar = state.avatar,
+                            size = 80.dp
+                        )
+                        // Edit indicator
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Change avatar",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+                    
+                    TextButton(
+                        onClick = { showAvatarPicker = true },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("Change Avatar")
+                    }
+                }
+            }
+
+            // Avatar picker dialog
+            if (showAvatarPicker) {
+                HabitAvatarPickerDialog(
+                    currentAvatar = state.avatar,
+                    onAvatarSelected = { newAvatar ->
+                        onAvatarChange(newAvatar)
+                    },
+                    onDismiss = { showAvatarPicker = false }
+                )
+            }
 
             // Frequency Selection
             FrequencySelector(
@@ -312,86 +381,6 @@ fun AddHabitScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AvatarSelector(
-    selectedAvatar: HabitAvatar,
-    onAvatarChange: (HabitAvatar) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.avatar_label),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            // Current avatar display
-            AvatarDisplay(
-                avatar = selectedAvatar,
-                size = 64.dp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            
-            // Emoji selection grid using FlowRow for better layout
-            Text(
-                text = stringResource(id = R.string.choose_emoji_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                HabitAvatar.POPULAR_EMOJIS.forEach { emoji ->
-                    EmojiItem(
-                        emoji = emoji,
-                        isSelected = selectedAvatar.value == emoji && selectedAvatar.type == HabitAvatarType.EMOJI,
-                        onClick = {
-                            onAvatarChange(
-                                selectedAvatar.copy(
-                                    type = HabitAvatarType.EMOJI,
-                                    value = emoji
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-            
-            // Background color selection
-            Text(
-                text = stringResource(id = R.string.background_color_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(HabitAvatar.BACKGROUND_COLORS) { color ->
-                    ColorItem(
-                        color = color,
-                        isSelected = selectedAvatar.backgroundColor == color,
-                        onClick = {
-                            onAvatarChange(selectedAvatar.copy(backgroundColor = color))
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun AvatarDisplay(
@@ -399,6 +388,8 @@ private fun AvatarDisplay(
     size: Dp,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -430,11 +421,23 @@ private fun AvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size((size.value * 0.5f).dp)
+                // Load custom image from URL using Coil
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(avatar.value)
+                    .crossfade(true)
+                
+                if (token != null && avatar.value.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
+                AsyncImage(
+                    model = requestBuilder.build(),
+                    contentDescription = "Custom habit avatar",
+                    modifier = Modifier
+                        .size(size)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             }
         }

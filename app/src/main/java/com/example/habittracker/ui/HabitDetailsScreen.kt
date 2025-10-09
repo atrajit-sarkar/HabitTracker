@@ -1177,6 +1177,8 @@ private fun HabitAvatarDisplay(
     size: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -1203,11 +1205,24 @@ private fun HabitAvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                Text(
-                    text = "IMG",
-                    color = Color.White,
-                    fontSize = (size.value * 0.3).sp,
-                    fontWeight = FontWeight.Bold
+                // Load custom image from URL using Coil
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = coil.request.ImageRequest.Builder(context)
+                    .data(avatar.value)
+                    .crossfade(true)
+                    .size(coil.size.Size.ORIGINAL)
+                
+                if (token != null && avatar.value.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
+                coil.compose.AsyncImage(
+                    model = requestBuilder.build(),
+                    contentDescription = "Custom habit avatar",
+                    modifier = Modifier
+                        .size(size)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
             }
         }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -407,6 +408,8 @@ private fun TrashAvatarDisplay(
     modifier: Modifier = Modifier,
     alpha: Float = 1f
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -434,11 +437,25 @@ private fun TrashAvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                Text(
-                    text = stringResource(R.string.img),
-                    color = Color.White.copy(alpha = alpha),
-                    fontSize = (size.value * 0.3).sp,
-                    fontWeight = FontWeight.Bold
+                // Load custom image from URL using Coil
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = coil.request.ImageRequest.Builder(context)
+                    .data(avatar.value)
+                    .crossfade(true)
+                    .size(coil.size.Size.ORIGINAL)
+                
+                if (token != null && avatar.value.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
+                coil.compose.AsyncImage(
+                    model = requestBuilder.build(),
+                    contentDescription = "Custom habit avatar",
+                    modifier = Modifier
+                        .size(size)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .graphicsLayer(alpha = alpha),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
             }
         }

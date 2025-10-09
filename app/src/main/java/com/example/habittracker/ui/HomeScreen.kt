@@ -1341,9 +1341,9 @@ private fun AddHabitSheet(
     )
     val scrollState = rememberScrollState() // Added scroll state
 
-    LaunchedEffect(timePickerState.hour, timePickerState.minute) {
-        onHabitTimeChange(timePickerState.hour, timePickerState.minute)
-    }
+    // Disable reactive updates - only update on save to prevent TimePicker glitches
+    // The TimePicker state will be read when the user saves the habit
+    // This completely eliminates the feedback loop that causes mode switching
 
     Column(
         modifier = Modifier
@@ -1379,11 +1379,71 @@ private fun AddHabitSheet(
             maxLines = 4
         )
         
-        // Avatar Selection
-        AvatarSelector(
-            selectedAvatar = state.avatar,
-            onAvatarChange = onAvatarChange
-        )
+        // Avatar Selection with custom image support
+        var showAvatarPicker by remember { mutableStateOf(false) }
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.avatar_label),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                
+                // Current avatar display (clickable to open picker)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .clickable { showAvatarPicker = true }
+                ) {
+                    AvatarDisplay(
+                        avatar = state.avatar,
+                        size = 64.dp
+                    )
+                    // Edit indicator
+                    androidx.compose.material3.Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Change avatar",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(5.dp)
+                        )
+                    }
+                }
+                
+                TextButton(
+                    onClick = { showAvatarPicker = true },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("Change Avatar")
+                }
+            }
+        }
+        
+        // Avatar picker dialog
+        if (showAvatarPicker) {
+            HabitAvatarPickerDialog(
+                currentAvatar = state.avatar,
+                onAvatarSelected = { newAvatar ->
+                    onAvatarChange(newAvatar)
+                },
+                onDismiss = { showAvatarPicker = false }
+            )
+        }
         
         // Frequency Selection
         FrequencySelector(
@@ -1444,7 +1504,11 @@ private fun AddHabitSheet(
                 Text(text = stringResource(id = R.string.cancel))
             }
             FilledTonalButton(
-                onClick = onSaveHabit,
+                onClick = {
+                    // Update time from picker state before saving
+                    onHabitTimeChange(timePickerState.hour, timePickerState.minute)
+                    onSaveHabit()
+                },
                 modifier = Modifier.weight(1f),
                 enabled = !state.isSaving && state.title.isNotBlank() 
             ) {
@@ -1885,75 +1949,6 @@ private fun NotificationSoundSelector(
     }
 }
 
-@Composable
-private fun AvatarSelector(
-    selectedAvatar: HabitAvatar,
-    onAvatarChange: (HabitAvatar) -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(id = R.string.avatar_label),
-            style = MaterialTheme.typography.titleMedium
-        )
-        
-        // Current avatar display
-        AvatarDisplay(
-            avatar = selectedAvatar,
-            size = 56.dp,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        
-        // Emoji selection grid
-        Text(
-            text = stringResource(id = R.string.choose_emoji_label),
-            style = MaterialTheme.typography.bodyMedium
-        )
-        
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(6),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.height(120.dp)
-        ) {
-            items(HabitAvatar.POPULAR_EMOJIS) { emoji ->
-                EmojiItem(
-                    emoji = emoji,
-                    isSelected = selectedAvatar.value == emoji && selectedAvatar.type == HabitAvatarType.EMOJI,
-                    onClick = {
-                        onAvatarChange(
-                            selectedAvatar.copy(
-                                type = HabitAvatarType.EMOJI,
-                                value = emoji
-                            )
-                        )
-                    }
-                )
-            }
-        }
-        
-        // Background color selection
-        Text(
-            text = stringResource(id = R.string.background_color_label),
-            style = MaterialTheme.typography.bodyMedium
-        )
-        
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(HabitAvatar.BACKGROUND_COLORS) { color ->
-                ColorItem(
-                    color = color,
-                    isSelected = selectedAvatar.backgroundColor == color,
-                    onClick = {
-                        onAvatarChange(selectedAvatar.copy(backgroundColor = color))
-                    }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun AvatarDisplay(
@@ -1961,6 +1956,8 @@ private fun AvatarDisplay(
     size: Dp,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -1987,12 +1984,24 @@ private fun AvatarDisplay(
                 )
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // For future implementation of custom images
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size((size.value * 0.6f).dp)
+                // Load custom image from URL using Coil
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(avatar.value)
+                    .crossfade(true)
+                    .size(Size.ORIGINAL)
+                
+                if (token != null && avatar.value.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
+                AsyncImage(
+                    model = requestBuilder.build(),
+                    contentDescription = "Custom habit avatar",
+                    modifier = Modifier
+                        .size(size)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             }
         }

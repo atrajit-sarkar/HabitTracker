@@ -320,7 +320,7 @@ object HabitReminderService {
             .setTicker(habit.title) // Legacy ticker text for older Android versions
 
         // Set avatar as large icon
-        val avatarBitmap = createAvatarBitmap(habit.avatar)
+        val avatarBitmap = createAvatarBitmap(habit.avatar, context)
         notificationBuilder.setLargeIcon(avatarBitmap)
 
         // For Android versions below O, set sound directly on notification
@@ -376,7 +376,7 @@ object HabitReminderService {
         }
     }
 
-    private fun createAvatarBitmap(avatar: HabitAvatar): Bitmap {
+    private fun createAvatarBitmap(avatar: HabitAvatar, context: Context): Bitmap {
         val size = 128
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -413,12 +413,46 @@ object HabitReminderService {
                 canvas.drawCircle(centerX, centerY, radius, iconPaint)
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // Future implementation for custom images
+                // Load custom image from URL
+                try {
+                    val imageLoader = coil.ImageLoader(context)
+                    val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                    val requestBuilder = coil.request.ImageRequest.Builder(context)
+                        .data(avatar.value)
+                        .size(size)
+                        .allowHardware(false) // Required for bitmap conversion
+                    
+                    if (token != null && avatar.value.contains("githubusercontent.com")) {
+                        requestBuilder.addHeader("Authorization", "token $token")
+                    }
+                    
+                    val result = kotlinx.coroutines.runBlocking {
+                        imageLoader.execute(requestBuilder.build())
+                    }
+                    
+                    if (result is coil.request.SuccessResult) {
+                        val loadedBitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        if (loadedBitmap != null) {
+                            // Create circular bitmap from loaded image
+                            val scaledBitmap = Bitmap.createScaledBitmap(loadedBitmap, size, size, true)
+                            val circlePaint = Paint().apply {
+                                isAntiAlias = true
+                            }
+                            canvas.drawBitmap(scaledBitmap, 0f, 0f, circlePaint)
+                            return bitmap
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("HabitReminderService", "Failed to load custom image for notification: ${e.message}")
+                }
+                
+                // Fallback if loading fails
                 val iconPaint = Paint().apply {
                     color = android.graphics.Color.WHITE
                     isAntiAlias = true
                     textSize = size * 0.4f
                     textAlign = Paint.Align.CENTER
+                    typeface = Typeface.DEFAULT_BOLD
                 }
                 val textY = size / 2f - (iconPaint.descent() + iconPaint.ascent()) / 2
                 canvas.drawText("IMG", size / 2f, textY, iconPaint)
