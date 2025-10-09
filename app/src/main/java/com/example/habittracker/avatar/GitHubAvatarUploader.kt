@@ -67,12 +67,14 @@ class GitHubAvatarUploader @Inject constructor() {
      * @param context Android context
      * @param userId Unique user ID
      * @param imageUri URI of the image to upload
+     * @param folder Subfolder to organize avatars ("profile" or "habits")
      * @return URL of the uploaded avatar or null on failure
      */
     suspend fun uploadAvatar(
         context: Context,
         userId: String,
-        imageUri: Uri
+        imageUri: Uri,
+        folder: String = "profile"
     ): UploadResult = withContext(Dispatchers.IO) {
         try {
             if (githubToken == null) {
@@ -89,7 +91,7 @@ class GitHubAvatarUploader @Inject constructor() {
             // Step 3: Generate unique filename
             val timestamp = System.currentTimeMillis()
             val filename = "avatar_$timestamp.png"
-            val path = "avatars/users/$userId/$filename"
+            val path = "avatars/$folder/$userId/$filename"
             
             // Step 4: Upload to GitHub
             val uploadUrl = uploadToGitHub(path, base64Image, "Upload custom avatar")
@@ -135,15 +137,18 @@ class GitHubAvatarUploader @Inject constructor() {
     
     /**
      * List all avatars for a user
+     * 
+     * @param userId User ID
+     * @param folder Subfolder to list from ("profile" or "habits")
      */
-    suspend fun listUserAvatars(userId: String): List<String> = withContext(Dispatchers.IO) {
+    suspend fun listUserAvatars(userId: String, folder: String = "profile"): List<String> = withContext(Dispatchers.IO) {
         try {
             if (githubToken == null) {
                 Log.e(TAG, "GitHub token not initialized")
                 return@withContext emptyList()
             }
             
-            val path = "avatars/users/$userId"
+            val path = "avatars/$folder/$userId"
             val url = URL("$GITHUB_API_BASE/repos/$GITHUB_OWNER/$GITHUB_REPO/contents/$path")
             
             val connection = url.openConnection() as HttpURLConnection

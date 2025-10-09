@@ -25,15 +25,21 @@ class AvatarPickerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AvatarPickerUiState())
     val uiState: StateFlow<AvatarPickerUiState> = _uiState.asStateFlow()
     
+    // Track which folder we're working with ("profile" or "habits")
+    private var currentFolder: String = "profile"
+    
     /**
      * Load all available avatars (default + custom)
+     * 
+     * @param folder Folder to load from ("profile" or "habits")
      */
-    fun loadAvatars() {
+    fun loadAvatars(folder: String = "profile") {
+        currentFolder = folder
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
             try {
-                val avatars = avatarManager.getAllAvatars()
+                val avatars = avatarManager.getAllAvatars(folder)
                 _uiState.update { 
                     it.copy(
                         avatars = avatars,
@@ -63,10 +69,10 @@ class AvatarPickerViewModel @Inject constructor(
                 ) 
             }
             
-            when (val result = avatarManager.uploadCustomAvatar(imageUri)) {
+            when (val result = avatarManager.uploadCustomAvatar(imageUri, currentFolder)) {
                 is AvatarResult.Success -> {
                     // Reload avatars to show the new one
-                    loadAvatars()
+                    loadAvatars(currentFolder)
                     _uiState.update { it.copy(isUploading = false) }
                 }
                 is AvatarResult.Error -> {
@@ -92,7 +98,7 @@ class AvatarPickerViewModel @Inject constructor(
             
             if (success) {
                 // Reload avatars to remove the deleted one
-                loadAvatars()
+                loadAvatars(currentFolder)
             } else {
                 _uiState.update { 
                     it.copy(errorMessage = "Failed to delete avatar") 

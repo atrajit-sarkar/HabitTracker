@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -846,6 +848,9 @@ private fun HabitCard(
     var showFanfareAnimation by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     
+    // Get haptic feedback for long press vibration
+    val hapticFeedback = LocalHapticFeedback.current
+    
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
     val reminderText = if (habit.isReminderEnabled) {
@@ -865,9 +870,12 @@ private fun HabitCard(
                 },
                 onLongClick = {
                     if (!isSelectionMode) {
+                        // Perform haptic feedback explicitly
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         onLongPress()
                     }
-                }
+                },
+                onLongClickLabel = "Select habit" // Accessibility label
             ),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)

@@ -48,9 +48,10 @@ class AvatarManager @Inject constructor(
      * Upload a custom avatar for the current user
      * 
      * @param imageUri URI of the selected image
+     * @param folder Folder to upload to ("profile" for profile avatars, "habits" for habit avatars)
      * @return Result containing the avatar URL or error
      */
-    suspend fun uploadCustomAvatar(imageUri: Uri): AvatarResult {
+    suspend fun uploadCustomAvatar(imageUri: Uri, folder: String = "profile"): AvatarResult {
         return try {
             // Get current user ID from Firebase Auth
             val userId = firebaseAuth.currentUser?.uid
@@ -59,14 +60,19 @@ class AvatarManager @Inject constructor(
             }
             
             // Upload to GitHub
-            when (val uploadResult = githubUploader.uploadAvatar(context, userId, imageUri)) {
+            when (val uploadResult = githubUploader.uploadAvatar(context, userId, imageUri, folder)) {
                 is UploadResult.Success -> {
-                    // Update user profile with new avatar URL
-                    val updateResult = authRepository.updateCustomAvatar(uploadResult.avatarUrl)
-                    if (updateResult is it.atraj.habittracker.auth.AuthResult.Success) {
-                        AvatarResult.Success(uploadResult.avatarUrl)
+                    // Only update user profile if uploading profile avatar
+                    if (folder == "profile") {
+                        val updateResult = authRepository.updateCustomAvatar(uploadResult.avatarUrl)
+                        if (updateResult is it.atraj.habittracker.auth.AuthResult.Success) {
+                            AvatarResult.Success(uploadResult.avatarUrl)
+                        } else {
+                            AvatarResult.Error("Failed to update user profile")
+                        }
                     } else {
-                        AvatarResult.Error("Failed to update user profile")
+                        // For habit avatars, just return success without updating profile
+                        AvatarResult.Success(uploadResult.avatarUrl)
                     }
                 }
                 is UploadResult.Error -> {
@@ -130,16 +136,17 @@ class AvatarManager @Inject constructor(
     /**
      * Get all avatars for the current user (both default and custom)
      * 
+     * @param folder Folder to get avatars from ("profile" or "habits")
      * @return Combined list of default and custom uploaded avatars
      */
-    suspend fun getAllAvatars(): List<AvatarItem> {
+    suspend fun getAllAvatars(folder: String = "profile"): List<AvatarItem> {
         val userId = firebaseAuth.currentUser?.uid
         val defaultAvatars = getDefaultAvatars().map { 
             AvatarItem(it, AvatarType.DEFAULT) 
         }
         
         if (userId != null) {
-            val customAvatars = githubUploader.listUserAvatars(userId).map {
+            val customAvatars = githubUploader.listUserAvatars(userId, folder).map {
                 AvatarItem(it, AvatarType.CUSTOM)
             }
             return defaultAvatars + customAvatars
@@ -169,7 +176,9 @@ class AvatarManager @Inject constructor(
      * Check if an avatar URL is a custom uploaded avatar
      */
     private fun isCustomUploadedAvatar(avatarUrl: String): Boolean {
-        return avatarUrl.contains("/avatars/users/")
+        return avatarUrl.contains("/avatars/profile/") || 
+               avatarUrl.contains("/avatars/habits/") || 
+               avatarUrl.contains("/avatars/users/")
     }
     
     /**

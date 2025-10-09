@@ -51,6 +51,10 @@ fun HabitAvatarPickerDialog(
     
     var selectedTab by remember { mutableStateOf(0) } // 0 = Emojis, 1 = Images
     
+    // Cache current avatar value for faster comparison
+    val currentAvatarValue = remember(currentAvatar) { currentAvatar.value }
+    val currentAvatarType = remember(currentAvatar) { currentAvatar.type }
+    
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -79,7 +83,7 @@ fun HabitAvatarPickerDialog(
     }
     
     LaunchedEffect(Unit) {
-        viewModel.loadAvatars()
+        viewModel.loadAvatars("habits")  // Load from habits folder
     }
     
     AlertDialog(
@@ -139,9 +143,12 @@ fun HabitAvatarPickerDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.heightIn(max = 300.dp)
                             ) {
-                                items(HabitAvatar.POPULAR_EMOJIS) { emoji ->
-                                    val isSelected = currentAvatar.value == emoji && 
-                                                    currentAvatar.type == HabitAvatarType.EMOJI
+                                items(
+                                    items = HabitAvatar.POPULAR_EMOJIS,
+                                    key = { it } // Add key for better performance
+                                ) { emoji ->
+                                    val isSelected = currentAvatarValue == emoji && 
+                                                    currentAvatarType == HabitAvatarType.EMOJI
                                     
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -297,13 +304,17 @@ fun HabitAvatarPickerDialog(
                                 
                                 LazyVerticalGrid(
                                     columns = GridCells.Fixed(3),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.heightIn(max = 300.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp),
+                                    modifier = Modifier.heightIn(max = 400.dp)
                                 ) {
-                                    items(uiState.avatars) { avatarItem ->
-                                        val isSelected = currentAvatar.value == avatarItem.url && 
-                                                        currentAvatar.type == HabitAvatarType.CUSTOM_IMAGE
+                                    items(
+                                        items = uiState.avatars,
+                                        key = { it.url } // Add key for better recomposition performance
+                                    ) { avatarItem ->
+                                        val isSelected = currentAvatarValue == avatarItem.url && 
+                                                        currentAvatarType == HabitAvatarType.CUSTOM_IMAGE
                                         
                                         Box(
                                             modifier = Modifier.aspectRatio(1f)
@@ -335,6 +346,9 @@ fun HabitAvatarPickerDialog(
                                                 val requestBuilder = ImageRequest.Builder(context)
                                                     .data(avatarItem.url)
                                                     .crossfade(true)
+                                                    .size(coil.size.Size.ORIGINAL) // Load at original size for better caching
+                                                    .memoryCacheKey(avatarItem.url) // Explicit cache key
+                                                    .diskCacheKey(avatarItem.url) // Explicit disk cache key
                                                 
                                                 if (token != null) {
                                                     requestBuilder.addHeader("Authorization", "token $token")
@@ -346,11 +360,13 @@ fun HabitAvatarPickerDialog(
                                                     modifier = Modifier
                                                         .fillMaxSize()
                                                         .clip(CircleShape),
-                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                    placeholder = null, // No placeholder for smoother scrolling
+                                                    error = null // No error icon for smoother scrolling
                                                 )
                                             }
                                             
-                                            // Selection indicator - larger with shadow for better visibility
+                                            // Selection indicator
                                             if (isSelected) {
                                                 Surface(
                                                     color = MaterialTheme.colorScheme.primary,
@@ -358,8 +374,7 @@ fun HabitAvatarPickerDialog(
                                                     modifier = Modifier
                                                         .align(Alignment.BottomEnd)
                                                         .padding(4.dp)
-                                                        .size(28.dp),
-                                                    shadowElevation = 4.dp
+                                                        .size(24.dp)
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Check,
@@ -381,15 +396,14 @@ fun HabitAvatarPickerDialog(
                                                     modifier = Modifier
                                                         .align(Alignment.TopStart)
                                                         .padding(4.dp)
-                                                        .size(24.dp),
-                                                    shadowElevation = 2.dp
+                                                        .size(20.dp)
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Star,
                                                         contentDescription = "Custom",
                                                         tint = MaterialTheme.colorScheme.onTertiaryContainer,
                                                         modifier = Modifier
-                                                            .padding(4.dp)
+                                                            .padding(3.dp)
                                                             .fillMaxSize()
                                                     )
                                                 }
