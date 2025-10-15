@@ -680,39 +680,48 @@ class HabitViewModel @Inject constructor(
         if (completedDates.isEmpty()) return 0
 
         val today = LocalDate.now()
-        val yesterday = today.minusDays(1)
+        val sortedDates = completedDates.sorted()
+        val mostRecent = sortedDates.last()
         
-        // Check if there's a recent completion (today or yesterday)
-        val hasRecentCompletion = today in completedDates || yesterday in completedDates
+        // Calculate the base streak by counting all completed dates and subtracting gaps
+        // Start from the most recent completion and work backwards
+        var streakValue = 0
+        var currentDate = mostRecent
         
-        if (!hasRecentCompletion) {
-            // No recent completion - apply penalty system
-            // Find the most recent completion
-            val mostRecent = completedDates.max()
-            val daysSinceLastCompletion = ChronoUnit.DAYS.between(mostRecent, today).toInt()
-            
-            // Calculate what the streak would have been
-            var consecutiveStreak = 1
-            var cursor = mostRecent.minusDays(1)
-            while (cursor in completedDates) {
-                consecutiveStreak++
-                cursor = cursor.minusDays(1)
+        // Process each day from most recent completion back to the oldest
+        for (date in sortedDates.reversed()) {
+            if (date == currentDate) {
+                // This date is completed, add 1 to streak
+                streakValue++
+                currentDate = currentDate.minusDays(1)
+            } else {
+                // There's a gap - calculate how many days were missed
+                val gapDays = ChronoUnit.DAYS.between(date, currentDate).toInt()
+                // Apply penalty: -1 for each missed day
+                streakValue -= gapDays
+                // If streak goes negative, reset to 0 and start fresh from this date
+                if (streakValue < 0) {
+                    streakValue = 1 // Start fresh from this completion
+                    currentDate = date.minusDays(1)
+                } else {
+                    // Add this completion after applying gap penalty
+                    streakValue++
+                    currentDate = date.minusDays(1)
+                }
             }
-            
-            // Apply penalty: -1 for each missed day, but don't go below 0
-            val penalty = daysSinceLastCompletion - 1 // -1 because first day after is acceptable
-            return maxOf(0, consecutiveStreak - penalty)
         }
         
-        // Has recent completion - calculate normal streak from most recent date
-        val startDate = if (today in completedDates) today else yesterday
-        var streak = 1
-        var cursor = startDate.minusDays(1)
-        while (cursor in completedDates) {
-            streak++
-            cursor = cursor.minusDays(1)
+        // Now apply penalty for days missed from most recent completion to today
+        val daysSinceLastCompletion = ChronoUnit.DAYS.between(mostRecent, today).toInt()
+        
+        if (daysSinceLastCompletion > 1) {
+            // Apply penalty: -1 for each day missed after the grace period (yesterday)
+            val penalty = daysSinceLastCompletion - 1
+            streakValue -= penalty
         }
-        return streak
+        
+        // Return the final streak value, minimum 0
+        return maxOf(0, streakValue)
     }
 
     private fun calculateLongestStreak(completedDates: Set<LocalDate>): Int {
