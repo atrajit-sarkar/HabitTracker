@@ -29,18 +29,23 @@ adb shell am start -n it.atraj.habittracker/.MainActivity
 
 # Run specific test file
 .\gradlew test --tests "ClassNameTest"
+
+# Generate test report
+.\gradlew test --info
+# Reports are in: app/build/reports/tests/testDebugUnitTest/index.html
 ```
 
 ### Code Quality & Linting
 ```powershell
-# Check for Kotlin code style issues
+# Analyze with Android lint
+.\gradlew lint
+# Lint reports are in: app/build/reports/lint-results.html
+
+# Check for Kotlin code style issues (if ktlint is configured)
 .\gradlew ktlintCheck
 
 # Auto-format Kotlin code (if ktlint is configured)
 .\gradlew ktlintFormat
-
-# Analyze with Android lint
-.\gradlew lint
 ```
 
 ## Architecture Overview
@@ -99,10 +104,11 @@ See `README.md` and `FIREBASE_SETUP.md` for detailed instructions.
 
 ## Key Technical Details
 
-### Package Name
-- **Current**: `it.atraj.habittracker`
-- **Previous**: `com.example.habittracker` (legacy in some files)
-- When creating new files, use the current package name
+### Package Names
+- **Current**: `it.atraj.habittracker` (used in build.gradle.kts)
+- **Legacy**: `com.example.habittracker` (still used in actual source files)
+- **IMPORTANT**: All source code files currently use `com.example.habittracker` package
+- When creating new files, match the existing package structure in surrounding files
 
 ### Build Configuration
 - **Min SDK**: 29 (Android 10)
@@ -112,9 +118,13 @@ See `README.md` and `FIREBASE_SETUP.md` for detailed instructions.
 - **JVM Target**: 17
 
 ### Security Configuration
-- `keystore.properties` stores signing keys and GitHub tokens (not committed)
-- Encrypted SharedPreferences for sensitive data (`SecureTokenStorage`)
+- `keystore.properties` stores signing keys and tokens (never committed, see `keystore.properties.template`)
+  - GitHub token for avatar uploads
+  - Gmail SMTP credentials for email notifications
+  - Release signing credentials
+- Encrypted SharedPreferences for runtime token storage (`SecureEmailStorage`)
 - Firestore security rules enforce user data isolation
+- `google-services.json` excluded from repository
 
 ### Notification System Architecture
 The app uses a multi-layered notification reliability system:
@@ -146,21 +156,44 @@ The app uses a multi-layered notification reliability system:
 - Centralized navigation graph in `NavGraph.kt`
 - Deep linking support for notifications (habit details, chat screens)
 
+### Firebase Cloud Functions
+The project includes Cloud Functions for chat notifications:
+```powershell
+# Deploy functions (requires Firebase CLI)
+cd functions
+npm run deploy
+
+# Test locally
+npm run serve
+
+# View logs
+npm run logs
+```
+
 ## Common Development Tasks
 
 ### Adding a New Feature
 1. Create domain models in `data/local/`
 2. Add repository interface in `data/`
 3. Implement Firestore repository in `data/firestore/`
-4. Create ViewModel in appropriate UI package
+4. Create ViewModel (with `@HiltViewModel` annotation) in appropriate UI package
 5. Build Compose UI screens
-6. Update navigation graph
-7. Add to dependency injection modules
+6. Update navigation graph in `ui/navigation/`
+7. Add to dependency injection modules in `di/`
+8. Update Firestore security rules if needed
 
 ### Working with Firebase
+- Firebase instances are provided via Hilt DI in `AppModule`
+- Firestore has offline persistence enabled (100MB cache)
 - Use `@Inject` to get Firebase instances in repositories
-- Always handle offline scenarios with Firestore persistence
 - User authentication state is managed globally in `AuthRepository`
+- Always handle offline scenarios - Firestore handles sync automatically
+- User data structure:
+  - `users/{userId}` - Profile data (customAvatar, customDisplayName)
+  - `users/{userId}/habits/{habitId}` - Habit documents
+  - `users/{userId}/completions/{completionId}` - Completion records
+  - `userProfiles/{userId}` - Social features (friends, stats)
+  - `chatChannels/{channelId}` - Chat rooms and messages
 
 ### Notification Development
 - Test on physical device (emulator notifications are unreliable)
@@ -171,9 +204,11 @@ The app uses a multi-layered notification reliability system:
 ## Troubleshooting
 
 ### Build Issues
-- Ensure `google-services.json` is in `app/` directory
-- Check package name matches Firebase configuration
+- Ensure `google-services.json` is in `app/` directory (download from Firebase Console)
+- Check package name in Firebase matches `it.atraj.habittracker`
+- Verify `keystore.properties` exists (copy from `keystore.properties.template`)
 - Clean and rebuild: `.\gradlew clean assembleDebug`
+- If Hilt errors occur: `.\gradlew clean` and rebuild
 
 ### Google Sign-In Issues
 - Verify SHA-1 fingerprint is added to Firebase
@@ -210,9 +245,18 @@ The app uses a multi-layered notification reliability system:
 - Full logging enabled
 
 ### Release Build
-- ProGuard/R8 enabled for code shrinking
+```powershell
+# Build signed release APK
+.\gradlew assembleRelease
+# Output: app/build/outputs/apk/release/app-release.apk
+
+# Build signed release AAB (for Play Store)
+.\gradlew bundleRelease
+# Output: app/build/outputs/bundle/release/app-release.aab
+```
+- ProGuard/R8 enabled for code shrinking and obfuscation
 - Resource shrinking enabled
-- Requires `keystore.properties` for signing
-- GitHub token loaded from secure storage
+- Requires `keystore.properties` with signing credentials
+- GitHub token and email credentials loaded from `keystore.properties`
 
 The codebase follows modern Android development best practices with clean architecture principles and comprehensive error handling.

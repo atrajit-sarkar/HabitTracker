@@ -6,10 +6,13 @@ import androidx.lifecycle.viewModelScope
 import it.atraj.habittracker.auth.AuthRepository
 import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.data.StreakCalculator
+import it.atraj.habittracker.data.firestore.UserRewardsRepository
 import it.atraj.habittracker.data.local.Habit
 import it.atraj.habittracker.data.local.HabitAvatar
 import it.atraj.habittracker.data.local.HabitFrequency
 import it.atraj.habittracker.data.local.NotificationSound
+import it.atraj.habittracker.data.local.UserRewards
 import it.atraj.habittracker.notification.HabitReminderScheduler
 import it.atraj.habittracker.notification.HabitReminderService
 import it.atraj.habittracker.ui.social.ProfileStatsUpdater
@@ -35,7 +38,8 @@ class HabitViewModel @Inject constructor(
     private val habitRepository: HabitRepository,
     private val reminderScheduler: HabitReminderScheduler,
     private val authRepository: AuthRepository,
-    private val profileStatsUpdater: ProfileStatsUpdater
+    private val profileStatsUpdater: ProfileStatsUpdater,
+    private val userRewardsRepository: UserRewardsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HabitScreenState(isLoading = true))
@@ -46,12 +50,27 @@ class HabitViewModel @Inject constructor(
     
     // Track current user for stats updates
     private var currentUser: User? = null
+    
+    // User rewards state
+    private val _userRewards = MutableStateFlow(UserRewards())
+    val userRewards: StateFlow<UserRewards> = _userRewards.asStateFlow()
 
     init {
         // Observe current user for stats updates
         viewModelScope.launch {
             authRepository.currentUser.collectLatest { user ->
                 currentUser = user
+                // Initialize user rewards when user signs in
+                if (user != null) {
+                    userRewardsRepository.initializeUserRewards()
+                }
+            }
+        }
+        
+        // Observe user rewards
+        viewModelScope.launch {
+            userRewardsRepository.observeUserRewards().collectLatest { rewards ->
+                _userRewards.value = rewards
             }
         }
         
@@ -87,8 +106,9 @@ class HabitViewModel @Inject constructor(
             }
         }
         
-        // Track current date to detect day changes
+        // Track current date to detect day changes and recalculate streaks
         var lastKnownDate = LocalDate.now()
+        var isFirstLoad = true
         
         viewModelScope.launch {
             habitRepository.observeHabits().collectLatest { habits ->
@@ -104,9 +124,20 @@ class HabitViewModel @Inject constructor(
                     )
                 }
                 
-                // If date changed, log it for debugging
-                if (dateChanged) {
-                    android.util.Log.d("HabitViewModel", "Date changed detected, refreshing habit completion states")
+                // Recalculate streaks on app open or date change
+                if (isFirstLoad || dateChanged) {
+                    if (dateChanged) {
+                        android.util.Log.d("HabitViewModel", "Date changed detected, recalculating all streaks")
+                    } else {
+                        android.util.Log.d("HabitViewModel", "App opened, recalculating all streaks")
+                    }
+                    
+                    // Recalculate streaks for all non-deleted habits
+                    viewModelScope.launch(Dispatchers.IO) {
+                        recalculateAllStreaks()
+                    }
+                    
+                    isFirstLoad = false
                 }
                 
                 // Sync notification channels after habits are loaded
@@ -407,7 +438,11 @@ class HabitViewModel @Inject constructor(
 
     fun markHabitCompleted(habitId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Mark as completed
             habitRepository.markCompletedToday(habitId)
+            
+            // Calculate and update streak
+            updateHabitStreak(habitId)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {
@@ -447,6 +482,147 @@ class HabitViewModel @Inject constructor(
         profileStatsUpdater.updateUserStats(user)
         
         android.util.Log.d("HabitViewModel", "updateUserStatsAsync: Stats update complete")
+    }
+    
+    /**
+     * Recalculate streaks for all habits
+     * Called on app open and daily at midnight
+     */
+    private suspend fun recalculateAllStreaks() {
+        try {
+            val habits = habitRepository.getAllHabits()
+            val nonDeletedHabits = habits.filter { !it.isDeleted }
+            
+            android.util.Log.d("HabitViewModel", "Recalculating streaks for ${nonDeletedHabits.size} habits")
+            
+            var totalDiamondsEarned = 0
+            var totalFreezeDaysUsed = 0
+            
+            nonDeletedHabits.forEach { habit ->
+                try {
+                    val completions = habitRepository.getHabitCompletions(habit.id)
+                    val currentDate = LocalDate.now()
+                    val availableFreezeDays = _userRewards.value.freezeDays
+                    
+                    // Calculate streak
+                    val result = StreakCalculator.calculateStreak(
+                        habit = habit,
+                        completions = completions,
+                        currentDate = currentDate,
+                        availableFreezeDays = availableFreezeDays
+                    )
+                    
+                    // Track diamonds and freeze usage
+                    totalDiamondsEarned += result.diamondsEarned
+                    totalFreezeDaysUsed += result.freezeDaysUsed
+                    
+                    // Update habit only if streak changed
+                    if (result.newStreak != habit.streak || 
+                        result.diamondsEarned > 0 || 
+                        result.freezeDaysUsed > 0) {
+                        
+                        val newHighest = maxOf(habit.highestStreakAchieved, result.newStreak)
+                        val updatedHabit = habit.copy(
+                            streak = result.newStreak,
+                            highestStreakAchieved = newHighest,
+                            lastStreakUpdate = currentDate
+                        )
+                        
+                        habitRepository.updateHabit(updatedHabit)
+                        android.util.Log.d("HabitViewModel", 
+                            "Updated ${habit.title}: streak=${result.newStreak}, " +
+                            "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("HabitViewModel", 
+                        "Error recalculating streak for ${habit.title}", e)
+                }
+            }
+            
+            // Apply freeze days usage (batch)
+            if (totalFreezeDaysUsed > 0) {
+                repeat(totalFreezeDaysUsed) {
+                    userRewardsRepository.useFreezeDayIfAvailable()
+                }
+                android.util.Log.d("HabitViewModel", "Used $totalFreezeDaysUsed freeze days total")
+            }
+            
+            // Award diamonds (batch)
+            if (totalDiamondsEarned > 0) {
+                userRewardsRepository.addDiamonds(totalDiamondsEarned)
+                android.util.Log.d("HabitViewModel", "Awarded $totalDiamondsEarned diamonds total")
+            }
+            
+            android.util.Log.d("HabitViewModel", "Streak recalculation complete")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error in recalculateAllStreaks", e)
+        }
+    }
+    
+    /**
+     * Calculate and update streak for a habit
+     */
+    private suspend fun updateHabitStreak(habitId: Long) {
+        try {
+            val habit = habitRepository.getHabitById(habitId)
+            val completions = habitRepository.getHabitCompletions(habitId)
+            val currentDate = LocalDate.now()
+            val availableFreezeDays = _userRewards.value.freezeDays
+            
+            android.util.Log.d("HabitViewModel", "Calculating streak for ${habit.title}")
+            
+            // Calculate streak
+            val result = StreakCalculator.calculateStreak(
+                habit = habit,
+                completions = completions,
+                currentDate = currentDate,
+                availableFreezeDays = availableFreezeDays
+            )
+            
+            android.util.Log.d("HabitViewModel", 
+                "Streak result: newStreak=${result.newStreak}, diamonds=${result.diamondsEarned}, " +
+                "freezeUsed=${result.freezeDaysUsed}, grace=${result.graceUsed}")
+            
+            // Use freeze days if needed
+            if (result.freezeDaysUsed > 0) {
+                repeat(result.freezeDaysUsed) {
+                    userRewardsRepository.useFreezeDayIfAvailable()
+                }
+            }
+            
+            // Award diamonds for milestones
+            if (result.diamondsEarned > 0) {
+                userRewardsRepository.addDiamonds(result.diamondsEarned)
+                android.util.Log.d("HabitViewModel", "Awarded ${result.diamondsEarned} diamonds!")
+            }
+            
+            // Update habit with new streak
+            val newHighest = maxOf(habit.highestStreakAchieved, result.newStreak)
+            val updatedHabit = habit.copy(
+                streak = result.newStreak,
+                highestStreakAchieved = newHighest,
+                lastStreakUpdate = currentDate
+            )
+            
+            habitRepository.updateHabit(updatedHabit)
+            android.util.Log.d("HabitViewModel", "Updated habit streak to ${result.newStreak}")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error updating habit streak", e)
+        }
+    }
+    
+    /**
+     * Purchase freeze days with diamonds
+     */
+    suspend fun purchaseFreezeDays(days: Int, cost: Int): Boolean {
+        return try {
+            userRewardsRepository.purchaseFreezeDays(days, cost)
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error purchasing freeze days", e)
+            false
+        }
     }
 
     fun deleteHabit(habitId: Long) {
@@ -648,11 +824,11 @@ class HabitViewModel @Inject constructor(
             val completions = habitRepository.getHabitCompletions(habitId)
             val completedDates = completions.map { it.completedDate }.toSet()
             
-            // Calculate current streak
-            val currentStreak = calculateCurrentStreak(completedDates)
+            // Use habit.streak (calculated by StreakCalculator with grace/freeze)
+            val currentStreak = habit.streak
             
             // Calculate longest streak
-            val longestStreak = calculateLongestStreak(completedDates)
+            val longestStreak = maxOf(habit.highestStreakAchieved, currentStreak)
             
             // Calculate total completions
             val totalCompletions = completions.size
@@ -676,75 +852,8 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    private fun calculateCurrentStreak(completedDates: Set<LocalDate>): Int {
-        if (completedDates.isEmpty()) return 0
-
-        val today = LocalDate.now()
-        val sortedDates = completedDates.sorted()
-        val mostRecent = sortedDates.last()
-        
-        // Calculate the base streak by counting all completed dates and subtracting gaps
-        // Start from the most recent completion and work backwards
-        var streakValue = 0
-        var currentDate = mostRecent
-        
-        // Process each day from most recent completion back to the oldest
-        for (date in sortedDates.reversed()) {
-            if (date == currentDate) {
-                // This date is completed, add 1 to streak
-                streakValue++
-                currentDate = currentDate.minusDays(1)
-            } else {
-                // There's a gap - calculate how many days were missed
-                val gapDays = ChronoUnit.DAYS.between(date, currentDate).toInt()
-                // Apply penalty: -1 for each missed day
-                streakValue -= gapDays
-                // If streak goes negative, reset to 0 and start fresh from this date
-                if (streakValue < 0) {
-                    streakValue = 1 // Start fresh from this completion
-                    currentDate = date.minusDays(1)
-                } else {
-                    // Add this completion after applying gap penalty
-                    streakValue++
-                    currentDate = date.minusDays(1)
-                }
-            }
-        }
-        
-        // Now apply penalty for days missed from most recent completion to today
-        val daysSinceLastCompletion = ChronoUnit.DAYS.between(mostRecent, today).toInt()
-        
-        if (daysSinceLastCompletion > 1) {
-            // Apply penalty: -1 for each day missed after the grace period (yesterday)
-            val penalty = daysSinceLastCompletion - 1
-            streakValue -= penalty
-        }
-        
-        // Return the final streak value, minimum 0
-        return maxOf(0, streakValue)
-    }
-
-    private fun calculateLongestStreak(completedDates: Set<LocalDate>): Int {
-        if (completedDates.isEmpty()) return 0
-        
-        val sortedDates = completedDates.sorted()
-        var longestStreak = 1
-        var currentStreak = 1
-        
-        for (i in 1 until sortedDates.size) {
-            val currentDate = sortedDates[i]
-            val previousDate = sortedDates[i - 1]
-            
-            if (ChronoUnit.DAYS.between(previousDate, currentDate) == 1L) {
-                currentStreak++
-                longestStreak = maxOf(longestStreak, currentStreak)
-            } else {
-                currentStreak = 1
-            }
-        }
-        
-        return longestStreak
-    }
+    // OLD STREAK CALCULATION FUNCTIONS REMOVED
+    // Now using habit.streak from StreakCalculator throughout the app
 
     suspend fun getHabitById(habitId: Long): Habit {
         return withContext(Dispatchers.IO) {

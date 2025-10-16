@@ -21,7 +21,11 @@ data class Habit(
     val lastCompletedDate: LocalDate? = null,
     val createdAt: Instant = Instant.now(),
     val isDeleted: Boolean = false,
-    val deletedAt: Instant? = null
+    val deletedAt: Instant? = null,
+    // Streak and rewards fields
+    val streak: Int = 0,
+    val highestStreakAchieved: Int = 0,
+    val lastStreakUpdate: LocalDate? = null // Track when streak was last calculated
 ) {
     // Helper function to get NotificationSound object
     fun getNotificationSound(): NotificationSound {

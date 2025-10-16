@@ -24,10 +24,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
+import it.atraj.habittracker.data.local.HabitAvatar
+import it.atraj.habittracker.data.local.HabitAvatarType
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.atraj.habittracker.ui.HabitViewModel
@@ -689,9 +697,9 @@ fun HabitComparisonChart(comparisons: List<HabitComparison>) {
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(
-                                text = comparison.habitEmoji,
-                                fontSize = 20.sp
+                            HabitAvatarDisplay(
+                                avatar = comparison.habitAvatar,
+                                size = 32.dp
                             )
                             Text(
                                 text = comparison.habitName,
@@ -966,9 +974,9 @@ fun TopHabitItem(rank: Int, habit: HabitComparison) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = habit.habitEmoji,
-                fontSize = 24.sp
+            HabitAvatarDisplay(
+                avatar = habit.habitAvatar,
+                size = 40.dp
             )
             Column {
                 Text(
@@ -1066,5 +1074,63 @@ fun getPerformanceMessage(score: Int): String {
         score >= 60 -> "Good effort! Room to improve! 📈"
         score >= 50 -> "Decent start! Keep pushing! 💫"
         else -> "Let's build momentum together! 🚀"
+    }
+}
+
+@Composable
+fun HabitAvatarDisplay(
+    avatar: HabitAvatar,
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .background(
+                color = Color(avatar.backgroundColor.toColorInt()),
+                shape = CircleShape
+            )
+    ) {
+        when (avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                Text(
+                    text = avatar.value,
+                    fontSize = (size.value * 0.6).sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+            HabitAvatarType.DEFAULT_ICON -> {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(size * 0.6f)
+                )
+            }
+            HabitAvatarType.CUSTOM_IMAGE -> {
+                // Load custom image from URL using Coil
+                val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                val requestBuilder = ImageRequest.Builder(context)
+                    .data(avatar.value)
+                    .crossfade(true)
+                    .size(Size.ORIGINAL)
+                
+                if (token != null && avatar.value.contains("githubusercontent.com")) {
+                    requestBuilder.addHeader("Authorization", "token $token")
+                }
+                
+                AsyncImage(
+                    model = requestBuilder.build(),
+                    contentDescription = "Custom habit avatar",
+                    modifier = Modifier
+                        .size(size)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
     }
 }
