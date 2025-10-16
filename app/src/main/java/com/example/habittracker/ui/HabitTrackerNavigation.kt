@@ -200,6 +200,7 @@ fun HabitTrackerNavigation(
         composable("home") {
             val viewModel: HabitViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val userRewards by viewModel.userRewards.collectAsStateWithLifecycle()
             
             // Get AuthViewModel for user data
             val authViewModel: AuthViewModel = hiltViewModel()
@@ -240,9 +241,11 @@ fun HabitTrackerNavigation(
                 safeNavigate("notification_setup_guide")
             }
             
+            
             HabitHomeRoute(
                 state = state,
                 user = authState.user,
+                userRewards = userRewards,
                 onAddHabitClick = onAddHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
@@ -262,7 +265,8 @@ fun HabitTrackerNavigation(
                 onToggleHabitSelection = viewModel::toggleHabitSelection,
                 onStartSelectionMode = viewModel::startSelectionMode,
                 onExitSelectionMode = viewModel::exitSelectionMode,
-                onDeleteSelectedHabits = viewModel::deleteSelectedHabits
+                onDeleteSelectedHabits = viewModel::deleteSelectedHabits,
+                onFreezeStoreClick = { safeNavigate("freeze_store") }
             )
         }
         
@@ -609,6 +613,28 @@ fun HabitTrackerNavigation(
             )
         }
 
+        // Freeze Store Screen
+        composable("freeze_store") {
+            val viewModel: HabitViewModel = hiltViewModel()
+            val userRewards by viewModel.userRewards.collectAsStateWithLifecycle()
+            val coroutineScope = rememberCoroutineScope()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            FreezeStoreScreen(
+                currentDiamonds = userRewards.diamonds,
+                currentFreezeDays = userRewards.freezeDays,
+                onBackClick = onBackClick,
+                onPurchase = { days: Int, cost: Int ->
+                    coroutineScope.launch {
+                        viewModel.purchaseFreezeDays(days, cost)
+                    }
+                }
+            )
+        }
+
         // Individual Chat Screen
         composable("chat/{friendId}/{friendName}/{friendAvatar}/{friendPhotoUrl}") { backStackEntry ->
             val friendId = backStackEntry.arguments?.getString("friendId") ?: ""
@@ -648,6 +674,9 @@ fun HabitDetailsRoute(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    
+    // Observe user rewards
+    val userRewards by viewModel.userRewards.collectAsState()
 
     // Function to refresh progress data
     suspend fun refreshProgress() {
@@ -759,6 +788,7 @@ fun HabitDetailsRoute(
                 progress = currentProgress,
                 selectedDate = selectedDate,
                 isSelectedDateCompleted = isSelectedDateCompleted,
+                userRewards = userRewards,
                 onBackClick = onBackClick,
                 onSelectDate = { date ->
                     selectedDate = date

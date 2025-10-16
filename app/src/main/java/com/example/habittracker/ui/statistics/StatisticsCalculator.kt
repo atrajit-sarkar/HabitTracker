@@ -36,7 +36,8 @@ data class HabitStatistics(
 data class HabitComparison(
     val habitId: Long,
     val habitName: String,
-    val habitEmoji: String,
+    val habitEmoji: String,  // Kept for backward compatibility
+    val habitAvatar: it.atraj.habittracker.data.local.HabitAvatar,  // Full avatar object
     val completionCount: Int,
     val currentStreak: Int,
     val completionRate: Int
@@ -169,6 +170,7 @@ suspend fun calculateStatistics(
             habitId = habit.id,
             habitName = habit.title,
             habitEmoji = habit.avatar.value,
+            habitAvatar = habit.avatar,  // Include full avatar object
             completionCount = progress.completedDates.size,
             currentStreak = progress.currentStreak,
             completionRate = if (daysSinceStart > 0) {

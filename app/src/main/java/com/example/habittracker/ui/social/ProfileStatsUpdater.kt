@@ -123,8 +123,13 @@ class ProfileStatsUpdater @Inject constructor(
             0
         }
         
-        // Calculate current streak (longest consecutive days) using cached data
-        val currentStreak = calculateCurrentStreak(activeHabits, today, completionCache)
+        // Calculate current streak - average of all habit streaks (floor)
+        // (Each habit's streak is calculated by StreakCalculator with grace/freeze)
+        val currentStreak = if (activeHabits.isNotEmpty()) {
+            kotlin.math.floor(activeHabits.map { it.streak }.average()).toInt()
+        } else {
+            0
+        }
         
         // Calculate this week's completions (Monday to Sunday) using cached data
         val completedThisWeek = calculateWeekCompletions(activeHabits, today, completionCache)
@@ -149,83 +154,7 @@ class ProfileStatsUpdater @Inject constructor(
         )
     }
 
-    private suspend fun calculateCurrentStreak(
-        habits: List<Habit>, 
-        today: LocalDate,
-        completionCache: Map<Long, List<it.atraj.habittracker.data.local.HabitCompletion>>
-    ): Int {
-        if (habits.isEmpty()) return 0
-        
-        Log.d(TAG, "calculateCurrentStreak: Calculating streak for ${habits.size} habits")
-        
-        // Find the longest current streak among all habits
-        var maxStreak = 0
-        
-        habits.forEach { habit ->
-            val streak = calculateHabitStreak(habit, today, completionCache[habit.id] ?: emptyList())
-            Log.d(TAG, "calculateCurrentStreak: Habit '${habit.title}' has streak: $streak")
-            if (streak > maxStreak) {
-                maxStreak = streak
-            }
-        }
-        
-        Log.d(TAG, "calculateCurrentStreak: Max streak across all habits: $maxStreak")
-        return maxStreak
-    }
-
-    private suspend fun calculateHabitStreak(
-        habit: Habit, 
-        today: LocalDate,
-        completions: List<it.atraj.habittracker.data.local.HabitCompletion>
-    ): Int {
-        Log.d(TAG, "calculateHabitStreak: Habit '${habit.title}' has ${completions.size} total completions")
-        
-        if (completions.isEmpty()) return 0
-        
-        val completedDates = completions.map { it.completedDate }.toSet()
-        val sortedDates = completedDates.sorted()
-        val mostRecent = sortedDates.last()
-        
-        // Calculate the base streak by counting all completed dates and subtracting gaps
-        // Start from the most recent completion and work backwards
-        var streakValue = 0
-        var currentDate = mostRecent
-        
-        // Process each day from most recent completion back to the oldest
-        for (date in sortedDates.reversed()) {
-            if (date == currentDate) {
-                // This date is completed, add 1 to streak
-                streakValue++
-                currentDate = currentDate.minusDays(1)
-            } else {
-                // There's a gap - calculate how many days were missed
-                val gapDays = java.time.temporal.ChronoUnit.DAYS.between(date, currentDate).toInt()
-                // Apply penalty: -1 for each missed day
-                streakValue -= gapDays
-                // If streak goes negative, reset to 0 and start fresh from this date
-                if (streakValue < 0) {
-                    streakValue = 1 // Start fresh from this completion
-                    currentDate = date.minusDays(1)
-                } else {
-                    // Add this completion after applying gap penalty
-                    streakValue++
-                    currentDate = date.minusDays(1)
-                }
-            }
-        }
-        
-        // Now apply penalty for days missed from most recent completion to today
-        val daysSinceLastCompletion = java.time.temporal.ChronoUnit.DAYS.between(mostRecent, today).toInt()
-        
-        if (daysSinceLastCompletion > 1) {
-            // Apply penalty: -1 for each day missed after the grace period (yesterday)
-            val penalty = daysSinceLastCompletion - 1
-            streakValue -= penalty
-        }
-        
-        // Return the final streak value, minimum 0
-        return maxOf(0, streakValue)
-    }
+    // OLD FUNCTIONS REMOVED - Now using habit.streak from StreakCalculator
 
     private suspend fun calculateWeekCompletions(
         habits: List<Habit>, 

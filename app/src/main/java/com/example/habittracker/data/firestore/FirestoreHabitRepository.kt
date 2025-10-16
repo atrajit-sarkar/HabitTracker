@@ -363,7 +363,10 @@ private fun Habit.toFirestoreHabit(docId: String, numericId: Long? = null): Fire
         lastCompletedDate = lastCompletedDate?.toEpochDay(),
         createdAt = createdAt.toEpochMilli(),
         isDeleted = isDeleted,
-        deletedAt = deletedAt?.toEpochMilli()
+        deletedAt = deletedAt?.toEpochMilli(),
+        streak = streak,
+        highestStreakAchieved = highestStreakAchieved,
+        lastStreakUpdate = lastStreakUpdate?.toEpochDay()
     )
 }
 
@@ -396,7 +399,10 @@ private fun FirestoreHabit.toHabit(): Habit {
         lastCompletedDate = convertedLastCompletedDate,
         createdAt = Instant.ofEpochMilli(createdAt),
         isDeleted = isDeleted,
-        deletedAt = deletedAt?.let { Instant.ofEpochMilli(it) }
+        deletedAt = deletedAt?.let { Instant.ofEpochMilli(it) },
+        streak = streak,
+        highestStreakAchieved = highestStreakAchieved,
+        lastStreakUpdate = lastStreakUpdate?.let { LocalDate.ofEpochDay(it) }
     )
 }
 

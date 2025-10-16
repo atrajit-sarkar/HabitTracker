@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -45,6 +46,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
@@ -52,6 +54,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
@@ -144,6 +147,7 @@ import java.time.format.FormatStyle
 fun HabitHomeRoute(
     state: HabitScreenState,
     user: User?,
+    userRewards: it.atraj.habittracker.data.local.UserRewards,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
@@ -156,7 +160,8 @@ fun HabitHomeRoute(
     onToggleHabitSelection: (Long) -> Unit = {},
     onStartSelectionMode: (Long) -> Unit = {},
     onExitSelectionMode: () -> Unit = {},
-    onDeleteSelectedHabits: () -> Unit = {}
+    onDeleteSelectedHabits: () -> Unit = {},
+    onFreezeStoreClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -218,6 +223,7 @@ fun HabitHomeRoute(
     HabitHomeScreen(
         state = state,
         user = user,
+        userRewards = userRewards,
         snackbarHostState = snackbarHostState,
         onAddHabitClick = onAddHabitClick,
         onToggleReminder = onToggleReminder,
@@ -237,7 +243,8 @@ fun HabitHomeRoute(
         onToggleHabitSelection = onToggleHabitSelection,
         onStartSelectionMode = onStartSelectionMode,
         onExitSelectionMode = onExitSelectionMode,
-        onDeleteSelectedHabits = onDeleteSelectedHabits
+        onDeleteSelectedHabits = onDeleteSelectedHabits,
+        onFreezeStoreClick = onFreezeStoreClick
     )
 }
 
@@ -246,6 +253,7 @@ fun HabitHomeRoute(
 fun HabitHomeScreen(
     state: HabitScreenState,
     user: User?,
+    userRewards: it.atraj.habittracker.data.local.UserRewards,
     snackbarHostState: SnackbarHostState,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
@@ -261,7 +269,8 @@ fun HabitHomeScreen(
     onToggleHabitSelection: (Long) -> Unit = {},
     onStartSelectionMode: (Long) -> Unit = {},
     onExitSelectionMode: () -> Unit = {},
-    onDeleteSelectedHabits: () -> Unit = {}
+    onDeleteSelectedHabits: () -> Unit = {},
+    onFreezeStoreClick: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -274,36 +283,6 @@ fun HabitHomeScreen(
     }
     
     val context = LocalContext.current
-    
-    // PRELOAD all avatar images in background for smooth scrolling
-    LaunchedEffect(state.habits.size) {
-        if (state.habits.isNotEmpty()) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                state.habits.forEach { habit ->
-                    if (habit.avatar.type == HabitAvatarType.CUSTOM_IMAGE && habit.avatar.value.startsWith("http")) {
-                        try {
-                            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
-                            val imageLoader = coil.Coil.imageLoader(context)
-                            val request = coil.request.ImageRequest.Builder(context)
-                                .data(habit.avatar.value)
-                                .size(100)
-                                .memoryCacheKey("avatar_${habit.avatar.value.hashCode()}")
-                                .diskCacheKey("avatar_${habit.avatar.value.hashCode()}")
-                                .apply {
-                                    if (token != null && habit.avatar.value.contains("githubusercontent.com")) {
-                                        addHeader("Authorization", "token $token")
-                                    }
-                                }
-                                .build()
-                            imageLoader.execute(request)
-                        } catch (e: Exception) {
-                            // Silently fail
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // Close drawer when returning to home screen
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -422,6 +401,61 @@ fun HabitHomeScreen(
                     }
                 },
                 actions = {
+                    // Diamond Counter
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                Color(0xFFFFD700).copy(alpha = 0.15f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Diamond,
+                            contentDescription = "Diamonds",
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = userRewards.diamonds.toString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Freeze Days Counter
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                Color(0xFF87CEEB).copy(alpha = 0.15f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickableOnce { onFreezeStoreClick() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AcUnit,
+                            contentDescription = "Freeze Days",
+                            tint = Color(0xFF87CEEB),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = userRewards.freezeDays.toString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
                     // Profile Picture that navigates to profile screen
                     Box(
                         modifier = Modifier
@@ -517,13 +551,26 @@ fun HabitHomeScreen(
             }
         }
     ) { padding ->
+        val surfaceColor = MaterialTheme.colorScheme.surface
+        val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+        val gradientBrush = remember(surfaceColor, surfaceVariantColor) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    surfaceColor,
+                    surfaceVariantColor.copy(alpha = 0.6f)
+                )
+            )
+        }
+        
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradientBackground())
+                .background(gradientBrush)
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            // Performance optimizations
+            userScrollEnabled = true
         ) {
             item {
                 AnimatedVisibility(visible = notificationPermissionVisible, enter = fadeIn(), exit = fadeOut()) {
@@ -540,24 +587,31 @@ fun HabitHomeScreen(
                 }
             }
 
-            items(state.habits, key = { it.id }) { habit ->
-                HabitCard(
-                    habit = habit,
-                    isSelectionMode = state.isSelectionMode,
-                    onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
-                    onMarkCompleted = { onMarkHabitCompleted(habit.id) },
-                    onDelete = {
-                        habitCountBeforeDelete.value = state.habits.size
-                        onDeleteHabit(habit.id)
-                    },
-                    onSeeDetails = { onHabitDetailsClick(habit.id) },
-                    onLongPress = { onStartSelectionMode(habit.id) },
-                    onClick = {
-                        if (state.isSelectionMode) {
-                            onToggleHabitSelection(habit.id)
+            items(
+                items = state.habits,
+                key = { it.id },
+                contentType = { "habit_card" }
+            ) { habit ->
+                // Use key to prevent unnecessary recompositions
+                androidx.compose.runtime.key(habit.id) {
+                    HabitCard(
+                        habit = habit,
+                        isSelectionMode = state.isSelectionMode,
+                        onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
+                        onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                        onDelete = {
+                            habitCountBeforeDelete.value = state.habits.size
+                            onDeleteHabit(habit.id)
+                        },
+                        onSeeDetails = { onHabitDetailsClick(habit.id) },
+                        onLongPress = { onStartSelectionMode(habit.id) },
+                        onClick = {
+                            if (state.isSelectionMode) {
+                                onToggleHabitSelection(habit.id)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
 
             item {
@@ -851,13 +905,6 @@ private fun DrawerContent(
     }
 }
 
-@Composable
-private fun gradientBackground(): Brush = Brush.verticalGradient(
-    colors = listOf(
-        MaterialTheme.colorScheme.surface,
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    )
-)
 
 @Composable
 private fun HabitCard(
@@ -871,6 +918,16 @@ private fun HabitCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Memoize expensive calculations
+    val palette = remember(habit.id) { cardPaletteFor(habit.id) }
+    val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
+    val reminderText = remember(habit.isReminderEnabled, habit.reminderTime) {
+        if (habit.isReminderEnabled) {
+            "Reminder: ${timeFormatter.format(habit.reminderTime)}"
+        } else {
+            "Reminder off"
+        }
+    }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showTitleDialog by remember { mutableStateOf(false) }
     var showDescriptionDialog by remember { mutableStateOf(false) }
@@ -882,14 +939,6 @@ private fun HabitCard(
     
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
-    
-    val palette = remember(habit.id) { cardPaletteFor(habit.id) }
-    val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
-    val reminderText = if (habit.isReminderEnabled) {
-        stringResource(id = R.string.reminder_on, timeFormatter.format(habit.reminderTime))
-    } else {
-        stringResource(id = R.string.reminder_off)
-    }
 
     Card(
         modifier = modifier
@@ -909,25 +958,26 @@ private fun HabitCard(
                 },
                 onLongClickLabel = "Select habit" // Accessibility label
             ),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Reduce overdraw
     ) {
         Box(
             modifier = Modifier
                 .background(
-                    palette.brush, 
-                    shape = RoundedCornerShape(28.dp)
+                    palette.brush, // Restore gradient
+                    shape = RoundedCornerShape(16.dp)
                 )
                 .then(
                     if (habit.isSelected) {
                         Modifier.border(
                             width = 3.dp,
                             color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(28.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
                     } else Modifier
                 )
-                .padding(24.dp)
+                .padding(12.dp)
         ) {
             // Selection checkbox overlay
             if (isSelectionMode) {
@@ -962,16 +1012,18 @@ private fun HabitCard(
                 }
             }
             
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Avatar display
+                    // Avatar display - memoized to prevent recomposition
+                    androidx.compose.runtime.key(habit.avatar) {
                     AvatarDisplay(
                         avatar = habit.avatar,
-                        size = 48.dp
+                        size = 36.dp
                     )
+                    }
                     
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
@@ -980,9 +1032,9 @@ private fun HabitCard(
                         ) {
                             Text(
                                 text = habit.title,
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 onTextLayout = { textLayoutResult ->
                                     isTitleTruncated = textLayoutResult.hasVisualOverflow
@@ -1004,16 +1056,16 @@ private fun HabitCard(
                             }
                         }
                         if (habit.description.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Row(
                                 verticalAlignment = Alignment.Top,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
                                     text = habit.description,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.82f),
-                                    maxLines = 2,
+                                    maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     onTextLayout = { textLayoutResult ->
                                         isDescriptionTruncated = textLayoutResult.hasVisualOverflow
@@ -1046,77 +1098,67 @@ private fun HabitCard(
                         imageVector = Icons.Default.Alarm,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = reminderText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = habit.isReminderEnabled,
-                        onCheckedChange = onToggleReminder,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = Color.White.copy(alpha = 0.4f),
-                            checkedThumbColor = Color.White,
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f),
-                            uncheckedThumbColor = Color.White
-                        )
-                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    androidx.compose.material3.Surface(
+                        modifier = Modifier
+                            .height(20.dp)
+                            .width(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (habit.isReminderEnabled) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable { onToggleReminder(!habit.isReminderEnabled) },
+                            contentAlignment = if (habit.isReminderEnabled) Alignment.CenterEnd else Alignment.CenterStart
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .size(16.dp)
+                                    .background(Color.White, CircleShape)
+                            )
+                        }
+                    }
                 }
 
                 if (habit.isCompletedToday) {
-                    // OPTIMIZED: Only load Lottie once per habit, use static progress
-                    val composition by rememberLottieComposition(
-                        LottieCompositionSpec.Asset("man_with_task_list.json")
-                    )
-                    
-                    // Calculate target frame: 132 out of 241 total frames - STATIC for performance
-                    val targetProgress = remember { 132f / 241f }
-                    
+                    // Compact completed indicator
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Completed chip
-                        AssistChip(
-                            onClick = { /* No action needed or perhaps show details */ },
-                            label = {
-                                Text(
-                                    text = stringResource(id = R.string.habit_completed_today),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White
-                                )
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = Color.White.copy(alpha = 0.18f),
-                                labelColor = Color.White,
-                                leadingIconContentColor = Color.White
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        
-                        // Lottie animation - static frame for performance
-                        composition?.let {
-                            LottieAnimation(
-                                composition = it,
-                                progress = { targetProgress },
-                                modifier = Modifier.size(60.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Color.White.copy(alpha = 0.18f),
+                                RoundedCornerShape(10.dp)
                             )
-                        }
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(id = R.string.habit_completed_today),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 } else {
                     Row(
@@ -1131,15 +1173,25 @@ private fun HabitCard(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp)),
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                 colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                                     containerColor = Color.White,
                                     contentColor = palette.accent
                                 )
                             ) {
-                                Icon(imageVector = Icons.Default.Check, contentDescription = null)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(text = stringResource(R.string.done), fontWeight = FontWeight.SemiBold)
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = stringResource(R.string.done),
+                                    fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                             }
                             
                             // OPTIMIZED: Fanfare animation only when triggered
@@ -1184,35 +1236,55 @@ private fun HabitCard(
                             onClick = onSeeDetails,
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(20.dp)),
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                                 contentColor = Color.White
                             ),
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
                         ) {
-                            Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = stringResource(R.string.details), fontWeight = FontWeight.SemiBold)
+                            Icon(
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = stringResource(R.string.details),
+                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     }
                 }
 
-                // Add "See Details" button for completed habits too
+                // Compact "Details" button for completed habits
                 if (habit.isCompletedToday) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedButton(
                         onClick = onSeeDetails,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp)),
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                             contentColor = Color.White
                         ),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
                     ) {
-                        Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(R.string.see_details), fontWeight = FontWeight.SemiBold)
+                        Icon(
+                            imageVector = Icons.Default.Visibility,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.see_details),
+                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
             }
@@ -1973,12 +2045,15 @@ private fun AvatarDisplay(
 ) {
     val context = LocalContext.current
     
+    val bgColor = remember(avatar.backgroundColor) {
+        Color(android.graphics.Color.parseColor(avatar.backgroundColor))
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size)
             .background(
-                color = Color(android.graphics.Color.parseColor(avatar.backgroundColor)),
+                color = bgColor,
                 shape = CircleShape
             )
     ) {
@@ -2003,7 +2078,7 @@ private fun AvatarDisplay(
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(avatar.value)
-                    .crossfade(150) // Faster crossfade
+                    .crossfade(false) // Disable crossfade for scroll performance
                     .size(100) // Fixed small size for list performance
                     .memoryCacheKey("avatar_${avatar.value.hashCode()}")
                     .diskCacheKey("avatar_${avatar.value.hashCode()}")

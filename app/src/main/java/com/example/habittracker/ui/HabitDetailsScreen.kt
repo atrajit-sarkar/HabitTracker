@@ -64,6 +64,7 @@ fun HabitDetailsScreen(
     progress: HabitProgress,
     selectedDate: LocalDate,
     isSelectedDateCompleted: Boolean,
+    userRewards: it.atraj.habittracker.data.local.UserRewards,
     onBackClick: () -> Unit,
     onSelectDate: (LocalDate) -> Unit = { _ -> },
     onMarkCompleted: () -> Unit,
@@ -118,14 +119,21 @@ fun HabitDetailsScreen(
             )
 
             // Progress Stats Cards
-            ProgressStatsSection(progress = progress)
+            ProgressStatsSection(habit = habit, progress = progress)
+            
+            // Rewards and Streak Info Section
+            StreakRewardsSection(
+                habit = habit,
+                userRewards = userRewards
+            )
 
             // Calendar View
             CalendarSection(
                 habit = habit,
                 completedDates = progress.completedDates,
                 selectedDate = selectedDate,
-                onDateSelected = onSelectDate
+                onDateSelected = onSelectDate,
+                progress = progress
             )
 
             // Habit Information
@@ -243,7 +251,7 @@ private fun HeroSection(
                 }
             }
 
-            // Current Streak with Animated Fire
+            // Current Streak with Animated Fire (using habit.streak for consistency)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -251,10 +259,10 @@ private fun HeroSection(
             ) {
                 AnimatedFireIcon(
                     isActive = isSelectedDateCompleted && isToday,
-                    streakCount = progress.currentStreak
+                    streakCount = habit.streak
                 )
                 Text(
-                    text = stringResource(R.string.current_streak_days, progress.currentStreak),
+                    text = stringResource(R.string.current_streak_days, habit.streak),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -294,7 +302,7 @@ private fun HeroSection(
                         )
                     }
                     Text(
-                        text = "• Complete today or yesterday to maintain streak\n• Miss days? Streak reduces by 1 per missed day (motivational penalty)\n• Backfill past days to recover your streak progress",
+                        text = "• First missed day = 🧊 Free grace (no penalty)\n• Additional missed days = ❄️ Use freeze days or -1 streak per day\n• Streak updates automatically daily\n• Earn 💎 20 diamonds every 10 days, +100 at 100-day milestones",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         lineHeight = 18.sp
@@ -469,7 +477,7 @@ private fun HeroSection(
 }
 
 @Composable
-private fun ProgressStatsSection(progress: HabitProgress) {
+private fun ProgressStatsSection(habit: Habit, progress: HabitProgress) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         // Enhanced Section Header
         Row(
@@ -530,7 +538,7 @@ private fun ProgressStatsSection(progress: HabitProgress) {
             ) {
                 EnhancedStatCard(
                     title = "Current Streak",
-                    value = progress.currentStreak.toString(),
+                    value = habit.streak.toString(),
                     subtitle = "days",
                     icon = Icons.Default.LocalFireDepartment,
                     gradient = listOf(
@@ -539,7 +547,7 @@ private fun ProgressStatsSection(progress: HabitProgress) {
                     ),
                     modifier = Modifier.weight(1f),
                     useLottieAnimation = true,
-                    lottieAsset = if (progress.currentStreak == 0) "fireblack.json" else "Fire.json"
+                    lottieAsset = if (habit.streak == 0) "fireblack.json" else "Fire.json"
                 )
                 EnhancedStatCard(
                     title = "Longest Streak",
@@ -788,11 +796,396 @@ private fun EnhancedStatCard(
 }
 
 @Composable
+private fun StreakRewardsSection(
+    habit: Habit,
+    userRewards: it.atraj.habittracker.data.local.UserRewards
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Section Header (Clickable to expand/collapse)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "rewards_glow")
+            val glowAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "glow_alpha"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFFFD700).copy(alpha = glowAlpha),
+                                Color(0xFFFFD700).copy(alpha = 0.2f)
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "💎",
+                    fontSize = 18.sp
+                )
+            }
+            
+            Text(
+                text = "Streak Rewards & System",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        // Expandable content
+        if (isExpanded) {
+        // Rewards Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Current Streak with Fire Animation
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = Color(0xFFFF6B35),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Current Streak",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Text(
+                        text = "${habit.streak} days",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF6B35)
+                    )
+                }
+                
+                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                
+                // Total Diamonds (calculated from streak milestones)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "💎",
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Diamonds from Habit",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Text(
+                        text = calculateDiamondsEarned(habit.highestStreakAchieved).toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFD700)
+                    )
+                }
+                
+                Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                
+                // Available Freeze Days (Shared Pool)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "❄️",
+                            fontSize = 20.sp
+                        )
+                        Column {
+                            Text(
+                                text = "Freeze Days Available",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Shared across all habits",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${userRewards.freezeDays}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF03DAC6)
+                    )
+                }
+            }
+        }
+        
+        // Visual Legend
+        StreakLegendCard()
+        } // End of isExpanded
+    }
+}
+
+/**
+ * Calculate total diamonds earned from a habit based on highest streak
+ */
+private fun calculateDiamondsEarned(highestStreak: Int): Int {
+    var total = 0
+    
+    // Every 10 days = 20 diamonds
+    val tenDayMilestones = highestStreak / 10
+    total += tenDayMilestones * 20
+    
+    // Every 100 days = additional 100 diamonds (on top of the 10-day reward)
+    val hundredDayMilestones = highestStreak / 100
+    total += hundredDayMilestones * 100
+    
+    return total
+}
+
+@Composable
+private fun StreakLegendCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Streak System Guide",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            // Streak Colors
+            Text(
+                text = "Calendar Colors:",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            LegendItem(
+                color = Color(0xFFE53935),
+                label = "Red Border",
+                description = "Streak = 0 (broken/reset)"
+            )
+            
+            LegendItem(
+                color = Color(0xFFFFA726),
+                label = "Yellow Border",
+                description = "Streak 1-4 days (building momentum)"
+            )
+            
+            LegendItem(
+                color = Color(0xFF66BB6A),
+                label = "Green Border",
+                description = "Streak 5+ days (consistent progress)"
+            )
+            
+            Divider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            
+            // Protection Systems
+            Text(
+                text = "Streak Protection:",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "🧊",
+                    fontSize = 18.sp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Icy Glass Border",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Default grace day (1 free missed day per gap)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "❄️",
+                    fontSize = 18.sp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Snowy Glass Overlay",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Purchased freeze day protection (shared pool)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            Divider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            
+            // Rewards Info
+            Text(
+                text = "Diamond Rewards:",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = "💎", fontSize = 16.sp)
+                Text(
+                    text = "20 diamonds every 10-day streak\n💎 +100 diamonds bonus at 100-day milestones",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(
+    color: Color,
+    label: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .border(
+                    width = 3.dp,
+                    color = color,
+                    shape = CircleShape
+                )
+                .background(
+                    color = color.copy(alpha = 0.2f),
+                    shape = CircleShape
+                )
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun CalendarSection(
     habit: Habit,
     completedDates: Set<LocalDate>,
     selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit = { _ -> }
+    onDateSelected: (LocalDate) -> Unit,
+    progress: HabitProgress
 ) {
     var currentMonth by remember(selectedDate) { mutableStateOf(YearMonth.from(selectedDate)) }
     
@@ -856,7 +1249,8 @@ private fun CalendarSection(
                     onDateSelected = { date ->
                         currentMonth = YearMonth.from(date)
                         onDateSelected(date)
-                    }
+                    },
+                    progress = progress
                 )
                 
                 // Helper text
@@ -882,8 +1276,13 @@ private fun MonthCalendar(
     completedDates: Set<LocalDate>,
     habitCreationDate: LocalDate,
     selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit
+    onDateSelected: (LocalDate) -> Unit,
+    progress: HabitProgress
 ) {
+    // Calculate streak at each date for proper coloring
+    val streakAtDate = remember(completedDates) {
+        calculateStreakAtEachDate(completedDates, habitCreationDate)
+    }
     val firstDayOfMonth = month.atDay(1)
     val lastDayOfMonth = month.atEndOfMonth()
     // Fix for Android 10/11 compatibility - use proper modulo calculation
@@ -922,6 +1321,18 @@ private fun MonthCalendar(
                     month.atDay(dayNumber)
                 } else null
 
+                // Determine if this is a grace day
+                val isGraceDay = date?.let { d ->
+                    if (d !in completedDates && d >= habitCreationDate) {
+                        // Check if there's a completion before this date
+                        val previousCompletions = completedDates.filter { it < d }.sorted()
+                        if (previousCompletions.isNotEmpty()) {
+                            val lastCompletion = previousCompletions.last()
+                            ChronoUnit.DAYS.between(lastCompletion, d) == 1L
+                        } else false
+                    } else false
+                } ?: false
+                
                 CalendarDay(
                     date = date,
                     isCompleted = date?.let { it in completedDates } ?: false,
@@ -933,7 +1344,9 @@ private fun MonthCalendar(
                         if (date != null && !date.isAfter(today)) {
                             onDateSelected(date)
                         }
-                    }
+                    },
+                    streakLevel = date?.let { streakAtDate[it] } ?: 0,
+                    isGraceDay = isGraceDay
                 )
             }
         }
@@ -947,7 +1360,9 @@ private fun CalendarDay(
     isToday: Boolean,
     isBeforeHabitCreation: Boolean,
     isSelected: Boolean,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    streakLevel: Int = 0,  // 0 = broken/none, 1-4 = building, 5+ = strong
+    isGraceDay: Boolean = false  // Grace day indicator
 ) {
     // Allow selecting any past date (incl. before habit creation) for backfill
     val isClickable = date != null && !date.isAfter(LocalDate.now())
@@ -969,10 +1384,19 @@ private fun CalendarDay(
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     }
 
+    // Streak-based border color (spec colors)
+    val streakBorderColor = when {
+        streakLevel == 0 -> Color(0xFFE53935) // Red for broken streak
+        streakLevel in 1..4 -> Color(0xFFFFA726) // Yellow for building
+        streakLevel >= 5 -> Color(0xFF66BB6A) // Green for strong streak
+        else -> null
+    }
+    
     val borderColor = when {
         isSelected && isCompleted -> MaterialTheme.colorScheme.onPrimary
         isSelected -> MaterialTheme.colorScheme.primary
-        isToday && !isCompleted -> MaterialTheme.colorScheme.primary
+        isToday && !isCompleted -> if (streakBorderColor != null) streakBorderColor else MaterialTheme.colorScheme.primary
+        isCompleted && streakBorderColor != null -> streakBorderColor  // Apply streak color to completed days
         isBeforeHabitCreation && isClickable -> MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
         else -> null
     }
@@ -984,7 +1408,20 @@ private fun CalendarDay(
             shape = CircleShape
         )
 
-    if (borderColor != null) {
+    // Grace day gets special icy border
+    if (isGraceDay) {
+        dayModifier = dayModifier.border(
+            width = 3.dp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF87CEEB).copy(alpha = 0.8f),
+                    Color(0xFFB0E0E6).copy(alpha = 0.6f),
+                    Color(0xFF87CEEB).copy(alpha = 0.8f)
+                )
+            ),
+            shape = CircleShape
+        )
+    } else if (borderColor != null) {
         dayModifier = dayModifier.border(
             width = 2.dp,
             color = borderColor,
@@ -1031,6 +1468,44 @@ private fun CalendarDay(
             }
         }
     }
+}
+
+/**
+ * Calculate streak value at each date for proper calendar coloring
+ */
+private fun calculateStreakAtEachDate(
+    completedDates: Set<LocalDate>,
+    habitCreationDate: LocalDate
+): Map<LocalDate, Int> {
+    if (completedDates.isEmpty()) return emptyMap()
+    
+    val sorted = completedDates.sorted()
+    val result = mutableMapOf<LocalDate, Int>()
+    
+    var streak = 0
+    var expectedDate = sorted.first()
+    
+    for (completion in sorted) {
+        val gap = ChronoUnit.DAYS.between(expectedDate, completion).toInt()
+        
+        when {
+            gap == 0 -> {
+                streak++
+                result[completion] = streak
+                expectedDate = expectedDate.plusDays(1)
+            }
+            gap > 0 -> {
+                // Apply grace to first missed day
+                val penalty = if (gap > 1) gap - 1 else 0
+                streak = maxOf(0, streak - penalty)
+                streak++
+                result[completion] = streak
+                expectedDate = completion.plusDays(1)
+            }
+        }
+    }
+    
+    return result
 }
 
 @Composable
