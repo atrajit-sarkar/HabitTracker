@@ -27,7 +27,9 @@ class BackgroundMusicManager @Inject constructor(
         ROMANTIC_1("Casa Rosa", "romantic_casa_rosa.mp3"),
         HINDI_1("Love Slowed", "hindi_love_slowed.mp3"),
         JAPANESE_1("Waguri Edit", "japanese_waguri_edit.mp3"),
-        JAPANESE_2("Shounen Ki", "japanese_shounen_ki.mp3")
+        JAPANESE_2("Shounen Ki", "japanese_shounen_ki.mp3"),
+        CLAIR_OBSCUR("Lumière", "clair_obscur_lumiere.mp3"),
+        CYBERPUNK("Stay At Your House", "cyberpunk_stay_at_house.mp3")
     }
     
     fun initialize(song: MusicTrack, volumeLevel: Float, enabled: Boolean) {
@@ -69,13 +71,18 @@ class BackgroundMusicManager @Inject constructor(
     }
     
     fun stopMusic() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+                it.release()
             }
-            it.release()
+        } catch (e: Exception) {
+            Log.e("BackgroundMusic", "Error stopping music", e)
+        } finally {
+            mediaPlayer = null
         }
-        mediaPlayer = null
     }
     
     fun pauseMusic() {
@@ -95,11 +102,12 @@ class BackgroundMusicManager @Inject constructor(
     
     fun changeSong(newSong: MusicTrack) {
         if (currentSong != newSong) {
+            // Always stop the current song first to prevent overlap
+            stopMusic()
+            
             currentSong = newSong
             if (isEnabled && newSong != MusicTrack.NONE) {
                 startMusic()
-            } else {
-                stopMusic()
             }
         }
     }

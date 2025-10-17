@@ -25,6 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.atraj.habittracker.music.BackgroundMusicManager
 import it.atraj.habittracker.music.MusicDownloadManager
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 data class MusicTrackData(
     val id: String,
@@ -65,11 +67,35 @@ fun MusicSettingsScreen(
     }
     
     var enabled by remember { mutableStateOf(state.user?.musicEnabled ?: false) }
-    var selectedTrack by remember { mutableStateOf(state.user?.musicTrack ?: \"NONE\") }
+    var selectedTrack by remember { mutableStateOf(state.user?.musicTrack ?: "NONE") }
     var volume by remember { mutableFloatStateOf(state.user?.musicVolume ?: 0.3f) }
+    var isUserAdjustingVolume by remember { mutableStateOf(false) }
+    
+    // Sync state with user data when it changes (e.g., on screen revisit)
+    // But don't sync volume when user is actively adjusting it
+    LaunchedEffect(state.user?.musicEnabled, state.user?.musicTrack, state.user?.musicVolume) {
+        state.user?.let { user ->
+            enabled = user.musicEnabled
+            selectedTrack = user.musicTrack
+            if (!isUserAdjustingVolume) {
+                volume = user.musicVolume
+            }
+        }
+    }
     
     val downloadStates = remember { mutableStateMapOf<String, Pair<Boolean, Int>>() }
+    val deletingStates = remember { mutableStateMapOf<String, Boolean>() }
+    val deletedFiles = remember { mutableStateSetOf<String>() }
     val scope = rememberCoroutineScope()
+    var saveJob by remember { mutableStateOf<Job?>(null) }
+    
+    // Cleanup when leaving screen
+    DisposableEffect(Unit) {
+        onDispose {
+            saveJob?.cancel()
+            isUserAdjustingVolume = false
+        }
+    }
     
     val tracks = remember {
         listOf(
@@ -82,13 +108,15 @@ fun MusicSettingsScreen(
             MusicTrackData("ROMANTIC_1", "Casa Rosa", "romantic_casa_rosa.mp3", "Guera Encantadora", "Romantic"),
             MusicTrackData("HINDI_1", "Love Slowed", "hindi_love_slowed.mp3", "Hindi", "Romantic"),
             MusicTrackData("JAPANESE_1", "Waguri Edit", "japanese_waguri_edit.mp3", "Waguri", "Japanese"),
-            MusicTrackData("JAPANESE_2", "Shounen Ki", "japanese_shounen_ki.mp3", "Tetsuya Takeda", "Japanese")
+            MusicTrackData("JAPANESE_2", "Shounen Ki", "japanese_shounen_ki.mp3", "Tetsuya Takeda", "Japanese"),
+            MusicTrackData("CLAIR_OBSCUR", "Lumière", "clair_obscur_lumiere.mp3", "Clair Obscur", "Soundtrack"),
+            MusicTrackData("CYBERPUNK", "Stay At Your House", "cyberpunk_stay_at_house.mp3", "Cyberpunk Edgerunners", "Soundtrack")
         )
     }
     
-    // Auto-save when settings change
-    LaunchedEffect(enabled, selectedTrack, volume) {
-        if (state.user != null) {
+    // Auto-save when settings change (enabled and track immediately, volume debounced)
+    LaunchedEffect(enabled, selectedTrack) {
+        if (state.user != null && !isUserAdjustingVolume) {
             viewModel.updateMusicSettings(enabled, selectedTrack, volume)
             
             // Apply immediately to music manager
@@ -100,7 +128,7 @@ fun MusicSettingsScreen(
                 }
                 manager.setEnabled(enabled)
                 manager.changeSong(musicTrack)
-                manager.setVolume(volume)
+                manager.setVolume(volume) // Ensure correct volume is set
             }
         }
     }
@@ -170,40 +198,64 @@ fun MusicSettingsScreen(
                 }
             }
             
-            // Volume Control
+            // Volume Control - Android System UI Style (Horizontal)
             AnimatedVisibility(visible = enabled) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Volume",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${(volume * 100).toInt()}%",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        // Volume Icon
+                        Icon(
+                            imageVector = when {
+                                volume == 0f -> Icons.Default.VolumeOff
+                                volume < 0.5f -> Icons.Default.VolumeDown
+                                else -> Icons.Default.VolumeUp
+                            },
+                            contentDescription = "Volume",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        
+                        // Slider
                         Slider(
                             value = volume,
-                            onValueChange = { volume = it },
+                            onValueChange = { newVolume ->
+                                volume = newVolume
+                                isUserAdjustingVolume = true
+                                
+                                // Apply volume to music manager immediately for live feedback
+                                // Only setVolume, don't restart the song
+                                musicManager?.setVolume(newVolume)
+                                
+                                // Debounce the save to Firebase
+                                saveJob?.cancel()
+                                saveJob = scope.launch {
+                                    delay(300) // Wait 300ms after user stops adjusting
+                                    if (state.user != null) {
+                                        viewModel.updateMusicSettings(enabled, selectedTrack, newVolume)
+                                    }
+                                    delay(100) // Extra delay before allowing sync
+                                    isUserAdjustingVolume = false
+                                }
+                            },
                             valueRange = 0f..1f,
-                            steps = 19
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        // Volume Percentage
+                        Text(
+                            text = "${(volume * 100).toInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.width(48.dp)
                         )
                     }
                 }
@@ -218,18 +270,23 @@ fun MusicSettingsScreen(
             )
             
             tracks.forEach { track ->
+                val isDownloaded = track.fileName.isEmpty() || 
+                    (!deletedFiles.contains(track.fileName) && 
+                     downloadManager?.isMusicDownloaded(track.fileName) == true)
+                
                 MusicTrackCard(
                     track = track,
                     isSelected = selectedTrack == track.id,
-                    isDownloaded = track.fileName.isEmpty() || 
-                        downloadManager?.isMusicDownloaded(track.fileName) == true,
+                    isDownloaded = isDownloaded,
                     downloadState = downloadStates[track.fileName] ?: (false to 0),
+                    isDeleting = deletingStates[track.fileName] ?: false,
                     onSelect = { 
-                        if (track.id == "NONE" || downloadManager?.isMusicDownloaded(track.fileName) == true) {
+                        if (track.id == "NONE" || isDownloaded) {
                             selectedTrack = track.id
                         }
                     },
                     onDownload = {
+                        deletedFiles.remove(track.fileName)
                         downloadStates[track.fileName] = true to 0
                         scope.launch {
                             downloadManager?.downloadMusic(track.fileName) { progress ->
@@ -242,10 +299,18 @@ fun MusicSettingsScreen(
                         }
                     },
                     onDelete = {
-                        downloadManager?.deleteMusicFile(track.fileName)
-                        downloadStates.remove(track.fileName)
-                        if (selectedTrack == track.id) {
-                            selectedTrack = "NONE"
+                        scope.launch {
+                            deletingStates[track.fileName] = true
+                            try {
+                                downloadManager?.deleteMusicFile(track.fileName)
+                                deletedFiles.add(track.fileName)
+                                downloadStates.remove(track.fileName)
+                                if (selectedTrack == track.id) {
+                                    selectedTrack = "NONE"
+                                }
+                            } finally {
+                                deletingStates.remove(track.fileName)
+                            }
                         }
                     }
                 )
@@ -262,6 +327,7 @@ private fun MusicTrackCard(
     isSelected: Boolean,
     isDownloaded: Boolean,
     downloadState: Pair<Boolean, Int>,
+    isDeleting: Boolean,
     onSelect: () -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit
@@ -330,7 +396,18 @@ private fun MusicTrackCard(
             
             // Action Buttons
             if (track.fileName.isNotEmpty()) {
-                if (isDownloading) {
+                if (isDeleting) {
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else if (isDownloading) {
                     Box(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center
@@ -349,21 +426,30 @@ private fun MusicTrackCard(
                     }
                 } else if (isDownloaded) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            enabled = !isDeleting
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Downloaded",
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        Box(
+                            modifier = Modifier.size(48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Downloaded",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 } else {
                     IconButton(onClick = onDownload) {

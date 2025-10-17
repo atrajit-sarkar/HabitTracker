@@ -46,6 +46,7 @@ import it.atraj.habittracker.ui.chat.ChatScreen
 import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
 import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
 import it.atraj.habittracker.email.ui.EmailSettingsScreen
+import it.atraj.habittracker.auth.ui.MusicSettingsScreen
 import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -518,7 +519,7 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            it.atraj.habittracker.auth.ui.MusicSettingsScreen(
+            MusicSettingsScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick
             )
