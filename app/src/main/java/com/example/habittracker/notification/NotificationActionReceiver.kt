@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.receiver.HabitCompletionReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     try {
                         habitRepository.markCompletedToday(habitId)
                         HabitReminderService.dismissNotification(context, habitId)
+                        
+                        // Trigger icon check after habit completion
+                        HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

@@ -23,6 +23,7 @@ import it.atraj.habittracker.update.UpdateDialog
 import it.atraj.habittracker.update.UpdateInfo
 import it.atraj.habittracker.update.UpdateManager
 import it.atraj.habittracker.update.UpdateResultDialog
+import it.atraj.habittracker.service.OverdueHabitIconManager
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -46,6 +47,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var downloadManager: it.atraj.habittracker.music.MusicDownloadManager
+    
+    @Inject
+    lateinit var iconManager: OverdueHabitIconManager
     
     private var hasCheckedBatteryOptimization = false
     private lateinit var updateManager: UpdateManager
@@ -304,6 +308,9 @@ class MainActivity : ComponentActivity() {
         
         // Resume background music
         musicManager.resumeMusic()
+        
+        // Check if app icon needs to be updated based on overdue habits
+        iconManager.checkAndUpdateIcon()
         
         // Check battery optimization only once per app session
         // and only if user has reminders enabled
