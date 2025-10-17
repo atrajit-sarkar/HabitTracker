@@ -112,7 +112,8 @@ class OverdueHabitWorker @AssistedInject constructor(
             Log.d(TAG, "Checking for overdue habits...")
             
             // Check and update icon based on overdue habits
-            iconManager.checkAndUpdateIcon()
+            // Force refresh to avoid cached results and ensure downgrades happen promptly
+            iconManager.checkAndUpdateIcon(forceRefresh = true)
             
             Log.d(TAG, "Overdue habit check completed successfully")
             Result.success()
