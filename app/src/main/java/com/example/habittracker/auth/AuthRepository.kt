@@ -17,6 +17,9 @@ private const val TAG = "AuthRepository"
 private const val USERS_COLLECTION = "users"
 private const val CUSTOM_AVATAR_FIELD = "customAvatar"
 private const val CUSTOM_DISPLAY_NAME_FIELD = "customDisplayName"
+private const val MUSIC_ENABLED_FIELD = "musicEnabled"
+private const val MUSIC_TRACK_FIELD = "musicTrack"
+private const val MUSIC_VOLUME_FIELD = "musicVolume"
 
 @Singleton
 class AuthRepository @Inject constructor(
@@ -47,8 +50,11 @@ class AuthRepository @Inject constructor(
                         
                         val customAvatar = snapshot?.getString(CUSTOM_AVATAR_FIELD)
                         val customDisplayName = snapshot?.getString(CUSTOM_DISPLAY_NAME_FIELD)
+                        val musicEnabled = snapshot?.getBoolean(MUSIC_ENABLED_FIELD) ?: false
+                        val musicTrack = snapshot?.getString(MUSIC_TRACK_FIELD) ?: "NONE"
+                        val musicVolume = snapshot?.getDouble(MUSIC_VOLUME_FIELD)?.toFloat() ?: 0.3f
                         Log.d(TAG, "User data snapshot updated - Avatar: $customAvatar, Name: $customDisplayName")
-                        trySend(firebaseUser.toUser(customAvatar, customDisplayName))
+                        trySend(firebaseUser.toUser(customAvatar, customDisplayName, musicEnabled, musicTrack, musicVolume))
                     }
             } else {
                 trySend(null)
@@ -212,14 +218,43 @@ class AuthRepository @Inject constructor(
         }
     }
     
-    private fun FirebaseUser.toUser(customAvatar: String?, customDisplayName: String?): User {
+    suspend fun updateMusicPreferences(enabled: Boolean, track: String, volume: Float): AuthResult {
+        return try {
+            val userId = firebaseAuth.currentUser?.uid 
+                ?: return AuthResult.Error("No user signed in")
+            
+            val userDoc = firestore.collection(USERS_COLLECTION).document(userId)
+            userDoc.set(mapOf(
+                MUSIC_ENABLED_FIELD to enabled,
+                MUSIC_TRACK_FIELD to track,
+                MUSIC_VOLUME_FIELD to volume
+            ), com.google.firebase.firestore.SetOptions.merge()).await()
+            
+            Log.d(TAG, "Music preferences updated - Enabled: $enabled, Track: $track, Volume: $volume")
+            AuthResult.Success
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update music preferences", e)
+            AuthResult.Error(e.message ?: "Failed to update music settings")
+        }
+    }
+    
+    private fun FirebaseUser.toUser(
+        customAvatar: String?, 
+        customDisplayName: String?,
+        musicEnabled: Boolean = false,
+        musicTrack: String = "NONE",
+        musicVolume: Float = 0.3f
+    ): User {
         return User(
             uid = uid,
             email = email,
             displayName = displayName,
             photoUrl = photoUrl?.toString(),
             customAvatar = customAvatar,
-            customDisplayName = customDisplayName
+            customDisplayName = customDisplayName,
+            musicEnabled = musicEnabled,
+            musicTrack = musicTrack,
+            musicVolume = musicVolume
         )
     }
 }

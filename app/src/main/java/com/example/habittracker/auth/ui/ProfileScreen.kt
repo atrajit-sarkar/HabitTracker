@@ -260,6 +260,7 @@ fun ProfileScreen(
     var showSetNameDialog by remember { mutableStateOf(false) }
     var showAnimationPicker by remember { mutableStateOf(false) }
     var showEnlargedPhotoDialog by remember { mutableStateOf(false) }
+    var showMusicDialog by remember { mutableStateOf(false) }
     
     // Profile card animation preference (stored in SharedPreferences)
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -729,391 +730,398 @@ fun ProfileScreen(
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
 
-            // Notification Setup Guide Card - Highlighted
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(16.dp))
-                    .clickableOnce { onNotificationGuideClick() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                )
-                            )
-                        )
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.notification_setup_guide),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.ensure_reliable_reminders),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Open Guide",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Language Settings Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                    .clickableOnce { onLanguageSettingsClick() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
-                                )
-                            )
-                        )
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.language_settings),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = stringResource(R.string.select_language),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = stringResource(R.string.language_settings),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Email Notifications Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                    .clickableOnce { onEmailSettingsClick() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                                )
-                            )
-                        )
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "Email Notifications",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = "Get habit reminders via email",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Email Settings",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Check for Updates Card - App Settings
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                    .clickableOnce { onCheckForUpdates() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                )
-                            )
-                        )
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SystemUpdate,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.check_for_updates),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.get_latest_features),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Check Updates",
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Send Feedback Card
+// Stacked Account Settings Cards
             val feedbackContext = androidx.compose.ui.platform.LocalContext.current
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                    .clickableOnce {
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/atrajit-sarkar/HabitTracker/issues/new/choose")
-                        )
-                        feedbackContext.startActivity(intent)
-                    },
+                    .shadow(4.dp, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color.Transparent
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Notification Setup Guide
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { onNotificationGuideClick() }
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
                                 )
                             )
-                        )
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Feedback,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.notification_setup_guide),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.ensure_reliable_reminders),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
                         }
-                        Column {
-                            Text(
-                                text = "Send Feedback",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Report bugs or suggest features",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Open Guide",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Send Feedback",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
+                    
+                    // Language Settings
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { onLanguageSettingsClick() }
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.language_settings),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = stringResource(R.string.select_language),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = stringResource(R.string.language_settings),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // Email Notifications
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { onEmailSettingsClick() }
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Email Notifications",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "Get habit reminders via email",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Email Settings",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // Check for Updates
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { onCheckForUpdates() }
+                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.check_for_updates),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.get_latest_features),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Check Updates",
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // Send Feedback
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://github.com/atrajit-sarkar/HabitTracker/issues/new/choose")
+                                )
+                                feedbackContext.startActivity(intent)
+                            }
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Feedback,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Send Feedback",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "Report bugs or suggest features",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Send Feedback",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+            
+            // Profile Settings Section
+            Text(
+                text = "Profile Settings",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
+Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = Color.Transparent
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Edit Name (all users)
-                    ProfileActionItem(
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Edit Name
+                    ProfileSettingRow(
                         icon = Icons.Default.Edit,
                         title = "Edit Name",
                         subtitle = "Change your display name",
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        textColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         onClick = { showEditNameDialog = true }
                     )
                     
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
                     
-                    // Change Avatar (all users)
-                    ProfileActionItem(
+                    // Change Avatar
+                    ProfileSettingRow(
                         icon = Icons.Default.Face,
                         title = "Change Avatar",
                         subtitle = "Select a custom emoji avatar",
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        textColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         onClick = { showAvatarPicker = true }
                     )
                     
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
                     
-                    // Profile Animation (new feature)
-                    ProfileActionItem(
+                    // Profile Animation
+                    ProfileSettingRow(
                         icon = Icons.Default.Animation,
                         title = "Profile Animation",
                         subtitle = when (selectedAnimation) {
@@ -1124,35 +1132,78 @@ fun ProfileScreen(
                             "fireblast" -> "Fireblast"
                             else -> "None selected"
                         },
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.tertiary,
+                        textColor = MaterialTheme.colorScheme.onTertiaryContainer,
                         onClick = { showAnimationPicker = true }
                     )
                     
                     // Reset Avatar (show only if user has custom avatar set)
                     if (state.user?.customAvatar != null) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        ProfileActionItem(
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                        ProfileSettingRow(
                             icon = Icons.Default.Refresh,
                             title = "Reset Avatar",
                             subtitle = if (state.user?.photoUrl != null) 
                                 "Return to Google profile picture" 
                             else 
                                 "Return to default emoji",
-                            onClick = { showResetAvatarDialog = true },
+                            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                            gradientColors = listOf(
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ),
                             iconTint = MaterialTheme.colorScheme.secondary,
-                            titleColor = MaterialTheme.colorScheme.secondary
+                            textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            onClick = { showResetAvatarDialog = true }
                         )
                     }
                     
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // Background Music
+                    ProfileSettingRow(
+                        icon = Icons.Default.MusicNote,
+                        title = "Background Music",
+                        subtitle = if (state.user?.musicEnabled == true) "Music enabled" else "Music disabled",
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.tertiary,
+                        textColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        onClick = { showMusicDialog = true }
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
 
                     // Sign Out
-                    ProfileActionItem(
+                    ProfileSettingRow(
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
                         title = "Sign Out",
                         subtitle = "Sign out of your account",
-                        onClick = { showSignOutDialog = true },
+                        backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                        ),
                         iconTint = MaterialTheme.colorScheme.error,
-                        titleColor = MaterialTheme.colorScheme.error
+                        textColor = MaterialTheme.colorScheme.onErrorContainer,
+                        onClick = { showSignOutDialog = true }
                     )
                 }
             }
@@ -1208,6 +1259,45 @@ fun ProfileScreen(
                 showAvatarPicker = false
             },
             onDismiss = { showAvatarPicker = false }
+        )
+    }
+    
+    // Music Settings Dialog
+    if (showMusicDialog) {
+        // Get music manager from MainActivity
+        val activity = context as? it.atraj.habittracker.MainActivity
+        val musicManager = activity?.let { 
+            // Access the injected musicManager from MainActivity
+            try {
+                val field = it::class.java.getDeclaredField("musicManager")
+                field.isAccessible = true
+                field.get(it) as? it.atraj.habittracker.music.BackgroundMusicManager
+            } catch (e: Exception) {
+                null
+            }
+        }
+        
+        MusicSettingsDialog(
+            currentEnabled = state.user?.musicEnabled ?: false,
+            currentTrack = state.user?.musicTrack ?: "NONE",
+            currentVolume = state.user?.musicVolume ?: 0.3f,
+            onDismiss = { showMusicDialog = false },
+            onSave = { enabled, track, volume ->
+                viewModel.updateMusicSettings(enabled, track, volume)
+                showMusicDialog = false
+                
+                // Apply music settings immediately
+                musicManager?.let { manager ->
+                    val musicTrack = try {
+                        it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.valueOf(track)
+                    } catch (e: Exception) {
+                        it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE
+                    }
+                    manager.setEnabled(enabled)
+                    manager.changeSong(musicTrack)
+                    manager.setVolume(volume)
+                }
+            }
         )
     }
     
@@ -1455,6 +1545,70 @@ private fun StatsCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileSettingRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    backgroundColor: Color,
+    gradientColors: List<Color>,
+    iconTint: Color,
+    textColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickableOnce(onClick = onClick)
+            .background(backgroundColor)
+            .background(
+                Brush.horizontalGradient(colors = gradientColors)
+            )
+            .padding(20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor.copy(alpha = 0.7f)
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(32.dp)
+        )
     }
 }
 
@@ -1824,4 +1978,155 @@ private fun AnimationOption(
             }
         }
     }
+}
+
+@Composable
+private fun MusicSettingsDialog(
+    currentEnabled: Boolean,
+    currentTrack: String,
+    currentVolume: Float,
+    onDismiss: () -> Unit,
+    onSave: (Boolean, String, Float) -> Unit
+) {
+    var enabled by remember { mutableStateOf(currentEnabled) }
+    var selectedTrack by remember { mutableStateOf(currentTrack) }
+    var volume by remember { mutableFloatStateOf(currentVolume) }
+    
+    val tracks = remember {
+        listOf(
+            "NONE" to "No Music",
+            "AMBIENT_1" to "Peaceful Ambient",
+            "AMBIENT_2" to "Focus Flow",
+            "AMBIENT_3" to "Nature Sounds",
+            "LOFI_1" to "Lo-Fi Beats",
+            "PIANO_1" to "Piano Melody"
+        )
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+        },
+        title = {
+            Text(
+                "Background Music Settings",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 500.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Enable/Disable Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Enable Music",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { enabled = it }
+                    )
+                }
+                
+                HorizontalDivider()
+                
+                // Music Track Selection
+                AnimatedVisibility(visible = enabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Music Track",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        tracks.forEach { (trackId, trackName) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { selectedTrack = trackId }
+                                    .background(
+                                        if (selectedTrack == trackId)
+                                            MaterialTheme.colorScheme.tertiaryContainer
+                                        else
+                                            Color.Transparent
+                                    )
+                                    .padding(vertical = 8.dp, horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedTrack == trackId,
+                                    onClick = { selectedTrack = trackId }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = trackName,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Volume Slider
+                        Text(
+                            text = "Volume",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${(volume * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                        Slider(
+                            value = volume,
+                            onValueChange = { volume = it },
+                            valueRange = 0f..1f,
+                            steps = 19 // 5% increments
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(enabled, selectedTrack, volume) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary
+                )
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

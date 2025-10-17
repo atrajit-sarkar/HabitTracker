@@ -41,6 +41,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var avatarConfig: it.atraj.habittracker.avatar.AvatarConfig
     
+    @Inject
+    lateinit var musicManager: it.atraj.habittracker.music.BackgroundMusicManager
+    
     private var hasCheckedBatteryOptimization = false
     private lateinit var updateManager: UpdateManager
     
@@ -87,6 +90,9 @@ class MainActivity : ComponentActivity() {
         
         // Initialize avatar upload feature with secure token storage
         initializeAvatarFeature()
+        
+        // Initialize background music
+        initializeBackgroundMusic()
         
         // Get and log FCM token for testing
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -293,6 +299,9 @@ class MainActivity : ComponentActivity() {
             UserPresenceManager.setOnlineStatus(true)
         }
         
+        // Resume background music
+        musicManager.resumeMusic()
+        
         // Check battery optimization only once per app session
         // and only if user has reminders enabled
         if (!hasCheckedBatteryOptimization) {
@@ -360,11 +369,59 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    
+    /**
+     * Initialize background music based on user preferences
+     */
+    private fun initializeBackgroundMusic() {
+        // Collect user state to get music preferences
+        MainScope().launch {
+            com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.let { firebaseUser ->
+                try {
+                    // Fetch user document from Firestore to get music preferences
+                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    db.collection("users").document(firebaseUser.uid).get()
+                        .addOnSuccessListener { document ->
+                            if (document.exists()) {
+                                val enabled = document.getBoolean("musicEnabled") ?: false
+                                val trackName = document.getString("musicTrack") ?: "NONE"
+                                val volume = document.getDouble("musicVolume")?.toFloat() ?: 0.3f
+                                
+                                // Convert track name to enum
+                                val track = try {
+                                    it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.valueOf(trackName)
+                                } catch (e: Exception) {
+                                    it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE
+                                }
+                                
+                                musicManager.initialize(track, volume, enabled)
+                                Log.d("MainActivity", "Music initialized: enabled=$enabled, track=$trackName, volume=$volume")
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("MainActivity", "Failed to load music preferences", e)
+                        }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error initializing background music", e)
+                }
+            }
+        }
+    }
+    
     override fun onPause() {
         super.onPause()
+        // Pause background music
+        musicManager.pauseMusic()
+        
         // Set user offline when app goes to background
         MainScope().launch {
             UserPresenceManager.setOnlineStatus(false)
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stop background music when activity is destroyed
+        musicManager.stopMusic()
     }
 }

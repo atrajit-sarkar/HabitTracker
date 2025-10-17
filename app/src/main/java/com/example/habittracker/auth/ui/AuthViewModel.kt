@@ -237,6 +237,30 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+    
+    fun updateMusicPreferences(enabled: Boolean, track: String, volume: Float, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            val result = authRepository.updateMusicPreferences(enabled, track, volume)
+            if (result is AuthResult.Success) {
+                onSuccess()
+            } else if (result is AuthResult.Error) {
+                _uiState.update { it.copy(errorMessage = result.message) }
+            }
+        }
+    }
+    
+    fun updateMusicSettings(enabled: Boolean, track: String, volume: Float) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = authRepository.updateMusicPreferences(enabled, track, volume)
+            _uiState.update { 
+                it.copy(
+                    isLoading = false,
+                    errorMessage = if (result is AuthResult.Error) result.message else null
+                )
+            }
+        }
+    }
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
