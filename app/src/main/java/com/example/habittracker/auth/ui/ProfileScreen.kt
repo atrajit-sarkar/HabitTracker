@@ -252,7 +252,8 @@ fun ProfileScreen(
     onNotificationGuideClick: () -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
     onLanguageSettingsClick: () -> Unit = {},
-    onEmailSettingsClick: () -> Unit = {}
+    onEmailSettingsClick: () -> Unit = {},
+    onMusicSettingsClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -263,7 +264,6 @@ fun ProfileScreen(
     var showSetNameDialog by remember { mutableStateOf(false) }
     var showAnimationPicker by remember { mutableStateOf(false) }
     var showEnlargedPhotoDialog by remember { mutableStateOf(false) }
-    var showMusicDialog by remember { mutableStateOf(false) }
     
     // Profile card animation preference (stored in SharedPreferences)
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1186,7 +1186,7 @@ Card(
                         ),
                         iconTint = MaterialTheme.colorScheme.tertiary,
                         textColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        onClick = { showMusicDialog = true }
+                        onClick = onMusicSettingsClick
                     )
                     
                     HorizontalDivider(
@@ -1262,45 +1262,6 @@ Card(
                 showAvatarPicker = false
             },
             onDismiss = { showAvatarPicker = false }
-        )
-    }
-    
-    // Music Settings Dialog
-    if (showMusicDialog) {
-        // Get music manager from MainActivity
-        val activity = context as? it.atraj.habittracker.MainActivity
-        val musicManager = activity?.let { 
-            // Access the injected musicManager from MainActivity
-            try {
-                val field = it::class.java.getDeclaredField("musicManager")
-                field.isAccessible = true
-                field.get(it) as? it.atraj.habittracker.music.BackgroundMusicManager
-            } catch (e: Exception) {
-                null
-            }
-        }
-        
-        MusicSettingsDialog(
-            currentEnabled = state.user?.musicEnabled ?: false,
-            currentTrack = state.user?.musicTrack ?: "NONE",
-            currentVolume = state.user?.musicVolume ?: 0.3f,
-            onDismiss = { showMusicDialog = false },
-            onSave = { enabled, track, volume ->
-                viewModel.updateMusicSettings(enabled, track, volume)
-                showMusicDialog = false
-                
-                // Apply music settings immediately
-                musicManager?.let { manager ->
-                    val musicTrack = try {
-                        it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.valueOf(track)
-                    } catch (e: Exception) {
-                        it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE
-                    }
-                    manager.setEnabled(enabled)
-                    manager.changeSong(musicTrack)
-                    manager.setVolume(volume)
-                }
-            }
         )
     }
     

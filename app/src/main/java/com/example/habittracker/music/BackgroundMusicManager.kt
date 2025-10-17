@@ -23,7 +23,11 @@ class BackgroundMusicManager @Inject constructor(
         AMBIENT_2("Focus Flow", "ambient_focus.mp3"),
         AMBIENT_3("Nature Sounds", "ambient_nature.mp3"),
         LOFI_1("Lo-Fi Beats", "lofi_chill.mp3"),
-        PIANO_1("Piano Melody", "piano_soft.mp3")
+        PIANO_1("Piano Melody", "piano_soft.mp3"),
+        ROMANTIC_1("Casa Rosa", "romantic_casa_rosa.mp3"),
+        HINDI_1("Love Slowed", "hindi_love_slowed.mp3"),
+        JAPANESE_1("Waguri Edit", "japanese_waguri_edit.mp3"),
+        JAPANESE_2("Shounen Ki", "japanese_shounen_ki.mp3")
     }
     
     fun initialize(song: MusicTrack, volumeLevel: Float, enabled: Boolean) {

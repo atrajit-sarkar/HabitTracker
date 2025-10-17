@@ -28,7 +28,11 @@ class MusicDownloadManager @Inject constructor(
         "ambient_focus.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_focus.mp3",
         "ambient_nature.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_nature.mp3",
         "lofi_chill.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/lofi_chill.mp3",
-        "piano_soft.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/piano_soft.mp3"
+        "piano_soft.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/piano_soft.mp3",
+        "romantic_casa_rosa.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/romantic_casa_rosa.mp3",
+        "hindi_love_slowed.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/hindi_love_slowed.mp3",
+        "japanese_waguri_edit.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/japanese_waguri_edit.mp3",
+        "japanese_shounen_ki.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/japanese_shounen_ki.mp3"
     )
     
     /**

@@ -447,6 +447,10 @@ fun HabitTrackerNavigation(
                 safeNavigate("email_settings")
             }
             
+            val onMusicSettingsClick = rememberNavigationHandler {
+                safeNavigate("music_settings")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -458,7 +462,8 @@ fun HabitTrackerNavigation(
                 onNotificationGuideClick = onNotificationGuideClick,
                 onCheckForUpdates = onCheckForUpdates,
                 onLanguageSettingsClick = onLanguageSettingsClick,
-                onEmailSettingsClick = onEmailSettingsClick
+                onEmailSettingsClick = onEmailSettingsClick,
+                onMusicSettingsClick = onMusicSettingsClick
             )
         }
         
@@ -503,6 +508,19 @@ fun HabitTrackerNavigation(
             
             EmailSettingsScreen(
                 onNavigateBack = onBackClick
+            )
+        }
+        
+        composable("music_settings") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            it.atraj.habittracker.auth.ui.MusicSettingsScreen(
+                viewModel = authViewModel,
+                onBackClick = onBackClick
             )
         }
         
