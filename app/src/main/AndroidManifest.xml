@@ -277,6 +277,12 @@
             android:name=".receiver.HabitCompletionReceiver"
             android:exported="false" />
 
+        <!-- Debug receiver to force an overdue icon check via adb broadcast -->
+        <receiver
+            android:name=".debug.DebugIconCheckReceiver"
+            android:exported="false">
+        </receiver>
+
         <!-- Reschedule reminders on time / timezone / date changes -->
         <receiver
             android:name=".notification.TimeChangeReceiver"

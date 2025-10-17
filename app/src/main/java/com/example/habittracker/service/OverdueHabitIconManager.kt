@@ -125,19 +125,23 @@ class OverdueHabitIconManager @Inject constructor(
         try {
             when (iconState) {
                 IconState.DEFAULT -> {
-                    // Restore user's selected icon
+                    // Restore user's selected icon (enable first, then disable others)
                     val userIconAlias = appIconManager.getUserSelectedAlias()
                     val userIconId = appIconManager.getUserSelectedIconId()
-                    
-                    setComponentEnabledSafely(WARNING_ACTIVITY, false)
-                    setComponentEnabledSafely(ANGRY_ACTIVITY, false)
-                    setComponentEnabledSafely(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
-                    
-                    // Enable user's preferred icon
+
+                    // Enable user's preferred icon first to ensure there is always an active launcher
                     setComponentEnabledSafely(userIconAlias, true)
                     appIconManager.setCurrentIconIdTemporarily(userIconId)
-                    
+
+                    // Disable all other overdue/default/custom aliases except the one we just enabled
+                    if (MAIN_ACTIVITY != userIconAlias) setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    listOf(WARNING_ACTIVITY, ANGRY_ACTIVITY, WARNING_ANIME_ACTIVITY, ANGRY_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                        if (it != userIconAlias) setComponentEnabledSafely(it, false)
+                    }
+                    CUSTOM_ICON_ALIASES.forEach {
+                        if (it != userIconAlias) setComponentEnabledSafely(it, false)
+                    }
+
                     Log.d(TAG, "Restored user's icon: $userIconId ($userIconAlias)")
                 }
                 
@@ -203,65 +207,57 @@ class OverdueHabitIconManager @Inject constructor(
                 }
                 
                 IconState.WARNING -> {
-                    // Enable warning icon, disable others
-                    // Use themed icon if user selected anime or sitama
+                    // Enable appropriate warning icon first (themed variants if user selected anime/sitama)
                     val userIconId = appIconManager.getUserSelectedIconId()
                     val warningAlias = when (userIconId) {
                         "anime" -> WARNING_ANIME_ACTIVITY
                         "sitama" -> WARNING_SITAMA_ACTIVITY
                         else -> WARNING_ACTIVITY
                     }
-                    
+
                     Log.d(TAG, "Switching to WARNING - User icon: $userIconId, Warning alias: $warningAlias")
-                    
-                    // Disable everything first
-                    setComponentEnabled(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
-                    
-                    // Disable all overdue variants
-                    setComponentEnabled(WARNING_ACTIVITY, false)
-                    setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
-                    setComponentEnabled(WARNING_SITAMA_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_SITAMA_ACTIVITY, false)
-                    
-                    // Enable only the appropriate warning icon
+
+                    // Enable the target alias first
                     setComponentEnabled(warningAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("warning")
-                    
-                    Log.d(TAG, "✓ Switched to warning app icon (themed: $warningAlias)")
+
+                    // Disable all other aliases except the one we just enabled
+                    if (MAIN_ACTIVITY != warningAlias) setComponentEnabled(MAIN_ACTIVITY, false)
+                    listOf(WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                        if (it != warningAlias) setComponentEnabled(it, false)
+                    }
+                    CUSTOM_ICON_ALIASES.forEach {
+                        if (it != warningAlias) setComponentEnabled(it, false)
+                    }
+
+                    Log.d(TAG, "\u2713 Switched to warning app icon (themed: $warningAlias)")
                 }
                 
                 IconState.CRITICAL_WARNING -> {
-                    // Enable angry icon, disable others
-                    // Use themed icon if user selected anime or sitama
+                    // Enable appropriate angry icon first (themed variants if user selected anime/sitama)
                     val userIconId = appIconManager.getUserSelectedIconId()
                     val angryAlias = when (userIconId) {
                         "anime" -> ANGRY_ANIME_ACTIVITY
                         "sitama" -> ANGRY_SITAMA_ACTIVITY
                         else -> ANGRY_ACTIVITY
                     }
-                    
+
                     Log.d(TAG, "Switching to CRITICAL_WARNING - User icon: $userIconId, Angry alias: $angryAlias")
-                    
-                    // Disable everything first
-                    setComponentEnabled(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
-                    
-                    // Disable all overdue variants
-                    setComponentEnabled(WARNING_ACTIVITY, false)
-                    setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
-                    setComponentEnabled(WARNING_SITAMA_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_SITAMA_ACTIVITY, false)
-                    
-                    // Enable only the appropriate angry icon
+
+                    // Enable the target alias first
                     setComponentEnabled(angryAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("angry")
-                    
-                    Log.d(TAG, "✓ Switched to angry app icon (themed: $angryAlias)")
+
+                    // Disable all other aliases except the one we just enabled
+                    if (MAIN_ACTIVITY != angryAlias) setComponentEnabled(MAIN_ACTIVITY, false)
+                    listOf(WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                        if (it != angryAlias) setComponentEnabled(it, false)
+                    }
+                    CUSTOM_ICON_ALIASES.forEach {
+                        if (it != angryAlias) setComponentEnabled(it, false)
+                    }
+
+                    Log.d(TAG, "\u2713 Switched to angry app icon (themed: $angryAlias)")
                 }
             }
         } catch (e: Exception) {
@@ -334,8 +330,15 @@ class OverdueHabitIconManager @Inject constructor(
     fun initialize() {
         // Just initialize state tracking - don't change components at startup
         try {
-            currentIconState = IconState.DEFAULT
-            Log.d(TAG, "OverdueHabitIconManager initialized")
+            // Initialize currentIconState from persisted AppIconManager to avoid
+            // process-restart desynchronization between in-memory state and actual enabled alias
+            val persistedIconId = appIconManager.getCurrentIconId()
+            currentIconState = when (persistedIconId) {
+                "angry" -> IconState.CRITICAL_WARNING
+                "warning" -> IconState.WARNING
+                else -> IconState.DEFAULT
+            }
+            Log.d(TAG, "OverdueHabitIconManager initialized - persisted icon id: $persistedIconId, currentIconState: $currentIconState")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize icon manager", e)
         }
