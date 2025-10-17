@@ -50,7 +50,6 @@ fun AppIconSelectionScreen(
     val context = LocalContext.current
     val currentIconId by viewModel.currentIconId.collectAsState()
     val isChangingIcon by viewModel.isChangingIcon.collectAsState()
-    val isInOverdueMode by viewModel.isInOverdueMode.collectAsState()
     
     // Define available icon options (user's custom icons only)
     val iconOptions = remember {
@@ -84,12 +83,6 @@ fun AppIconSelectionScreen(
                 name = "Anime",
                 iconRes = R.mipmap.ic_launcher_anime,
                 alias = "it.atraj.habittracker.MainActivity.Anime"
-            ),
-            AppIconOption(
-                id = "sitama",
-                name = "Sitama",
-                iconRes = R.mipmap.ic_launcher_sitama,
-                alias = "it.atraj.habittracker.MainActivity.Sitama"
             )
         )
     }
@@ -125,46 +118,6 @@ fun AppIconSelectionScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Warning card for overdue mode
-            if (isInOverdueMode) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Icon Change Locked",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "You have overdue habits! Complete all overdue tasks to unlock app icon customization.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
             // Header explanation
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -214,9 +167,8 @@ fun AppIconSelectionScreen(
                         option = option,
                         isSelected = currentIconId == option.id,
                         isChanging = isChangingIcon,
-                        isDisabled = isInOverdueMode,
                         onClick = {
-                            if (!isChangingIcon && !isInOverdueMode && currentIconId != option.id) {
+                            if (!isChangingIcon && currentIconId != option.id) {
                                 showConfirmationDialog = option
                             }
                         }
@@ -290,17 +242,14 @@ private fun AppIconCard(
     option: AppIconOption,
     isSelected: Boolean,
     isChanging: Boolean,
-    isDisabled: Boolean = false,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !isChanging && !isDisabled) { onClick() },
+            .clickable(enabled = !isChanging) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isDisabled) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            } else if (isSelected) {
+            containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             } else {
                 MaterialTheme.colorScheme.surface
@@ -341,9 +290,7 @@ private fun AppIconCard(
                     Image(
                         bitmap = it.toBitmap().asImageBitmap(),
                         contentDescription = null,
-                        modifier = Modifier
-                            .size(64.dp),
-                        alpha = if (isDisabled) 0.4f else 1f
+                        modifier = Modifier.size(64.dp)
                     )
                 }
             }
@@ -354,9 +301,7 @@ private fun AppIconCard(
                 option.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isDisabled) {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                } else if (isSelected) {
+                color = if (isSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant

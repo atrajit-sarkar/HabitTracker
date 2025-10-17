@@ -37,10 +37,6 @@ class OverdueHabitIconManager @Inject constructor(
         private const val WARNING_ANIME_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningAnime"
         private const val ANGRY_ANIME_ACTIVITY = "it.atraj.habittracker.MainActivity.AngryAnime"
         
-        // Sitama-themed overdue icons
-        private const val WARNING_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningSitama"
-        private const val ANGRY_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.AngrySitama"
-        
         // Custom user icon aliases - DO NOT MODIFY
         private val CUSTOM_ICON_ALIASES = setOf(
             "it.atraj.habittracker.MainActivity.Custom1",
@@ -48,10 +44,7 @@ class OverdueHabitIconManager @Inject constructor(
             "it.atraj.habittracker.MainActivity.NI",
             "it.atraj.habittracker.MainActivity.Anime",
             "it.atraj.habittracker.MainActivity.WarningAnime",
-            "it.atraj.habittracker.MainActivity.AngryAnime",
-            "it.atraj.habittracker.MainActivity.Sitama",
-            "it.atraj.habittracker.MainActivity.WarningSitama",
-            "it.atraj.habittracker.MainActivity.AngrySitama"
+            "it.atraj.habittracker.MainActivity.AngryAnime"
         )
     }
     
@@ -171,97 +164,56 @@ class OverdueHabitIconManager @Inject constructor(
      */
     fun updateAppIcon(iconState: IconState) {
         try {
-            Log.d(TAG, "updateAppIcon called with state: $iconState")
-            
             when (iconState) {
                 IconState.DEFAULT -> {
                     // Restore user's selected icon
                     val userIconAlias = appIconManager.getUserSelectedAlias()
                     val userIconId = appIconManager.getUserSelectedIconId()
                     
-                    Log.d(TAG, "Restoring to DEFAULT - User icon: $userIconId, Alias: $userIconAlias")
-                    
-                    // First: Disable ALL activity aliases (including main and all custom)
-                    setComponentEnabled(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { alias ->
-                        setComponentEnabled(alias, false)
-                    }
-                    
-                    // Second: Disable ALL overdue icons (default and themed)
                     setComponentEnabled(WARNING_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ACTIVITY, false)
-                    setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
-                    setComponentEnabled(WARNING_SITAMA_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_SITAMA_ACTIVITY, false)
+                    setComponentEnabled(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
                     
-                    // Third: Enable ONLY user's preferred icon
+                    // Enable user's preferred icon
                     appIconManager.setComponentEnabled(userIconAlias, true)
                     appIconManager.setCurrentIconIdTemporarily(userIconId)
                     
-                    Log.d(TAG, "✓ Restored user's icon: $userIconId ($userIconAlias)")
+                    Log.d(TAG, "Restored user's icon: $userIconId ($userIconAlias)")
                 }
                 
                 IconState.WARNING -> {
                     // Enable warning icon, disable others
-                    // Use themed icon if user selected anime or sitama
-                    val userIconId = appIconManager.getUserSelectedIconId()
-                    val warningAlias = when (userIconId) {
-                        "anime" -> WARNING_ANIME_ACTIVITY
-                        "sitama" -> WARNING_SITAMA_ACTIVITY
-                        else -> WARNING_ACTIVITY
-                    }
+                    // Use themed icon if user selected anime
+                    val warningAlias = if (userIconId == "anime") WARNING_ANIME_ACTIVITY else WARNING_ACTIVITY
                     
-                    Log.d(TAG, "Switching to WARNING - User icon: $userIconId, Warning alias: $warningAlias")
-                    
-                    // Disable everything first
                     setComponentEnabled(MAIN_ACTIVITY, false)
                     CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
-                    
-                    // Disable all overdue variants
                     setComponentEnabled(WARNING_ACTIVITY, false)
                     setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
-                    setComponentEnabled(WARNING_SITAMA_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_SITAMA_ACTIVITY, false)
                     
-                    // Enable only the appropriate warning icon
                     setComponentEnabled(warningAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("warning")
-                    
-                    Log.d(TAG, "✓ Switched to warning app icon (themed: $warningAlias)")
+                    Log.d(TAG, "Switched to warning app icon (themed: $warningAlias)")
                 }
                 
                 IconState.CRITICAL_WARNING -> {
                     // Enable angry icon, disable others
-                    // Use themed icon if user selected anime or sitama
-                    val userIconId = appIconManager.getUserSelectedIconId()
-                    val angryAlias = when (userIconId) {
-                        "anime" -> ANGRY_ANIME_ACTIVITY
-                        "sitama" -> ANGRY_SITAMA_ACTIVITY
-                        else -> ANGRY_ACTIVITY
-                    }
+                    // Use themed icon if user selected anime
+                    val angryAlias = if (userIconId == "anime") ANGRY_ANIME_ACTIVITY else ANGRY_ACTIVITY
                     
-                    Log.d(TAG, "Switching to CRITICAL_WARNING - User icon: $userIconId, Angry alias: $angryAlias")
-                    
-                    // Disable everything first
                     setComponentEnabled(MAIN_ACTIVITY, false)
                     CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
-                    
-                    // Disable all overdue variants
                     setComponentEnabled(WARNING_ACTIVITY, false)
                     setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
-                    setComponentEnabled(WARNING_SITAMA_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_SITAMA_ACTIVITY, false)
                     
-                    // Enable only the appropriate angry icon
                     setComponentEnabled(angryAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("angry")
-                    
-                    Log.d(TAG, "✓ Switched to angry app icon (themed: $angryAlias)")
+                    Log.d(TAG, "Switched to angry app icon (themed: $angryAlias)")
                 }
             }
         } catch (e: Exception) {
@@ -283,24 +235,18 @@ class OverdueHabitIconManager @Inject constructor(
     fun getCurrentIconState(): IconState = currentIconState
     
     private fun setComponentEnabled(componentName: String, enabled: Boolean) {
-        try {
-            val component = ComponentName(context, componentName)
-            val newState = if (enabled) {
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            }
-            
-            packageManager.setComponentEnabledSetting(
-                component,
-                newState,
-                PackageManager.DONT_KILL_APP
-            )
-            
-            Log.d(TAG, "Set component $componentName enabled=$enabled")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting component state for $componentName", e)
+        val component = ComponentName(context, componentName)
+        val newState = if (enabled) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } else {
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
+        
+        packageManager.setComponentEnabledSetting(
+            component,
+            newState,
+            PackageManager.DONT_KILL_APP
+        )
     }
     
     private fun setComponentEnabledSafely(componentName: String, enabled: Boolean) {
@@ -354,48 +300,7 @@ class OverdueHabitIconManager @Inject constructor(
     fun onHabitCompleted() {
         Log.d(TAG, "Habit completed, clearing cache and updating icon...")
         OverdueHabitChecker.clearCache()
-        // Use immediate check without delay for habit completion
-        scope.launch {
-            try {
-                // Small delay to let data sync
-                kotlinx.coroutines.delay(500)
-                
-                val habits = habitRepository.getAllHabits()
-                val currentTime = LocalDateTime.now()
-                
-                Log.d(TAG, "Checking ${habits.size} habits after completion")
-                
-                // Get completion data for all habits
-                val allCompletions = habits.associate { habit ->
-                    habit.id to habitRepository.getHabitCompletions(habit.id)
-                }
-                
-                // Check for overdue habits (force refresh)
-                val overdueHabits = OverdueHabitChecker.getOverdueHabits(
-                    habits = habits,
-                    allCompletions = allCompletions,
-                    currentTime = currentTime,
-                    forceRefresh = true
-                )
-                
-                // Determine required icon state
-                val requiredIconState = OverdueHabitChecker.determineIconState(overdueHabits)
-                
-                Log.d(TAG, "After completion: ${overdueHabits.size} overdue habits. Required icon state: $requiredIconState")
-                
-                // Update icon if state changed
-                if (requiredIconState != currentIconState) {
-                    updateAppIcon(requiredIconState)
-                    currentIconState = requiredIconState
-                    Log.d(TAG, "Icon updated to: $requiredIconState")
-                } else {
-                    Log.d(TAG, "Icon state unchanged: $currentIconState")
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "Error checking overdue habits after completion", e)
-            }
-        }
+        checkAndUpdateIcon(forceRefresh = true)
     }
     
     /**
