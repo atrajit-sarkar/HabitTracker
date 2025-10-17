@@ -47,6 +47,7 @@ import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
 import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
 import it.atraj.habittracker.email.ui.EmailSettingsScreen
 import it.atraj.habittracker.auth.ui.MusicSettingsScreen
+import it.atraj.habittracker.ui.profile.AppIconSelectionScreen
 import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -452,6 +453,10 @@ fun HabitTrackerNavigation(
                 safeNavigate("music_settings")
             }
             
+            val onAppIconSelectionClick = rememberNavigationHandler {
+                safeNavigate("app_icon_selection")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -464,7 +469,8 @@ fun HabitTrackerNavigation(
                 onCheckForUpdates = onCheckForUpdates,
                 onLanguageSettingsClick = onLanguageSettingsClick,
                 onEmailSettingsClick = onEmailSettingsClick,
-                onMusicSettingsClick = onMusicSettingsClick
+                onMusicSettingsClick = onMusicSettingsClick,
+                onAppIconSelectionClick = onAppIconSelectionClick
             )
         }
         
@@ -631,7 +637,17 @@ fun HabitTrackerNavigation(
                 onChatClick = onChatClick
             )
         }
-
+        
+        composable("app_icon_selection") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            AppIconSelectionScreen(
+                onBackClick = onBackClick
+            )
+        }
+        
         // Freeze Store Screen
         composable("freeze_store") {
             val viewModel: HabitViewModel = hiltViewModel()

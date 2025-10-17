@@ -27,15 +27,19 @@ class OverdueHabitWorker @AssistedInject constructor(
     companion object {
         private const val TAG = "OverdueHabitWorker"
         private const val WORK_NAME = "overdue_habit_check_work"
-        private const val CHECK_INTERVAL_MINUTES = 2L // Check every 2 minutes for maximum responsiveness
+        
+        // Production-ready intervals
+        private const val PERIODIC_CHECK_HOURS = 1L // Check every hour as fallback
+        private const val SMART_CHECK_DELAY_MINUTES = 5L // Check 5 minutes after habit due time
         
         /**
          * Schedule periodic checks for overdue habits
+         * Uses 1-hour interval as fallback - main checks are smart-scheduled around habit times
          */
         fun schedulePeriodicCheck(context: Context) {
             val workRequest = PeriodicWorkRequestBuilder<OverdueHabitWorker>(
-                CHECK_INTERVAL_MINUTES,
-                TimeUnit.MINUTES
+                PERIODIC_CHECK_HOURS,
+                TimeUnit.HOURS
             ).build()
             
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -44,31 +48,35 @@ class OverdueHabitWorker @AssistedInject constructor(
                 workRequest
             )
             
-            Log.d(TAG, "Scheduled periodic overdue habit checks every $CHECK_INTERVAL_MINUTES minutes")
+            Log.d(TAG, "Scheduled periodic overdue habit checks every $PERIODIC_CHECK_HOURS hour(s)")
         }
         
         /**
          * Schedule smart checks around habit due times for maximum responsiveness
+         * Checks 5 minutes after each habit's due time to detect overdue status
          */
         fun scheduleSmartChecks(context: Context, upcomingHabitTimes: List<LocalDateTime>) {
-            // Cancel existing immediate checks
-            WorkManager.getInstance(context).cancelUniqueWork("smart_checks")
+            // Cancel existing smart checks
+            WorkManager.getInstance(context).cancelAllWorkByTag("smart_check")
             
-            // Schedule checks 1 minute before and after each habit due time
-            upcomingHabitTimes.forEach { habitTime ->
-                val checkTime = habitTime.plusMinutes(1) // 1 minute after due time
+            // Schedule checks after each habit due time
+            upcomingHabitTimes.take(10).forEach { habitTime -> // Limit to next 10 habits
+                val checkTime = habitTime.plusMinutes(SMART_CHECK_DELAY_MINUTES)
                 val now = LocalDateTime.now()
                 
                 if (checkTime.isAfter(now)) {
                     val delayMinutes = ChronoUnit.MINUTES.between(now, checkTime)
                     
-                    val workRequest = OneTimeWorkRequestBuilder<OverdueHabitWorker>()
-                        .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
-                        .addTag("smart_check_${habitTime.toEpochSecond(java.time.ZoneOffset.UTC)}")
-                        .build()
-                    
-                    WorkManager.getInstance(context).enqueue(workRequest)
-                    Log.d(TAG, "Scheduled smart check for $delayMinutes minutes from now (habit due at $habitTime)")
+                    // Only schedule if within next 24 hours
+                    if (delayMinutes <= 1440) { // 24 hours
+                        val workRequest = OneTimeWorkRequestBuilder<OverdueHabitWorker>()
+                            .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
+                            .addTag("smart_check")
+                            .build()
+                        
+                        WorkManager.getInstance(context).enqueue(workRequest)
+                        Log.d(TAG, "Scheduled smart check in $delayMinutes minutes (habit due at $habitTime)")
+                    }
                 }
             }
         }

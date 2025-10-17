@@ -468,6 +468,9 @@ class HabitViewModel @Inject constructor(
             
             // Calculate and update streak
             updateHabitStreak(habitId)
+            
+            // Notify icon manager to check for overdue habits
+            it.atraj.habittracker.receiver.HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {
@@ -478,6 +481,9 @@ class HabitViewModel @Inject constructor(
     fun markHabitCompletedForDate(habitId: Long, date: java.time.LocalDate) {
         viewModelScope.launch(Dispatchers.IO) {
             habitRepository.markCompletedForDate(habitId, date)
+            
+            // Notify icon manager to check for overdue habits
+            it.atraj.habittracker.receiver.HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {

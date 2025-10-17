@@ -253,7 +253,8 @@ fun ProfileScreen(
     onCheckForUpdates: () -> Unit = {},
     onLanguageSettingsClick: () -> Unit = {},
     onEmailSettingsClick: () -> Unit = {},
-    onMusicSettingsClick: () -> Unit = {}
+    onMusicSettingsClick: () -> Unit = {},
+    onAppIconSelectionClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -1187,6 +1188,26 @@ Card(
                         iconTint = MaterialTheme.colorScheme.tertiary,
                         textColor = MaterialTheme.colorScheme.onTertiaryContainer,
                         onClick = onMusicSettingsClick
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // App Icon
+                    ProfileSettingRow(
+                        icon = Icons.Default.Apps,
+                        title = "App Icon",
+                        subtitle = "Change your app launcher icon",
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        onClick = onAppIconSelectionClick
                     )
                     
                     HorizontalDivider(

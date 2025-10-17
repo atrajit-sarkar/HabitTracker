@@ -36,6 +36,14 @@ object OverdueHabitChecker {
         val lastScheduledTime = getLastScheduledTime(habit, currentTime)
         val lastCompletionTime = getLastCompletionTime(habit, completions, lastScheduledTime.toLocalDate())
         
+        // For daily habits: if completed today, never overdue (even if yesterday was missed)
+        if (habit.frequency == HabitFrequency.DAILY) {
+            val completedToday = completions.any { it.completedDate == currentTime.toLocalDate() }
+            if (completedToday) {
+                return OverdueStatus(false, 0, false)
+            }
+        }
+        
         // If habit was completed after the last scheduled time, it's not overdue
         if (lastCompletionTime != null && lastCompletionTime.isAfter(lastScheduledTime)) {
             return OverdueStatus(false, 0, false)
@@ -123,30 +131,67 @@ object OverdueHabitChecker {
         return when (habit.frequency) {
             HabitFrequency.DAILY -> {
                 val todayScheduled = today.atTime(reminderTime)
+                // Only return today's scheduled time if it has passed
+                // Otherwise, return a future time (not overdue)
                 if (todayScheduled.isBefore(currentTime) || todayScheduled.isEqual(currentTime)) {
                     todayScheduled
                 } else {
-                    today.minusDays(1).atTime(reminderTime)
+                    // Future time - will not be marked as overdue
+                    todayScheduled
                 }
             }
             
             HabitFrequency.WEEKLY -> {
                 val targetDayOfWeek = habit.dayOfWeek ?: 1
-                val scheduledDate = findLastWeeklySchedule(today, targetDayOfWeek)
-                scheduledDate.atTime(reminderTime)
+                val todayDayOfWeek = today.dayOfWeek.value
+                // Only check if today is the scheduled day
+                if (todayDayOfWeek == targetDayOfWeek) {
+                    val todayScheduled = today.atTime(reminderTime)
+                    if (todayScheduled.isBefore(currentTime) || todayScheduled.isEqual(currentTime)) {
+                        todayScheduled
+                    } else {
+                        todayScheduled
+                    }
+                } else {
+                    // Not scheduled for today - return future time
+                    currentTime.plusDays(7)
+                }
             }
             
             HabitFrequency.MONTHLY -> {
                 val targetDayOfMonth = habit.dayOfMonth ?: 1
-                val scheduledDate = findLastMonthlySchedule(today, targetDayOfMonth)
-                scheduledDate.atTime(reminderTime)
+                val todayDayOfMonth = today.dayOfMonth
+                // Only check if today is the scheduled day
+                if (todayDayOfMonth == targetDayOfMonth) {
+                    val todayScheduled = today.atTime(reminderTime)
+                    if (todayScheduled.isBefore(currentTime) || todayScheduled.isEqual(currentTime)) {
+                        todayScheduled
+                    } else {
+                        todayScheduled
+                    }
+                } else {
+                    // Not scheduled for today - return future time
+                    currentTime.plusMonths(1)
+                }
             }
             
             HabitFrequency.YEARLY -> {
                 val targetMonth = habit.monthOfYear ?: 1
                 val targetDay = habit.dayOfMonth ?: 1
-                val scheduledDate = findLastYearlySchedule(today, targetMonth, targetDay)
-                scheduledDate.atTime(reminderTime)
+                val todayMonth = today.monthValue
+                val todayDay = today.dayOfMonth
+                // Only check if today is the scheduled day
+                if (todayMonth == targetMonth && todayDay == targetDay) {
+                    val todayScheduled = today.atTime(reminderTime)
+                    if (todayScheduled.isBefore(currentTime) || todayScheduled.isEqual(currentTime)) {
+                        todayScheduled
+                    } else {
+                        todayScheduled
+                    }
+                } else {
+                    // Not scheduled for today - return future time
+                    currentTime.plusYears(1)
+                }
             }
         }
     }

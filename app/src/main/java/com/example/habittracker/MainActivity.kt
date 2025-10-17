@@ -358,11 +358,18 @@ class MainActivity : ComponentActivity() {
             var token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(this)
             
             // If no token is stored, try to use BuildConfig token (for first run)
-            if (token == null && BuildConfig.GITHUB_TOKEN.isNotEmpty()) {
-                token = BuildConfig.GITHUB_TOKEN
-                // Store it securely for future use
-                it.atraj.habittracker.avatar.SecureTokenStorage.storeToken(this, token)
-                Log.d("MainActivity", "✅ GitHub token stored from BuildConfig")
+            if (token == null) {
+                try {
+                    val buildConfigToken = BuildConfig.GITHUB_TOKEN
+                    if (buildConfigToken.isNotEmpty()) {
+                        token = buildConfigToken
+                        // Store it securely for future use
+                        it.atraj.habittracker.avatar.SecureTokenStorage.storeToken(this, token)
+                        Log.d("MainActivity", "✅ GitHub token stored from BuildConfig")
+                    }
+                } catch (e: Exception) {
+                    Log.w("MainActivity", "⚠️ BuildConfig.GITHUB_TOKEN not available: ${e.message}")
+                }
             }
             
             if (token != null) {

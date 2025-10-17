@@ -19,7 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class OverdueHabitIconManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val habitRepository: HabitRepository
+    private val habitRepository: HabitRepository,
+    private val appIconManager: AppIconManager
 ) {
     
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -31,6 +32,20 @@ class OverdueHabitIconManager @Inject constructor(
         private const val MAIN_ACTIVITY = "it.atraj.habittracker.MainActivity"
         private const val WARNING_ACTIVITY = "it.atraj.habittracker.MainActivity.Warning"
         private const val ANGRY_ACTIVITY = "it.atraj.habittracker.MainActivity.Angry"
+        
+        // Anime-themed overdue icons
+        private const val WARNING_ANIME_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningAnime"
+        private const val ANGRY_ANIME_ACTIVITY = "it.atraj.habittracker.MainActivity.AngryAnime"
+        
+        // Custom user icon aliases - DO NOT MODIFY
+        private val CUSTOM_ICON_ALIASES = setOf(
+            "it.atraj.habittracker.MainActivity.Custom1",
+            "it.atraj.habittracker.MainActivity.Custom2",
+            "it.atraj.habittracker.MainActivity.NI",
+            "it.atraj.habittracker.MainActivity.Anime",
+            "it.atraj.habittracker.MainActivity.WarningAnime",
+            "it.atraj.habittracker.MainActivity.AngryAnime"
+        )
     }
     
     /**
@@ -39,7 +54,26 @@ class OverdueHabitIconManager @Inject constructor(
     fun checkAndUpdateIcon(forceRefresh: Boolean = false) {
         scope.launch {
             try {
+                // Skip on first launch to avoid false positives
+                if (appIconManager.isFirstLaunch()) {
+                    Log.d(TAG, "First launch detected, skipping overdue check")
+                    appIconManager.markFirstLaunchComplete()
+                    return@launch
+                }
+                
+                // Skip if user is actively changing icons
+                if (appIconManager.isChangingIcon()) {
+                    Log.d(TAG, "User is changing icon, skipping overdue check")
+                    return@launch
+                }
+                
+                // Add delay to avoid conflicts on app startup
+                // Longer delay to ensure app has fully restarted and Firestore data has synced
+                kotlinx.coroutines.delay(5000)
+                
+                Log.d(TAG, "Running overdue check now...")
                 val habits = habitRepository.getAllHabits()
+                Log.d(TAG, "Found ${habits.size} total habits")
                 val currentTime = LocalDateTime.now()
                 
                 // Get completion data for all habits
@@ -60,6 +94,11 @@ class OverdueHabitIconManager @Inject constructor(
                 
                 Log.d(TAG, "Found ${overdueHabits.size} overdue habits. Required icon state: $requiredIconState")
                 
+                // Log details of each overdue habit
+                overdueHabits.forEach { (habit, status) ->
+                    Log.d(TAG, "Overdue habit: ${habit.title}, ${status.overdueHours} hours overdue, reminder: ${habit.reminderHour}:${habit.reminderMinute}")
+                }
+                
                 // Update icon if state changed
                 if (requiredIconState != currentIconState) {
                     updateAppIcon(requiredIconState)
@@ -79,26 +118,39 @@ class OverdueHabitIconManager @Inject constructor(
         try {
             when (iconState) {
                 IconState.DEFAULT -> {
-                    // Enable default icon, disable warning icons
-                    setComponentEnabledSafely(MAIN_ACTIVITY, true)
+                    // Restore user's selected icon
+                    val userIconAlias = appIconManager.getUserSelectedAlias()
+                    val userIconId = appIconManager.getUserSelectedIconId()
+                    
                     setComponentEnabledSafely(WARNING_ACTIVITY, false)
                     setComponentEnabledSafely(ANGRY_ACTIVITY, false)
-                    Log.d(TAG, "Switched to default app icon")
+                    setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
+                    
+                    // Enable user's preferred icon
+                    setComponentEnabledSafely(userIconAlias, true)
+                    appIconManager.setCurrentIconIdTemporarily(userIconId)
+                    
+                    Log.d(TAG, "Restored user's icon: $userIconId ($userIconAlias)")
                 }
                 
                 IconState.WARNING -> {
                     // Enable warning icon, disable others
                     setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
                     setComponentEnabledSafely(WARNING_ACTIVITY, true)
                     setComponentEnabledSafely(ANGRY_ACTIVITY, false)
+                    appIconManager.setCurrentIconIdTemporarily("warning")
                     Log.d(TAG, "Switched to warning app icon")
                 }
                 
                 IconState.CRITICAL_WARNING -> {
                     // Enable angry icon, disable others
                     setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
                     setComponentEnabledSafely(WARNING_ACTIVITY, false)
                     setComponentEnabledSafely(ANGRY_ACTIVITY, true)
+                    appIconManager.setCurrentIconIdTemporarily("angry")
                     Log.d(TAG, "Switched to angry app icon")
                 }
             }
@@ -114,27 +166,54 @@ class OverdueHabitIconManager @Inject constructor(
         try {
             when (iconState) {
                 IconState.DEFAULT -> {
-                    // Enable default icon, disable warning icons
-                    setComponentEnabled(MAIN_ACTIVITY, true)
+                    // Restore user's selected icon
+                    val userIconAlias = appIconManager.getUserSelectedAlias()
+                    val userIconId = appIconManager.getUserSelectedIconId()
+                    
                     setComponentEnabled(WARNING_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ACTIVITY, false)
-                    Log.d(TAG, "Switched to default app icon")
+                    setComponentEnabled(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
+                    
+                    // Enable user's preferred icon
+                    appIconManager.setComponentEnabled(userIconAlias, true)
+                    appIconManager.setCurrentIconIdTemporarily(userIconId)
+                    
+                    Log.d(TAG, "Restored user's icon: $userIconId ($userIconAlias)")
                 }
                 
                 IconState.WARNING -> {
                     // Enable warning icon, disable others
+                    // Use themed icon if user selected anime
+                    val warningAlias = if (userIconId == "anime") WARNING_ANIME_ACTIVITY else WARNING_ACTIVITY
+                    
                     setComponentEnabled(MAIN_ACTIVITY, false)
-                    setComponentEnabled(WARNING_ACTIVITY, true)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
+                    setComponentEnabled(WARNING_ACTIVITY, false)
+                    setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
                     setComponentEnabled(ANGRY_ACTIVITY, false)
-                    Log.d(TAG, "Switched to warning app icon")
+                    setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
+                    
+                    setComponentEnabled(warningAlias, true)
+                    appIconManager.setCurrentIconIdTemporarily("warning")
+                    Log.d(TAG, "Switched to warning app icon (themed: $warningAlias)")
                 }
                 
                 IconState.CRITICAL_WARNING -> {
                     // Enable angry icon, disable others
+                    // Use themed icon if user selected anime
+                    val angryAlias = if (userIconId == "anime") ANGRY_ANIME_ACTIVITY else ANGRY_ACTIVITY
+                    
                     setComponentEnabled(MAIN_ACTIVITY, false)
+                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabled(it, false) }
                     setComponentEnabled(WARNING_ACTIVITY, false)
-                    setComponentEnabled(ANGRY_ACTIVITY, true)
-                    Log.d(TAG, "Switched to angry app icon")
+                    setComponentEnabled(WARNING_ANIME_ACTIVITY, false)
+                    setComponentEnabled(ANGRY_ACTIVITY, false)
+                    setComponentEnabled(ANGRY_ANIME_ACTIVITY, false)
+                    
+                    setComponentEnabled(angryAlias, true)
+                    appIconManager.setCurrentIconIdTemporarily("angry")
+                    Log.d(TAG, "Switched to angry app icon (themed: $angryAlias)")
                 }
             }
         } catch (e: Exception) {
@@ -199,16 +278,20 @@ class OverdueHabitIconManager @Inject constructor(
      * Initialize icon manager - call from Application onCreate
      */
     fun initialize() {
-        // Ensure default icon is enabled on first run
+        // Just initialize state tracking - don't change components at startup
         try {
-            setComponentEnabled(MAIN_ACTIVITY, true)
-            setComponentEnabled(WARNING_ACTIVITY, false)
-            setComponentEnabled(ANGRY_ACTIVITY, false)
             currentIconState = IconState.DEFAULT
             Log.d(TAG, "OverdueHabitIconManager initialized")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize icon manager", e)
         }
+    }
+    
+    /**
+     * Clear the changing icon flag (call after app has fully started)
+     */
+    fun clearChangingIconFlag() {
+        appIconManager.clearChangingIconFlag()
     }
     
     /**
