@@ -16,6 +16,10 @@ import it.atraj.habittracker.data.local.UserRewards
 import it.atraj.habittracker.notification.HabitReminderScheduler
 import it.atraj.habittracker.notification.HabitReminderService
 import it.atraj.habittracker.ui.social.ProfileStatsUpdater
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.ExistingWorkPolicy
+import it.atraj.habittracker.image.HabitImagePreloadWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
@@ -140,10 +144,14 @@ class HabitViewModel @Inject constructor(
                     isFirstLoad = false
                 }
                 
-                // Sync notification channels after habits are loaded
+        // Sync notification channels after habits are loaded
                 // This ensures all active habits have their channels in the system
                 if (habits.isNotEmpty()) {
                     HabitReminderService.syncAllHabitChannels(context, habits)
+                    
+                    // Preload custom images in background (non-blocking, one-time)
+                    // This ensures notifications have cached images even after cache clear
+                    scheduleImagePreload()
                 }
             }
         }
@@ -197,6 +205,23 @@ class HabitViewModel @Inject constructor(
             }
             android.util.Log.d("HabitViewModel", "Habits UI refreshed - completion states recalculated")
         }
+    }
+    
+    /**
+     * Schedule background image preload for custom habit avatars.
+     * Non-blocking, runs once, ensures notifications have cached images.
+     */
+    private fun scheduleImagePreload() {
+        val workRequest = OneTimeWorkRequestBuilder<HabitImagePreloadWorker>().build()
+        
+        // Use KEEP policy - if already running/scheduled, don't start another
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            HabitImagePreloadWorker.WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            workRequest
+        )
+        
+        android.util.Log.d("HabitViewModel", "Scheduled background image preload")
     }
 
     fun showAddHabitSheet() {
@@ -657,16 +682,31 @@ class HabitViewModel @Inject constructor(
 
     fun restoreHabit(habitId: Long) {
         viewModelScope.launch {
-            val habit = withContext(Dispatchers.IO) {
-                habitRepository.getHabitById(habitId)
-            }
+            android.util.Log.d("HabitViewModel", "🔄 Restoring habit ID: $habitId")
+            
             withContext(Dispatchers.IO) {
                 habitRepository.restoreFromTrash(habitId)
             }
+            android.util.Log.d("HabitViewModel", "✅ Habit restored in Firestore, now fetching fresh data...")
+            
+            // Fetch habit AFTER restore to get updated state
+            val habit = withContext(Dispatchers.IO) {
+                habitRepository.getHabitById(habitId)
+            }
+            
+            android.util.Log.d("HabitViewModel", "📦 Fresh habit data: title='${habit.title}', avatar=${habit.avatar}")
+            
             // Reschedule notifications if reminder is enabled
             if (habit.reminderEnabled) {
                 reminderScheduler.schedule(habit)
+                android.util.Log.d("HabitViewModel", "⏰ Alarm rescheduled for '${habit.title}'")
+            } else {
+                android.util.Log.d("HabitViewModel", "🔕 Reminder disabled, no alarm scheduled")
             }
+            
+            // Preload image to ensure fresh cache with updated URL
+            scheduleImagePreload()
+            
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" restored")
             }
@@ -683,6 +723,10 @@ class HabitViewModel @Inject constructor(
             val habit = withContext(Dispatchers.IO) {
                 habitRepository.getHabitById(habitId)
             }
+            
+            // Cancel any scheduled alarms
+            reminderScheduler.cancel(habitId)
+            
             withContext(Dispatchers.IO) {
                 habitRepository.permanentlyDeleteHabit(habitId)
             }

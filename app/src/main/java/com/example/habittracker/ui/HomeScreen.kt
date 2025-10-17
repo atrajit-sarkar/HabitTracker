@@ -275,7 +275,9 @@ fun HabitHomeScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
+    val targetHabitCount = remember { mutableStateOf(state.habits.size) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var isDeletingHabits by remember { mutableStateOf(false) }
 
     // Handle back button to exit selection mode
     androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
@@ -567,8 +569,8 @@ fun HabitHomeScreen(
                 .fillMaxSize()
                 .background(gradientBrush)
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             // Performance optimizations
             userScrollEnabled = true
         ) {
@@ -601,6 +603,8 @@ fun HabitHomeScreen(
                         onMarkCompleted = { onMarkHabitCompleted(habit.id) },
                         onDelete = {
                             habitCountBeforeDelete.value = state.habits.size
+                            targetHabitCount.value = state.habits.size - 1
+                            isDeletingHabits = true
                             onDeleteHabit(habit.id)
                         },
                         onSeeDetails = { onHabitDetailsClick(habit.id) },
@@ -621,9 +625,21 @@ fun HabitHomeScreen(
     }
     }
     
-    // Global loading overlay for delete operations controlled by ViewModel
-    if (state.isDeleting) {
+    // Loading overlay for delete operations - exactly like TrashScreen
+    if (isDeletingHabits) {
         LoadingSandClockOverlay()
+    }
+    
+    // Auto-dismiss logic - wait for ALL deletions to complete
+    LaunchedEffect(state.habits.size) {
+        // Only dismiss when we reach the target count (all deletions finished)
+        if (isDeletingHabits && state.habits.size <= targetHabitCount.value) {
+            isDeletingHabits = false
+            // Exit selection mode instantly when ALL deletions complete
+            if (state.isSelectionMode) {
+                onExitSelectionMode()
+            }
+        }
     }
     
     // Delete confirmation dialog for multiple habits
@@ -654,9 +670,11 @@ fun HabitHomeScreen(
             confirmButton = {
                     TextButton(
                         onClick = {
-                            // Remember count before delete; ViewModel will set isDeleting
+                            // Remember count before delete and calculate target
                             habitCountBeforeDelete.value = state.habits.size
+                            targetHabitCount.value = state.habits.size - state.selectedHabitIds.size
                             showDeleteConfirmation = false
+                            isDeletingHabits = true
                             onDeleteSelectedHabits()
                         },
                         colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
@@ -933,9 +951,6 @@ private fun HabitCard(
     var showDescriptionDialog by remember { mutableStateOf(false) }
     var isTitleTruncated by remember { mutableStateOf(false) }
     var isDescriptionTruncated by remember { mutableStateOf(false) }
-    var showCompletionAnimation by remember { mutableStateOf(false) }
-    var showFanfareAnimation by remember { mutableStateOf(false) }
-    var isDeleting by remember { mutableStateOf(false) }
     
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
@@ -977,7 +992,7 @@ private fun HabitCard(
                         )
                     } else Modifier
                 )
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
             // Selection checkbox overlay
             if (isSelectionMode) {
@@ -1012,7 +1027,7 @@ private fun HabitCard(
                 }
             }
             
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -1021,7 +1036,8 @@ private fun HabitCard(
                     androidx.compose.runtime.key(habit.avatar) {
                     AvatarDisplay(
                         avatar = habit.avatar,
-                        size = 36.dp
+                        size = 40.dp,
+                        habitId = habit.id // Use stable cache key
                     )
                     }
                     
@@ -1165,80 +1181,38 @@ private fun HabitCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            FilledTonalButton(
-                                onClick = {
-                                    showFanfareAnimation = true
-                                    onMarkCompleted()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(32.dp)
-                                    .clip(RoundedCornerShape(10.dp)),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = Color.White,
-                                    contentColor = palette.accent
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = stringResource(R.string.done),
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                            
-                            // OPTIMIZED: Fanfare animation only when triggered
-                            if (showFanfareAnimation) {
-                                val fanfareComposition by rememberLottieComposition(
-                                    LottieCompositionSpec.Asset("Fanfare.json")
-                                )
-                                
-                                val fanfareProgress by animateLottieCompositionAsState(
-                                    composition = fanfareComposition,
-                                    iterations = 1,
-                                    isPlaying = true,
-                                    speed = 1.5f, // Faster animation
-                                    restartOnPlay = false
-                                )
-                                
-                                // Stop animation when complete
-                                LaunchedEffect(fanfareProgress) {
-                                    if (fanfareProgress >= 0.99f) {
-                                        showFanfareAnimation = false
-                                    }
-                                }
-                                
-                                if (fanfareComposition != null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(60.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        LottieAnimation(
-                                            composition = fanfareComposition,
-                                            progress = { fanfareProgress },
-                                            modifier = Modifier.size(120.dp)
-                                        )
-                                    }
-                                }
-                            }
+                        FilledTonalButton(
+                            onClick = onMarkCompleted,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = Color.White,
+                                contentColor = palette.accent
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.done),
+                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                         
                         OutlinedButton(
                             onClick = onSeeDetails,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(32.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                .height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(10.dp),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                                 contentColor = Color.White
                             ),
@@ -1247,9 +1221,9 @@ private fun HabitCard(
                             Icon(
                                 imageVector = Icons.Default.Visibility,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = stringResource(R.string.details),
                                 fontWeight = FontWeight.Medium,
@@ -1266,9 +1240,9 @@ private fun HabitCard(
                         onClick = onSeeDetails,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(10.dp)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            .height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                             contentColor = Color.White
                         ),
@@ -1277,7 +1251,7 @@ private fun HabitCard(
                         Icon(
                             imageVector = Icons.Default.Visibility,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -2041,7 +2015,8 @@ private fun NotificationSoundSelector(
 private fun AvatarDisplay(
     avatar: HabitAvatar,
     size: Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    habitId: Long? = null // Stable cache key for custom images
 ) {
     val context = LocalContext.current
     
@@ -2076,12 +2051,16 @@ private fun AvatarDisplay(
             HabitAvatarType.CUSTOM_IMAGE -> {
                 // HEAVILY OPTIMIZED image loading for smooth scrolling
                 val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+                
+                // Use habit ID as stable cache key (survives GitHub token changes)
+                val cacheKey = habitId?.let { "habit_avatar_$it" } ?: "avatar_${avatar.value.hashCode()}"
+                
                 val requestBuilder = ImageRequest.Builder(context)
                     .data(avatar.value)
                     .crossfade(false) // Disable crossfade for scroll performance
                     .size(100) // Fixed small size for list performance
-                    .memoryCacheKey("avatar_${avatar.value.hashCode()}")
-                    .diskCacheKey("avatar_${avatar.value.hashCode()}")
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
                     .allowHardware(true) // Use hardware bitmaps for better performance
                 
                 if (token != null && avatar.value.contains("githubusercontent.com")) {

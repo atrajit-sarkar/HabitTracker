@@ -320,7 +320,7 @@ object HabitReminderService {
             .setTicker(habit.title) // Legacy ticker text for older Android versions
 
         // Set avatar as large icon
-        val avatarBitmap = createAvatarBitmap(habit.avatar, context)
+        val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)
         notificationBuilder.setLargeIcon(avatarBitmap)
 
         // For Android versions below O, set sound directly on notification
@@ -376,7 +376,7 @@ object HabitReminderService {
         }
     }
 
-    private fun createAvatarBitmap(avatar: HabitAvatar, context: Context): Bitmap {
+    private fun createAvatarBitmap(avatar: HabitAvatar, context: Context, habitId: Long? = null): Bitmap {
         val size = 128
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -413,30 +413,35 @@ object HabitReminderService {
                 canvas.drawCircle(centerX, centerY, radius, iconPaint)
             }
             HabitAvatarType.CUSTOM_IMAGE -> {
-                // For custom images in notifications, try to load from cache only (no network)
-                // This is fast and won't block the UI thread
+                // For custom images in notifications, try to load from cache using habit ID as key
+                // This ensures cache works even when GitHub token in URL changes
                 try {
-                    android.util.Log.d("HabitReminderService", "Attempting to load custom image from cache for notification: ${avatar.value}")
+                    android.util.Log.d("HabitReminderService", "Attempting to load custom image from cache for habit ID: $habitId")
                     
                     val imageLoader = coil.ImageLoader.Builder(context)
                         .diskCachePolicy(coil.request.CachePolicy.ENABLED)
                         .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
                         .build()
                     
+                    // Use habit ID as stable cache key (survives URL token changes)
+                    val cacheKey = "habit_avatar_$habitId"
+                    
                     // Only load from cache - disable network to prevent blocking
                     val request = coil.request.ImageRequest.Builder(context)
                         .data(avatar.value)
                         .size(size)
                         .allowHardware(false) // Required for bitmap conversion
+                        .diskCacheKey(cacheKey) // Use stable cache key
+                        .memoryCacheKey(cacheKey) // Use stable cache key
                         .diskCachePolicy(coil.request.CachePolicy.READ_ONLY) // Only read from cache
                         .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY) // Only read from cache
                         .networkCachePolicy(coil.request.CachePolicy.DISABLED) // Disable network completely
                         .build()
                     
                     // Try to get from cache synchronously (fast, no network)
-                    val drawable = imageLoader.diskCache?.get(avatar.value)?.use { snapshot ->
+                    val drawable = imageLoader.diskCache?.get(cacheKey)?.use { snapshot ->
                         android.graphics.BitmapFactory.decodeFile(snapshot.data.toFile().absolutePath)
-                    } ?: imageLoader.memoryCache?.get(coil.memory.MemoryCache.Key(avatar.value))?.bitmap
+                    } ?: imageLoader.memoryCache?.get(coil.memory.MemoryCache.Key(cacheKey))?.bitmap
                     
                     if (drawable != null) {
                         android.util.Log.d("HabitReminderService", "Successfully loaded custom image from cache for notification")

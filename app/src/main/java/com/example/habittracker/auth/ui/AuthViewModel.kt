@@ -1,17 +1,25 @@
 package it.atraj.habittracker.auth.ui
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import it.atraj.habittracker.auth.AuthRepository
 import it.atraj.habittracker.auth.AuthResult
 import it.atraj.habittracker.auth.GoogleSignInHelper
 import it.atraj.habittracker.auth.User
-import dagger.hilt.android.lifecycle.HiltViewModel
+import it.atraj.habittracker.data.HabitRepository
+import it.atraj.habittracker.notification.HabitReminderScheduler
+import it.atraj.habittracker.notification.HabitReminderService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class AuthUiState(
@@ -27,8 +35,11 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val authRepository: AuthRepository,
-    private val googleSignInHelper: GoogleSignInHelper
+    private val googleSignInHelper: GoogleSignInHelper,
+    private val habitRepository: HabitRepository,
+    private val reminderScheduler: HabitReminderScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -165,6 +176,34 @@ class AuthViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
+            // Cancel all scheduled alarms and delete notification channels before signing out
+            withContext(Dispatchers.IO) {
+                try {
+                    val habits = habitRepository.getAllHabits()
+                    val habitIds = habits.map { it.id }
+                    var cancelledCount = 0
+                    
+                    // Cancel all alarms
+                    habits.forEach { habit ->
+                        try {
+                            reminderScheduler.cancel(habit.id)
+                            cancelledCount++
+                        } catch (e: Exception) {
+                            Log.e("AuthViewModel", "Failed to cancel alarm for habit ${habit.id}", e)
+                        }
+                    }
+                    Log.d("AuthViewModel", "Cancelled $cancelledCount alarms before logout")
+                    
+                    // Delete all notification channels
+                    if (habitIds.isNotEmpty()) {
+                        HabitReminderService.deleteMultipleHabitChannels(context, habitIds)
+                        Log.d("AuthViewModel", "Deleted ${habitIds.size} notification channels before logout")
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error cleaning up alarms/channels during logout", e)
+                }
+            }
+            
             authRepository.signOut()
             googleSignInHelper.signOut()
         }
