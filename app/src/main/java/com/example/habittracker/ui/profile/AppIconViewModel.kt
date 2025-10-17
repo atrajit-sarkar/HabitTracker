@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.atraj.habittracker.service.AppIconManager
+import it.atraj.habittracker.service.OverdueHabitIconManager
+import it.atraj.habittracker.util.IconState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AppIconViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val appIconManager: AppIconManager
+    private val appIconManager: AppIconManager,
+    private val overdueHabitIconManager: OverdueHabitIconManager
 ) : ViewModel() {
     
     private val _currentIconId = MutableStateFlow("default")
@@ -24,13 +27,24 @@ class AppIconViewModel @Inject constructor(
     private val _isChangingIcon = MutableStateFlow(false)
     val isChangingIcon: StateFlow<Boolean> = _isChangingIcon.asStateFlow()
     
+    private val _isInOverdueMode = MutableStateFlow(false)
+    val isInOverdueMode: StateFlow<Boolean> = _isInOverdueMode.asStateFlow()
+    
     init {
         loadCurrentIconId()
+        checkOverdueMode()
     }
     
     private fun loadCurrentIconId() {
         viewModelScope.launch {
             _currentIconId.value = appIconManager.getCurrentIconId()
+        }
+    }
+    
+    private fun checkOverdueMode() {
+        viewModelScope.launch {
+            val currentIconState = overdueHabitIconManager.getCurrentIconState()
+            _isInOverdueMode.value = currentIconState != IconState.DEFAULT
         }
     }
     

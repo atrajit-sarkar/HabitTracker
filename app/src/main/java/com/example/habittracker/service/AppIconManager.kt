@@ -32,13 +32,18 @@ class AppIconManager @Inject constructor(
             "custom1" to "it.atraj.habittracker.MainActivity.Custom1",
             "custom2" to "it.atraj.habittracker.MainActivity.Custom2",
             "ni" to "it.atraj.habittracker.MainActivity.NI",
-            "anime" to "it.atraj.habittracker.MainActivity.Anime"
+            "anime" to "it.atraj.habittracker.MainActivity.Anime",
+            "sitama" to "it.atraj.habittracker.MainActivity.Sitama"
         )
         
         // Warning/Angry icons managed by OverdueHabitIconManager - DO NOT MODIFY
         private val OVERDUE_ICON_ALIASES = setOf(
             "it.atraj.habittracker.MainActivity.Warning",
-            "it.atraj.habittracker.MainActivity.Angry"
+            "it.atraj.habittracker.MainActivity.Angry",
+            "it.atraj.habittracker.MainActivity.WarningAnime",
+            "it.atraj.habittracker.MainActivity.AngryAnime",
+            "it.atraj.habittracker.MainActivity.WarningSitama",
+            "it.atraj.habittracker.MainActivity.AngrySitama"
         )
     }
     
