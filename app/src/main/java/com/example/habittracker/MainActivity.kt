@@ -44,6 +44,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var musicManager: it.atraj.habittracker.music.BackgroundMusicManager
     
+    @Inject
+    lateinit var downloadManager: it.atraj.habittracker.music.MusicDownloadManager
+    
     private var hasCheckedBatteryOptimization = false
     private lateinit var updateManager: UpdateManager
     

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -58,6 +59,8 @@ import coil.size.Size
 import com.airbnb.lottie.compose.*
 import it.atraj.habittracker.R
 import it.atraj.habittracker.ui.HabitViewModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun GlitteringProfilePhoto(
@@ -1988,20 +1991,37 @@ private fun MusicSettingsDialog(
     onDismiss: () -> Unit,
     onSave: (Boolean, String, Float) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? it.atraj.habittracker.MainActivity
+    val downloadManager = activity?.let {
+        try {
+            val field = it::class.java.getDeclaredField("downloadManager")
+            field.isAccessible = true
+            field.get(it) as? it.atraj.habittracker.music.MusicDownloadManager
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
     var enabled by remember { mutableStateOf(currentEnabled) }
     var selectedTrack by remember { mutableStateOf(currentTrack) }
     var volume by remember { mutableFloatStateOf(currentVolume) }
     
+    // Track download states per file
+    val downloadStates = remember { mutableStateMapOf<String, Pair<Boolean, Int>>() } // fileName -> (isDownloading, progress)
+    
     val tracks = remember {
         listOf(
-            "NONE" to "No Music",
-            "AMBIENT_1" to "Peaceful Ambient",
-            "AMBIENT_2" to "Focus Flow",
-            "AMBIENT_3" to "Nature Sounds",
-            "LOFI_1" to "Lo-Fi Beats",
-            "PIANO_1" to "Piano Melody"
+            "NONE" to ("No Music" to ""),
+            "AMBIENT_1" to ("Peaceful Ambient" to "ambient_calm.mp3"),
+            "AMBIENT_2" to ("Focus Flow" to "ambient_focus.mp3"),
+            "AMBIENT_3" to ("Nature Sounds" to "ambient_nature.mp3"),
+            "LOFI_1" to ("Lo-Fi Beats" to "lofi_chill.mp3"),
+            "PIANO_1" to ("Piano Melody" to "piano_soft.mp3")
         )
     }
+    
+    val scope = rememberCoroutineScope()
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2054,12 +2074,16 @@ private fun MusicSettingsDialog(
                             fontWeight = FontWeight.Bold
                         )
                         
-                        tracks.forEach { (trackId, trackName) ->
+                        tracks.forEach { (trackId, trackInfo) ->
+                            val (trackName, fileName) = trackInfo
+                            val isDownloaded = fileName.isEmpty() || downloadManager?.isMusicDownloaded(fileName) == true
+                            val downloadState = downloadStates[fileName] ?: (false to 0)
+                            val (isDownloading, progress) = downloadState
+                            
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .clickable { selectedTrack = trackId }
                                     .background(
                                         if (selectedTrack == trackId)
                                             MaterialTheme.colorScheme.tertiaryContainer
@@ -2071,13 +2095,95 @@ private fun MusicSettingsDialog(
                             ) {
                                 RadioButton(
                                     selected = selectedTrack == trackId,
-                                    onClick = { selectedTrack = trackId }
+                                    onClick = { 
+                                        if (trackId == "NONE" || isDownloaded) {
+                                            selectedTrack = trackId
+                                        }
+                                    },
+                                    enabled = trackId == "NONE" || isDownloaded
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = trackName,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable(enabled = trackId == "NONE" || isDownloaded) { 
+                                            if (trackId == "NONE" || isDownloaded) {
+                                                selectedTrack = trackId
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = trackName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (trackId == "NONE" || isDownloaded) 
+                                            MaterialTheme.colorScheme.onSurface 
+                                        else 
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    if (isDownloading) {
+                                        Text(
+                                            text = "Downloading... $progress%",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.tertiary
+                                        )
+                                    } else if (!isDownloaded && fileName.isNotEmpty()) {
+                                        Text(
+                                            text = "Tap download to use",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                
+                                // Download button or status icon
+                                if (fileName.isNotEmpty()) {
+                                    if (isDownloading) {
+                                        Box(
+                                            modifier = Modifier.size(40.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                progress = progress / 100f,
+                                                modifier = Modifier.size(32.dp),
+                                                strokeWidth = 3.dp,
+                                                color = MaterialTheme.colorScheme.tertiary
+                                            )
+                                            Text(
+                                                text = "$progress",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 9.sp
+                                            )
+                                        }
+                                    } else if (isDownloaded) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Downloaded",
+                                            tint = MaterialTheme.colorScheme.tertiary,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    } else {
+                                        IconButton(
+                                            onClick = {
+                                                downloadStates[fileName] = true to 0
+                                                scope.launch {
+                                                    downloadManager?.downloadMusic(fileName) { downloadProgress ->
+                                                        downloadStates[fileName] = true to downloadProgress
+                                                    }?.onSuccess {
+                                                        downloadStates[fileName] = false to 100
+                                                    }?.onFailure {
+                                                        downloadStates.remove(fileName)
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Download,
+                                                contentDescription = "Download",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                         

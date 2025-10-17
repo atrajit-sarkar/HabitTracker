@@ -9,7 +9,8 @@ import javax.inject.Singleton
 
 @Singleton
 class BackgroundMusicManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val downloadManager: MusicDownloadManager
 ) {
     private var mediaPlayer: MediaPlayer? = null
     private var currentSong: MusicTrack = MusicTrack.AMBIENT_1
@@ -42,22 +43,24 @@ class BackgroundMusicManager @Inject constructor(
             // Stop existing player
             stopMusic()
             
-            // Get asset file descriptor
-            val afd = context.assets.openFd(currentSong.resourceName)
+            // Check if music is downloaded locally
+            val musicFile = downloadManager.getMusicFile(currentSong.resourceName)
+            if (!musicFile.exists() || musicFile.length() == 0L) {
+                Log.w("BackgroundMusic", "Music file not downloaded: ${currentSong.resourceName}")
+                return
+            }
             
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                setDataSource(musicFile.absolutePath)
                 isLooping = true
                 setVolume(volume, volume)
                 prepare()
                 start()
             }
             
-            afd.close()
             Log.d("BackgroundMusic", "Music started: ${currentSong.displayName}")
         } catch (e: Exception) {
             Log.e("BackgroundMusic", "Failed to start music", e)
-            // Silently fail if music files are not available yet
         }
     }
     
