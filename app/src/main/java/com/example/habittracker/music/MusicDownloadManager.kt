@@ -32,7 +32,9 @@ class MusicDownloadManager @Inject constructor(
         "romantic_casa_rosa.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/romantic_casa_rosa.mp3",
         "hindi_love_slowed.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/hindi_love_slowed.mp3",
         "japanese_waguri_edit.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/japanese_waguri_edit.mp3",
-        "japanese_shounen_ki.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/japanese_shounen_ki.mp3"
+        "japanese_shounen_ki.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/japanese_shounen_ki.mp3",
+        "clair_obscur_lumiere.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/clair_obscur_lumiere.mp3",
+        "cyberpunk_stay_at_house.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/cyberpunk_stay_at_house.mp3"
     )
     
     /**
