@@ -1,0 +1,62 @@
+name: 💬 General Feedback
+description: Share your thoughts, suggestions, or general feedback about HabitTracker
+title: "[Feedback]: "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your feedback! Your thoughts help us improve HabitTracker.
+
+  - type: dropdown
+    id: feedback-type
+    attributes:
+      label: Feedback Type
+      description: What type of feedback are you providing?
+      options:
+        - 👍 Positive Experience
+        - 💡 Suggestion
+        - 🤔 Question
+        - 📱 UI/UX Feedback
+        - 🎨 Design Feedback
+        - ⚡ Performance Feedback
+        - 📖 Documentation
+        - 🌐 Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your Feedback
+      description: Tell us what's on your mind about HabitTracker
+      placeholder: Share your thoughts...
+    validations:
+      required: true
+
+  - type: textarea
+    id: improvements
+    attributes:
+      label: Suggestions for Improvement
+      description: If you have specific ideas on how we can improve, please share them here
+      placeholder: It would be great if...
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: App Version
+      description: What version of HabitTracker are you using? (Check in Profile → Check for Updates)
+      placeholder: e.g., 5.0.4
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples here.
+      placeholder: Any additional information...
+    validations:
+      required: false

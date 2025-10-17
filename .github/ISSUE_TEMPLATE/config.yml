@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/atrajit-sarkar/HabitTracker/blob/main/README.md
+    about: Read the documentation and learn more about HabitTracker
+  - name: 💬 GitHub Discussions
+    url: https://github.com/atrajit-sarkar/HabitTracker/discussions
+    about: Join the community discussion, ask questions, or share ideas
