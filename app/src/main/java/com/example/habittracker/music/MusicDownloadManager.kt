@@ -22,13 +22,13 @@ class MusicDownloadManager @Inject constructor(
         }
     }
     
-    // GitHub raw URLs for music files
+    // GitHub raw URLs for music files (stored in /songs folder)
     private val musicUrls = mapOf(
-        "ambient_calm.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/app/src/main/assets/ambient_calm.mp3",
-        "ambient_focus.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/app/src/main/assets/ambient_focus.mp3",
-        "ambient_nature.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/app/src/main/assets/ambient_nature.mp3",
-        "lofi_chill.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/app/src/main/assets/lofi_chill.mp3",
-        "piano_soft.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/app/src/main/assets/piano_soft.mp3"
+        "ambient_calm.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_calm.mp3",
+        "ambient_focus.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_focus.mp3",
+        "ambient_nature.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_nature.mp3",
+        "lofi_chill.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/lofi_chill.mp3",
+        "piano_soft.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/piano_soft.mp3"
     )
     
     /**
