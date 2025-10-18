@@ -139,3 +139,8 @@ obj/
 /app/build/outputs/apk/
 /app/build/outputs/bundle/
 /app/build/generated/
+
+# Icon optimization temporary files
+icon_backup_*/
+pngquant/
+pngquant-windows.zip
