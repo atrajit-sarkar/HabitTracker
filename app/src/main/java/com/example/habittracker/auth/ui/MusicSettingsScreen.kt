@@ -154,6 +154,8 @@ fun MusicSettingsScreen(
         if (state.user != null && !isUserAdjustingVolume) {
             viewModel.updateMusicSettings(enabled, selectedTrack, volume)
             
+            Log.d("MusicSettings", "Settings changed - enabled: $enabled, selectedTrack: $selectedTrack, volume: $volume")
+            
             // Apply immediately to music manager
             musicManager?.let { manager ->
                 manager.setEnabled(enabled)
@@ -161,6 +163,7 @@ fun MusicSettingsScreen(
                 
                 if (selectedTrack == "NONE") {
                     manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                    Log.d("MusicSettings", "Changed to NONE track")
                 } else {
                     // First try direct enum match
                     val enumTrack = try {
@@ -172,19 +175,33 @@ fun MusicSettingsScreen(
                     if (enumTrack != null) {
                         // Use enum-based playback
                         manager.changeSong(enumTrack)
+                        Log.d("MusicSettings", "Playing enum track: ${enumTrack.name} (${enumTrack.resourceName})")
                     } else {
                         // Use dynamic track playback by filename
                         val selectedMetadata = musicState.musicList.find { it.id == selectedTrack }
+                        Log.d("MusicSettings", "Looking for track ID: $selectedTrack in ${musicState.musicList.size} tracks")
+                        
                         if (selectedMetadata != null) {
-                            manager.playDynamicTrack(selectedMetadata.filename)
-                            Log.d("MusicSettings", "Playing dynamic track: ${selectedMetadata.filename}")
+                            Log.d("MusicSettings", "Found metadata - title: ${selectedMetadata.title}, filename: ${selectedMetadata.filename}")
+                            
+                            // Check if file is downloaded
+                            val isDownloaded = downloadManager?.isMusicDownloaded(selectedMetadata.filename) ?: false
+                            Log.d("MusicSettings", "Is file downloaded? $isDownloaded")
+                            
+                            if (isDownloaded) {
+                                manager.playDynamicTrack(selectedMetadata.filename)
+                                Log.d("MusicSettings", "✅ Attempting to play dynamic track: ${selectedMetadata.filename}")
+                            } else {
+                                Log.w("MusicSettings", "⚠️ File not downloaded: ${selectedMetadata.filename}")
+                                manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                            }
                         } else {
                             manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                            Log.w("MusicSettings", "Track not found: $selectedTrack")
+                            Log.w("MusicSettings", "❌ Track not found in music list: $selectedTrack")
                         }
                     }
                 }
-            }
+            } ?: Log.e("MusicSettings", "❌ MusicManager is null!")
         }
     }
     

@@ -49,7 +49,11 @@ class BackgroundMusicManager @Inject constructor(
         // Determine which file to play
         val fileName = currentDynamicFileName ?: currentSong.resourceName
         
-        if (currentSong == MusicTrack.NONE || fileName.isEmpty()) {
+        Log.d("BackgroundMusic", "startMusic() called - isEnabled: $isEnabled, fileName: $fileName, currentSong: ${currentSong.name}, currentDynamicFileName: $currentDynamicFileName")
+        
+        // Only skip if we have no valid filename (not just if currentSong is NONE, because dynamic tracks use NONE)
+        if (fileName.isEmpty()) {
+            Log.w("BackgroundMusic", "Not starting - fileName is empty")
             return
         }
         
@@ -59,22 +63,30 @@ class BackgroundMusicManager @Inject constructor(
             
             // Check if music is downloaded locally
             val musicFile = downloadManager.getMusicFile(fileName)
+            Log.d("BackgroundMusic", "Music file path: ${musicFile.absolutePath}")
+            Log.d("BackgroundMusic", "File exists: ${musicFile.exists()}, size: ${musicFile.length()}")
+            
             if (!musicFile.exists() || musicFile.length() == 0L) {
-                Log.w("BackgroundMusic", "Music file not downloaded: $fileName")
+                Log.w("BackgroundMusic", "⚠️ Music file not downloaded: $fileName")
                 return
             }
+            
+            Log.d("BackgroundMusic", "Creating MediaPlayer for: $fileName")
             
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(musicFile.absolutePath)
                 isLooping = true
                 setVolume(volume, volume)
+                Log.d("BackgroundMusic", "Preparing MediaPlayer...")
                 prepare()
+                Log.d("BackgroundMusic", "Starting MediaPlayer...")
                 start()
             }
             
-            Log.d("BackgroundMusic", "Music started: $fileName")
+            Log.d("BackgroundMusic", "✅ Music started successfully: $fileName (isPlaying: ${mediaPlayer?.isPlaying})")
         } catch (e: Exception) {
-            Log.e("BackgroundMusic", "Failed to start music", e)
+            Log.e("BackgroundMusic", "❌ Failed to start music: ${e.message}", e)
+            e.printStackTrace()
         }
     }
     
@@ -125,17 +137,30 @@ class BackgroundMusicManager @Inject constructor(
      * Play a dynamic track by filename (for tracks not in the enum)
      */
     fun playDynamicTrack(fileName: String) {
+        Log.d("BackgroundMusic", "playDynamicTrack called - fileName: $fileName, isEnabled: $isEnabled")
+        
         // Always stop the current song first
         stopMusic()
         
         currentSong = MusicTrack.NONE // Set to NONE when playing dynamic track
         currentDynamicFileName = fileName
         
-        if (isEnabled && fileName.isNotEmpty()) {
-            startMusic()
+        // Check if file exists
+        val musicFile = downloadManager.getMusicFile(fileName)
+        val fileExists = musicFile.exists() && musicFile.length() > 0L
+        Log.d("BackgroundMusic", "File check - path: ${musicFile.absolutePath}, exists: ${musicFile.exists()}, size: ${musicFile.length()}")
+        
+        if (!fileExists) {
+            Log.w("BackgroundMusic", "⚠️ Cannot play dynamic track - file not downloaded: $fileName")
+            return
         }
         
-        Log.d("BackgroundMusic", "Playing dynamic track: $fileName")
+        if (isEnabled && fileName.isNotEmpty()) {
+            startMusic()
+            Log.d("BackgroundMusic", "✅ Playing dynamic track: $fileName")
+        } else {
+            Log.w("BackgroundMusic", "⚠️ Not playing - isEnabled: $isEnabled, fileName.isNotEmpty: ${fileName.isNotEmpty()}")
+        }
     }
     
     /**
