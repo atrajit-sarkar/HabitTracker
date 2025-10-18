@@ -143,9 +143,6 @@ dependencies {
     // WorkManager for reliable background tasks
     implementation(libs.androidx.work.runtime.ktx)
     
-    // Media for background music playback
-    implementation("androidx.media:media:1.7.0")
-    
     // Security - Encrypted SharedPreferences (for secure token storage)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
