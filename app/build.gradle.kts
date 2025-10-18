@@ -69,10 +69,30 @@ android {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
+            
+            // Enable full R8 optimization
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // Additional R8 optimizations
+            packaging {
+                resources {
+                    excludes += setOf(
+                        "META-INF/DEPENDENCIES",
+                        "META-INF/LICENSE",
+                        "META-INF/LICENSE.txt",
+                        "META-INF/license.txt",
+                        "META-INF/NOTICE",
+                        "META-INF/NOTICE.txt",
+                        "META-INF/notice.txt",
+                        "META-INF/ASL2.0",
+                        "META-INF/*.kotlin_module",
+                        "META-INF/proguard/androidx-*.pro"
+                    )
+                }
+            }
         }
     }
 

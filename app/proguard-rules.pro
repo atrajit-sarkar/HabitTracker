@@ -33,11 +33,38 @@
     public static ** valueOf(java.lang.String);
 }
 
-# Optimize method calls
+# Aggressive R8 optimizations
 -optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
 -optimizationpasses 5
 -allowaccessmodification
 -dontpreverify
+-repackageclasses ''
+
+# Remove debug info
+-assumenosideeffects class kotlin.jvm.internal.Intrinsics {
+    public static void checkExpressionValueIsNotNull(...);
+    public static void checkNotNullExpressionValue(...);
+    public static void checkParameterIsNotNull(...);
+    public static void checkNotNullParameter(...);
+    public static void checkFieldIsNotNull(...);
+    public static void checkReturnedValueIsNotNull(...);
+}
+
+# Optimize away debugging code
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+}
+
+# Remove unused Compose internals
+-assumenosideeffects class androidx.compose.runtime.ComposerKt {
+    void sourceInformation(...);
+    void sourceInformationMarkerStart(...);
+    void sourceInformationMarkerEnd(...);
+}
 
 # ========== Firebase ==========
 -keep class com.google.firebase.** { *; }
@@ -117,13 +144,6 @@
 -dontwarn okhttp3.**
 -keep class okhttp3.** { *; }
 -keep interface okhttp3.** { *; }
-
-# ========== Performance: Remove logging in release ==========
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-    public static *** i(...);
-}
 
 # Keep MainActivity fields accessed via reflection in UI (MusicSettingsScreen)
 -keepclassmembers class it.atraj.habittracker.MainActivity {
