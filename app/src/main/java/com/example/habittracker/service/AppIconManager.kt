@@ -29,9 +29,6 @@ class AppIconManager @Inject constructor(
         // Available icon aliases (only user-selected custom icons)
         private val ICON_ALIASES = mapOf(
             "default" to "it.atraj.habittracker.MainActivity",
-            "custom1" to "it.atraj.habittracker.MainActivity.Custom1",
-            "custom2" to "it.atraj.habittracker.MainActivity.Custom2",
-            "ni" to "it.atraj.habittracker.MainActivity.NI",
             "anime" to "it.atraj.habittracker.MainActivity.Anime",
             "sitama" to "it.atraj.habittracker.MainActivity.Sitama"
         )

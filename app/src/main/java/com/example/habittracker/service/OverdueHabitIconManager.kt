@@ -41,11 +41,8 @@ class OverdueHabitIconManager @Inject constructor(
         private const val WARNING_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningSitama"
         private const val ANGRY_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.AngrySitama"
         
-        // Custom user icon aliases - DO NOT MODIFY
+        // Custom user icon aliases - NI/custom1/custom2 removed to reduce APK size
         private val CUSTOM_ICON_ALIASES = setOf(
-            "it.atraj.habittracker.MainActivity.Custom1",
-            "it.atraj.habittracker.MainActivity.Custom2",
-            "it.atraj.habittracker.MainActivity.NI",
             "it.atraj.habittracker.MainActivity.Anime",
             "it.atraj.habittracker.MainActivity.WarningAnime",
             "it.atraj.habittracker.MainActivity.AngryAnime",

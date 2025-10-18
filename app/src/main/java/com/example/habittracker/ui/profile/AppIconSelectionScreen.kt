@@ -62,24 +62,6 @@ fun AppIconSelectionScreen(
                 alias = "it.atraj.habittracker.MainActivity"
             ),
             AppIconOption(
-                id = "custom1",
-                name = "Custom 1",
-                iconRes = R.mipmap.ic_launcher_custom1,
-                alias = "it.atraj.habittracker.MainActivity.Custom1"
-            ),
-            AppIconOption(
-                id = "custom2",
-                name = "Custom 2",
-                iconRes = R.mipmap.ic_launcher_custom2,
-                alias = "it.atraj.habittracker.MainActivity.Custom2"
-            ),
-            AppIconOption(
-                id = "ni",
-                name = "NI",
-                iconRes = R.mipmap.ic_launcher_ni,
-                alias = "it.atraj.habittracker.MainActivity.NI"
-            ),
-            AppIconOption(
                 id = "anime",
                 name = "Anime",
                 iconRes = R.mipmap.ic_launcher_anime,
