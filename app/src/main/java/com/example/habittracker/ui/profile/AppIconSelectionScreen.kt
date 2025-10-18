@@ -68,6 +68,12 @@ fun AppIconSelectionScreen(
                 alias = "it.atraj.habittracker.MainActivity.Anime"
             ),
             AppIconOption(
+                id = "bird",
+                name = "Bird",
+                iconRes = R.mipmap.ic_launcher_bird,
+                alias = "it.atraj.habittracker.MainActivity.Bird"
+            ),
+            AppIconOption(
                 id = "sitama",
                 name = "Sitama",
                 iconRes = R.mipmap.ic_launcher_sitama,

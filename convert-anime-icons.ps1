@@ -104,3 +104,32 @@ foreach ($density in $densities.Keys) {
 
 Write-Host "`nIcon conversion complete!"
 Write-Host "All anime and sitama icons have been generated for all density folders."
+
+# Process bird.png (user-provided themed icon)
+Write-Host "`nProcessing bird.png..."
+foreach ($density in $densities.Keys) {
+    $size = $densities[$density]
+    $outputPath = "$resDir\mipmap-$density\ic_launcher_bird.png"
+    Write-Host "  Creating $density ($size x $size px)..."
+    Resize-Image -InputPath "$sourceDir\bird.png" -OutputPath $outputPath -Width $size -Height $size
+}
+
+# Process angry-bird.png
+Write-Host "`nProcessing angry-bird.png..."
+foreach ($density in $densities.Keys) {
+    $size = $densities[$density]
+    $outputPath = "$resDir\mipmap-$density\ic_launcher_angry_bird.png"
+    Write-Host "  Creating $density ($size x $size px)..."
+    Resize-Image -InputPath "$sourceDir\angry-bird.png" -OutputPath $outputPath -Width $size -Height $size
+}
+
+# Process warning-bird.png
+Write-Host "`nProcessing warning-bird.png..."
+foreach ($density in $densities.Keys) {
+    $size = $densities[$density]
+    $outputPath = "$resDir\mipmap-$density\ic_launcher_warning_bird.png"
+    Write-Host "  Creating $density ($size x $size px)..."
+    Resize-Image -InputPath "$sourceDir\warning-bird.png" -OutputPath $outputPath -Width $size -Height $size
+}
+
+Write-Host "`nBird icons generated for all density folders."

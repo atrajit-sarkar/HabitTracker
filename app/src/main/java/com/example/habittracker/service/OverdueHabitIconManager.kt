@@ -40,6 +40,10 @@ class OverdueHabitIconManager @Inject constructor(
         // Sitama-themed overdue icons
         private const val WARNING_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningSitama"
         private const val ANGRY_SITAMA_ACTIVITY = "it.atraj.habittracker.MainActivity.AngrySitama"
+
+    // Bird-themed overdue icons (user provided)
+    private const val WARNING_BIRD_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningBird"
+    private const val ANGRY_BIRD_ACTIVITY = "it.atraj.habittracker.MainActivity.AngryBird"
         
         // Custom user icon aliases - NI/custom1/custom2 removed to reduce APK size
         private val CUSTOM_ICON_ALIASES = setOf(
@@ -48,7 +52,10 @@ class OverdueHabitIconManager @Inject constructor(
             "it.atraj.habittracker.MainActivity.AngryAnime",
             "it.atraj.habittracker.MainActivity.Sitama",
             "it.atraj.habittracker.MainActivity.WarningSitama",
-            "it.atraj.habittracker.MainActivity.AngrySitama"
+            "it.atraj.habittracker.MainActivity.AngrySitama",
+            "it.atraj.habittracker.MainActivity.Bird",
+            "it.atraj.habittracker.MainActivity.WarningBird",
+            "it.atraj.habittracker.MainActivity.AngryBird"
         )
     }
     

@@ -30,7 +30,8 @@ class AppIconManager @Inject constructor(
         private val ICON_ALIASES = mapOf(
             "default" to "it.atraj.habittracker.MainActivity",
             "anime" to "it.atraj.habittracker.MainActivity.Anime",
-            "sitama" to "it.atraj.habittracker.MainActivity.Sitama"
+            "sitama" to "it.atraj.habittracker.MainActivity.Sitama",
+            "bird" to "it.atraj.habittracker.MainActivity.Bird"
         )
         
         // Warning/Angry icons managed by OverdueHabitIconManager - DO NOT MODIFY
@@ -40,7 +41,9 @@ class AppIconManager @Inject constructor(
             "it.atraj.habittracker.MainActivity.WarningAnime",
             "it.atraj.habittracker.MainActivity.AngryAnime",
             "it.atraj.habittracker.MainActivity.WarningSitama",
-            "it.atraj.habittracker.MainActivity.AngrySitama"
+            "it.atraj.habittracker.MainActivity.AngrySitama",
+            "it.atraj.habittracker.MainActivity.WarningBird",
+            "it.atraj.habittracker.MainActivity.AngryBird"
         )
     }
     

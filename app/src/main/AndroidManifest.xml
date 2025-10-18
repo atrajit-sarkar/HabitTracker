@@ -131,6 +131,51 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Activity alias for Bird icon (user-provided themed icon) -->
+        <activity-alias
+            android:name=".MainActivity.Bird"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_bird"
+            android:roundIcon="@mipmap/ic_launcher_bird"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Activity alias for Bird Warning icon -->
+        <activity-alias
+            android:name=".MainActivity.WarningBird"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_warning_bird"
+            android:roundIcon="@mipmap/ic_launcher_warning_bird"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Activity alias for Bird Angry icon -->
+        <activity-alias
+            android:name=".MainActivity.AngryBird"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_angry_bird"
+            android:roundIcon="@mipmap/ic_launcher_angry_bird"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Activity alias for Anime Warning icon -->
         <activity-alias
             android:name=".MainActivity.WarningAnime"
