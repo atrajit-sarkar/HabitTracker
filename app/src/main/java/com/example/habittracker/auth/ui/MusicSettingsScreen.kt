@@ -2,9 +2,13 @@ package it.atraj.habittracker.auth.ui
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,9 +20,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,6 +92,9 @@ fun MusicSettingsScreen(
     val musicState by musicSettingsViewModel.uiState.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? it.atraj.habittracker.MainActivity
+    
+    var showMusicPlayer by remember { mutableStateOf(false) }
+    var selectedMusicPlayerTrack by remember { mutableStateOf<MusicTrackData?>(null) }
     
     val downloadManager = activity?.let {
         try {
@@ -419,12 +430,12 @@ fun MusicSettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Available Tracks",
+                    text = "Your Library",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -447,7 +458,7 @@ fun MusicSettingsScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "${tracks.size} tracks",
+                            text = "${tracks.count { it.id != "NONE" }} tracks",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -456,55 +467,392 @@ fun MusicSettingsScreen(
                 }
             }
             
-            tracks.forEach { track ->
-                val isDownloaded = track.fileName.isEmpty() || 
-                    (!deletedFiles.contains(track.fileName) && 
-                     downloadManager?.isMusicDownloaded(track.fileName) == true)
-                
-                MusicTrackCard(
-                    track = track,
-                    isSelected = selectedTrack == track.id,
-                    isDownloaded = isDownloaded,
-                    downloadState = downloadStates[track.fileName] ?: (false to 0),
-                    isDeleting = deletingStates[track.fileName] ?: false,
-                    onSelect = { 
-                        if (track.id == "NONE" || isDownloaded) {
-                            selectedTrack = track.id
-                        }
-                    },
-                    onDownload = {
-                        deletedFiles.remove(track.fileName)
-                        downloadStates[track.fileName] = true to 0
-                        scope.launch {
-                            downloadManager?.downloadMusic(track.fileName) { progress ->
-                                downloadStates[track.fileName] = true to progress
-                            }?.onSuccess {
-                                downloadStates[track.fileName] = false to 100
-                            }?.onFailure {
-                                downloadStates.remove(track.fileName)
+            // Grid of music cards
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.height(((tracks.size / 2 + 1) * 220).dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(tracks) { track ->
+                    val isDownloaded = track.fileName.isEmpty() || 
+                        (!deletedFiles.contains(track.fileName) && 
+                         downloadManager?.isMusicDownloaded(track.fileName) == true)
+                    
+                    CompactMusicCard(
+                        track = track,
+                        isSelected = selectedTrack == track.id,
+                        isDownloaded = isDownloaded,
+                        downloadState = downloadStates[track.fileName] ?: (false to 0),
+                        isDeleting = deletingStates[track.fileName] ?: false,
+                        onSelect = { 
+                            if (track.id == "NONE" || isDownloaded) {
+                                selectedTrack = track.id
                             }
-                        }
-                    },
-                    onDelete = {
-                        scope.launch {
-                            deletingStates[track.fileName] = true
-                            try {
-                                downloadManager?.deleteMusicFile(track.fileName)
-                                deletedFiles.add(track.fileName)
-                                downloadStates.remove(track.fileName)
-                                if (selectedTrack == track.id) {
-                                    selectedTrack = "NONE"
+                        },
+                        onPlayerClick = {
+                            if (track.id != "NONE" && isDownloaded) {
+                                selectedMusicPlayerTrack = track
+                                showMusicPlayer = true
+                            }
+                        },
+                        onDownload = {
+                            deletedFiles.remove(track.fileName)
+                            downloadStates[track.fileName] = true to 0
+                            scope.launch {
+                                downloadManager?.downloadMusic(track.fileName) { progress ->
+                                    downloadStates[track.fileName] = true to progress
+                                }?.onSuccess {
+                                    downloadStates[track.fileName] = false to 100
+                                }?.onFailure {
+                                    downloadStates.remove(track.fileName)
                                 }
-                            } finally {
-                                deletingStates.remove(track.fileName)
+                            }
+                        },
+                        onDelete = {
+                            scope.launch {
+                                deletingStates[track.fileName] = true
+                                try {
+                                    downloadManager?.deleteMusicFile(track.fileName)
+                                    deletedFiles.add(track.fileName)
+                                    downloadStates.remove(track.fileName)
+                                    if (selectedTrack == track.id) {
+                                        selectedTrack = "NONE"
+                                    }
+                                } finally {
+                                    deletingStates.remove(track.fileName)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+    
+    // Show music player screen
+    if (showMusicPlayer && selectedMusicPlayerTrack != null) {
+        MusicPlayerScreen(
+            track = selectedMusicPlayerTrack!!,
+            isPlaying = enabled && selectedTrack == selectedMusicPlayerTrack!!.id,
+            currentVolume = volume,
+            musicManager = musicManager,
+            onBackClick = { showMusicPlayer = false },
+            onVolumeChange = { newVolume ->
+                volume = newVolume
+                isUserAdjustingVolume = true
+                musicManager?.setVolume(newVolume)
+                saveJob?.cancel()
+                saveJob = scope.launch {
+                    delay(300)
+                    if (state.user != null) {
+                        viewModel.updateMusicSettings(enabled, selectedTrack, newVolume)
+                    }
+                    delay(100)
+                    isUserAdjustingVolume = false
+                }
+            },
+            onPlayPauseClick = {
+                enabled = !enabled
+            }
+        )
+    }
+}
+
+@Composable
+private fun CompactMusicCard(
+    track: MusicTrackData,
+    isSelected: Boolean,
+    isDownloaded: Boolean,
+    downloadState: Pair<Boolean, Int>,
+    isDeleting: Boolean,
+    onSelect: () -> Unit,
+    onPlayerClick: () -> Unit,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val (isDownloading, progress) = downloadState
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    // Animation for selection
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "card_scale"
+    )
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.85f)
+            .scale(scale),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 8.dp else 2.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = track.id == "NONE" || isDownloaded) { onSelect() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Album art / Icon area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Background gradient
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) {
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary
+                                        )
+                                    )
+                                } else {
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                            MaterialTheme.colorScheme.tertiaryContainer
+                                        )
+                                    )
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isDeleting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 3.dp,
+                                color = Color.White
+                            )
+                        } else if (isDownloading) {
+                            Box(contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(
+                                    progress = { if (progress == 0) 0.5f else progress / 100f },
+                                    modifier = Modifier.size(40.dp),
+                                    strokeWidth = 3.dp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (progress == 0) "..." else "$progress%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 9.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = if (track.id == "NONE") 
+                                    Icons.Default.MusicOff 
+                                else 
+                                    Icons.Default.MusicNote,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    
+                    // Category badge
+                    if (track.category.isNotEmpty() && track.id != "NONE") {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .alpha(0.9f),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = track.category,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    
+                    // Selected indicator
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Track info
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = track.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (track.id == "NONE" || isDownloaded)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    
+                    if (track.artist.isNotEmpty()) {
+                        Text(
+                            text = track.artist,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                    
+                    // Status text
+                    if (!isDownloading && !isDeleting && !isDownloaded && track.fileName.isNotEmpty()) {
+                        Text(
+                            text = "Tap to download",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (track.fileName.isNotEmpty()) {
+                        if (isDownloaded && !isDeleting) {
+                            // Player button
+                            IconButton(
+                                onClick = onPlayerClick,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = "Open player",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.weight(1f))
+                            
+                            // Delete button
+                            IconButton(
+                                onClick = { showDeleteDialog = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        } else if (!isDownloading && !isDeleting) {
+                            // Download button
+                            FilledTonalButton(
+                                onClick = onDownload,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(32.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Download",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Delete Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text("Delete Track?")
+            },
+            text = {
+                Text("Delete \"${track.name}\" from your device? You can download it again later.")
+            },
+            confirmButton = {
+                FilledTonalButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
