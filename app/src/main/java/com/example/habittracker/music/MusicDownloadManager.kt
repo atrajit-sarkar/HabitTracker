@@ -3,6 +3,7 @@ package it.atraj.habittracker.music
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import it.atraj.habittracker.data.repository.MusicRepositoryService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,7 +15,8 @@ import javax.inject.Singleton
 
 @Singleton
 class MusicDownloadManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val musicRepositoryService: MusicRepositoryService
 ) {
     private val musicDir: File by lazy {
         File(context.filesDir, "music").apply {
@@ -22,8 +24,8 @@ class MusicDownloadManager @Inject constructor(
         }
     }
     
-    // GitHub raw URLs for music files (stored in /songs folder)
-    private val musicUrls = mapOf(
+    // Legacy GitHub raw URLs for backwards compatibility (stored in /songs folder)
+    private val legacyMusicUrls = mapOf(
         "ambient_calm.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_calm.mp3",
         "ambient_focus.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_focus.mp3",
         "ambient_nature.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/ambient_nature.mp3",
@@ -36,6 +38,30 @@ class MusicDownloadManager @Inject constructor(
         "clair_obscur_lumiere.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/clair_obscur_lumiere.mp3",
         "cyberpunk_stay_at_house.mp3" to "https://github.com/atrajit-sarkar/HabitTracker/raw/main/songs/cyberpunk_stay_at_house.mp3"
     )
+    
+    /**
+     * Get URL for a music file by checking dynamic repository first, then legacy
+     */
+    private suspend fun getMusicUrl(fileName: String): String? {
+        // Try to get from dynamic music repository
+        try {
+            val musicData = musicRepositoryService.getCachedMusicSync()
+            val track = musicData?.music?.find { it.filename == fileName }
+            if (track != null) {
+                Log.d("MusicDownload", "Found URL in dynamic repository: $fileName -> ${track.url}")
+                return track.url
+            }
+        } catch (e: Exception) {
+            Log.w("MusicDownload", "Could not get URL from dynamic repository: ${e.message}")
+        }
+        
+        // Fallback to legacy URLs
+        return legacyMusicUrls[fileName].also {
+            if (it != null) {
+                Log.d("MusicDownload", "Using legacy URL for: $fileName")
+            }
+        }
+    }
     
     /**
      * Check if a music file is already downloaded
@@ -63,8 +89,8 @@ class MusicDownloadManager @Inject constructor(
         onProgress: (Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val url = musicUrls[fileName]
-                ?: return@withContext Result.failure(Exception("Unknown music file: $fileName"))
+            val url = getMusicUrl(fileName)
+                ?: return@withContext Result.failure(Exception("Unknown music file: $fileName. Not found in dynamic repository or legacy URLs."))
             
             val destinationFile = File(musicDir, fileName)
             
