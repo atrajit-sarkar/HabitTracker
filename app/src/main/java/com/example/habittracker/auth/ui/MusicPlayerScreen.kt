@@ -1,5 +1,11 @@
 package it.atraj.habittracker.auth.ui
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.Build
+import android.os.IBinder
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -21,12 +27,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.atraj.habittracker.music.BackgroundMusicManager
+import it.atraj.habittracker.music.MusicForegroundService
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -41,12 +51,79 @@ fun MusicPlayerScreen(
     onVolumeChange: (Float) -> Unit,
     onPlayPauseClick: () -> Unit
 ) {
+    val context = LocalContext.current
     var showVolumeControl by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableFloatStateOf(100f) }
     var isUserSeeking by remember { mutableStateOf(false) }
+    var musicService by remember { mutableStateOf<MusicForegroundService?>(null) }
     
     val infiniteTransition = rememberInfiniteTransition(label = "music_animation")
+    
+    // Start foreground service when music player opens
+    DisposableEffect(Unit) {
+        val serviceIntent = Intent(context, MusicForegroundService::class.java)
+        
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as MusicForegroundService.MusicBinder
+                musicService = binder.getService()
+                
+                // Set music manager first
+                musicManager?.let { manager ->
+                    musicService?.setMusicManager(manager)
+                    Log.d("MusicPlayer", "Music manager set to service")
+                }
+                
+                // Then update track info
+                musicService?.updateTrackInfo(track.name, isPlaying)
+                Log.d("MusicPlayer", "Service connected - track: ${track.name}, playing: $isPlaying")
+            }
+            
+            override fun onServiceDisconnected(name: ComponentName?) {
+                musicService = null
+                Log.d("MusicPlayer", "Service disconnected")
+            }
+        }
+        
+        // Start foreground service
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            Log.d("MusicPlayer", "Foreground service started")
+        } catch (e: Exception) {
+            Log.e("MusicPlayer", "Failed to start service", e)
+        }
+        
+        // Bind to service with delay to ensure service is created
+        kotlinx.coroutines.GlobalScope.launch {
+            delay(100) // Small delay to ensure service is created
+            try {
+                context.bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE)
+                Log.d("MusicPlayer", "Attempting to bind service")
+            } catch (e: Exception) {
+                Log.e("MusicPlayer", "Failed to bind service", e)
+            }
+        }
+        
+        onDispose {
+            // Don't stop service on dispose - let it continue in background
+            try {
+                context.unbindService(connection)
+                Log.d("MusicPlayer", "Service unbound (music continues in background)")
+            } catch (e: Exception) {
+                // Already unbound
+            }
+        }
+    }
+    
+    // Update service when track or playing state changes
+    LaunchedEffect(track.name, isPlaying) {
+        musicService?.updateTrackInfo(track.name, isPlaying)
+    }
     
     // Update progress periodically when playing
     LaunchedEffect(isPlaying) {
