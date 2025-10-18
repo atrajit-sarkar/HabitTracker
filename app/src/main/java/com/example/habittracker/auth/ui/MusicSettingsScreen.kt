@@ -412,14 +412,24 @@ private fun MusicTrackCard(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            progress = { progress / 100f },
-                            modifier = Modifier.size(40.dp),
-                            strokeWidth = 3.dp,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
+                        // If progress is 0, show indeterminate spinner (unknown content length);
+                        // otherwise show determinate progress using a Float value.
+                        if (progress == 0) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(40.dp),
+                                strokeWidth = 3.dp,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        } else {
+                            CircularProgressIndicator(
+                                progress = { progress / 100f },
+                                modifier = Modifier.size(40.dp),
+                                strokeWidth = 3.dp,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
                         Text(
-                            text = "$progress",
+                            text = "$progress%",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp
                         )

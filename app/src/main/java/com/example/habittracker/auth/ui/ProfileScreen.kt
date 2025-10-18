@@ -2124,14 +2124,22 @@ private fun MusicSettingsDialog(
                                             modifier = Modifier.size(40.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            CircularProgressIndicator(
-                                                progress = progress / 100f,
-                                                modifier = Modifier.size(32.dp),
-                                                strokeWidth = 3.dp,
-                                                color = MaterialTheme.colorScheme.tertiary
-                                            )
+                                            if (progress == 0) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(32.dp),
+                                                    strokeWidth = 3.dp,
+                                                    color = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            } else {
+                                                CircularProgressIndicator(
+                                                    progress = { progress / 100f },
+                                                    modifier = Modifier.size(32.dp),
+                                                    strokeWidth = 3.dp,
+                                                    color = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            }
                                             Text(
-                                                text = "$progress",
+                                                text = "$progress%",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontSize = 9.sp
                                             )
