@@ -121,14 +121,19 @@ class BackgroundMusicManager @Inject constructor(
     }
     
     fun changeSong(newSong: MusicTrack) {
-        if (currentSong != newSong) {
+        if (currentSong != newSong || newSong == MusicTrack.NONE) {
             // Always stop the current song first to prevent overlap
             stopMusic()
             
             currentSong = newSong
             currentDynamicFileName = null // Clear dynamic file when using enum
+            
+            Log.d("BackgroundMusic", "changeSong - newSong: ${newSong.name}, isEnabled: $isEnabled")
+            
             if (isEnabled && newSong != MusicTrack.NONE) {
                 startMusic()
+            } else if (newSong == MusicTrack.NONE) {
+                Log.d("BackgroundMusic", "NONE selected - music stopped")
             }
         }
     }

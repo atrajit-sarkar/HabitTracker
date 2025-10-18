@@ -149,7 +149,7 @@ fun MusicSettingsScreen(
         musicSettingsViewModel.checkForUpdates()
     }
     
-    // Auto-save when settings change (enabled and track immediately, volume debounced)
+            // Auto-save when settings change (enabled and track immediately, volume debounced)
     LaunchedEffect(enabled, selectedTrack) {
         if (state.user != null && !isUserAdjustingVolume) {
             viewModel.updateMusicSettings(enabled, selectedTrack, volume)
@@ -162,8 +162,10 @@ fun MusicSettingsScreen(
                 manager.setVolume(volume) // Ensure correct volume is set
                 
                 if (selectedTrack == "NONE") {
+                    // Stop any playing music immediately when NONE is selected
+                    manager.stopMusic()
                     manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                    Log.d("MusicSettings", "Changed to NONE track")
+                    Log.d("MusicSettings", "Changed to NONE track - music stopped")
                 } else {
                     // First try direct enum match
                     val enumTrack = try {
@@ -414,12 +416,45 @@ fun MusicSettingsScreen(
             }
             
             // Music Tracks Section
-            Text(
-                text = "Available Tracks",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Available Tracks",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Track count badge
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    tonalElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "${tracks.size} tracks",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
             
             tracks.forEach { track ->
                 val isDownloaded = track.fileName.isEmpty() || 
