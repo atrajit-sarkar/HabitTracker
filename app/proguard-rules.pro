@@ -124,3 +124,10 @@
     public static *** v(...);
     public static *** i(...);
 }
+
+# Keep MainActivity fields accessed via reflection in UI (MusicSettingsScreen)
+-keepclassmembers class it.atraj.habittracker.MainActivity {
+    @androidx.annotation.Keep *;
+    ** downloadManager;
+    ** musicManager;
+}

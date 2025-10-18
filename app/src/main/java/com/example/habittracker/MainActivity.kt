@@ -29,6 +29,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
+import androidx.annotation.Keep
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var musicManager: it.atraj.habittracker.music.BackgroundMusicManager
     
+    @Keep
     @Inject
     lateinit var downloadManager: it.atraj.habittracker.music.MusicDownloadManager
     
