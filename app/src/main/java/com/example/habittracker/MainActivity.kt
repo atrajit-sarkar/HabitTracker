@@ -403,18 +403,45 @@ class MainActivity : ComponentActivity() {
                         .addOnSuccessListener { document ->
                             if (document.exists()) {
                                 val enabled = document.getBoolean("musicEnabled") ?: false
-                                val trackName = document.getString("musicTrack") ?: "NONE"
+                                val trackId = document.getString("musicTrack") ?: "NONE"
                                 val volume = document.getDouble("musicVolume")?.toFloat() ?: 0.3f
                                 
-                                // Convert track name to enum
-                                val track = try {
-                                    it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.valueOf(trackName)
+                                // Try to convert track ID to enum
+                                val enumTrack = try {
+                                    it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.valueOf(trackId)
                                 } catch (e: Exception) {
-                                    it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE
+                                    null
                                 }
                                 
-                                musicManager.initialize(track, volume, enabled)
-                                Log.d("MainActivity", "Music initialized: enabled=$enabled, track=$trackName, volume=$volume")
+                                if (enumTrack != null) {
+                                    // Use enum-based initialization
+                                    musicManager.initialize(enumTrack, volume, enabled)
+                                    Log.d("MainActivity", "Music initialized (enum): enabled=$enabled, track=$trackId, volume=$volume")
+                                } else if (trackId != "NONE") {
+                                    // It's a dynamic track - we need to load metadata to get the filename
+                                    // For now, use the trackId as filename (since our IDs match filenames)
+                                    musicManager.initialize(it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE, volume, enabled)
+                                    
+                                    // Load the music repository service to get the filename
+                                    MainScope().launch {
+                                        try {
+                                            val musicRepo = it.atraj.habittracker.data.repository.MusicRepositoryService(applicationContext)
+                                            val cachedMusic = musicRepo.getCachedMusicSync()
+                                            val track = cachedMusic?.music?.find { it.id == trackId }
+                                            
+                                            if (track != null && enabled) {
+                                                musicManager.playDynamicTrack(track.filename)
+                                                Log.d("MainActivity", "Music initialized (dynamic): enabled=$enabled, file=${track.filename}, volume=$volume")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("MainActivity", "Failed to load dynamic track: $trackId", e)
+                                        }
+                                    }
+                                } else {
+                                    // NONE track
+                                    musicManager.initialize(it.atraj.habittracker.music.BackgroundMusicManager.MusicTrack.NONE, volume, enabled)
+                                    Log.d("MainActivity", "Music initialized: disabled")
+                                }
                             }
                         }
                         .addOnFailureListener { e ->

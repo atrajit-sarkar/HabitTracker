@@ -1,5 +1,6 @@
 package it.atraj.habittracker.auth.ui
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,6 +40,19 @@ data class MusicTrackData(
 )
 
 /**
+ * Format title to Title Case and clean up
+ */
+fun String.toDisplayTitle(): String {
+    return this
+        .split(" ")
+        .joinToString(" ") { word ->
+            word.lowercase().replaceFirstChar { it.uppercase() }
+        }
+        .take(40) // Limit length
+        .trim()
+}
+
+/**
  * Convert MusicMetadata to MusicTrackData for UI
  */
 fun MusicMetadata.toMusicTrackData(): MusicTrackData {
@@ -47,12 +61,15 @@ fun MusicMetadata.toMusicTrackData(): MusicTrackData {
         it.resourceName == this.filename 
     }
     
+    // Use enum display name if available, otherwise format the metadata title
+    val displayName = enumTrack?.displayName ?: this.title.toDisplayTitle()
+    
     return MusicTrackData(
         id = enumTrack?.name ?: this.id, // Use enum name if found, otherwise use dynamic ID
-        name = this.title,
+        name = displayName,
         fileName = this.filename,
-        artist = this.artist,
-        category = this.category
+        artist = this.artist.toDisplayTitle(),
+        category = this.category.replaceFirstChar { it.uppercase() }
     )
 }
 
@@ -139,28 +156,34 @@ fun MusicSettingsScreen(
             
             // Apply immediately to music manager
             musicManager?.let { manager ->
-                val musicTrack = if (selectedTrack == "NONE") {
-                    BackgroundMusicManager.MusicTrack.NONE
+                manager.setEnabled(enabled)
+                manager.setVolume(volume) // Ensure correct volume is set
+                
+                if (selectedTrack == "NONE") {
+                    manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
                 } else {
                     // First try direct enum match
-                    try {
+                    val enumTrack = try {
                         BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
                     } catch (e: Exception) {
-                        // If that fails, find by matching filename
+                        null
+                    }
+                    
+                    if (enumTrack != null) {
+                        // Use enum-based playback
+                        manager.changeSong(enumTrack)
+                    } else {
+                        // Use dynamic track playback by filename
                         val selectedMetadata = musicState.musicList.find { it.id == selectedTrack }
                         if (selectedMetadata != null) {
-                            // Map by filename
-                            BackgroundMusicManager.MusicTrack.values().find { 
-                                it.resourceName == selectedMetadata.filename 
-                            } ?: BackgroundMusicManager.MusicTrack.NONE
+                            manager.playDynamicTrack(selectedMetadata.filename)
+                            Log.d("MusicSettings", "Playing dynamic track: ${selectedMetadata.filename}")
                         } else {
-                            BackgroundMusicManager.MusicTrack.NONE
+                            manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                            Log.w("MusicSettings", "Track not found: $selectedTrack")
                         }
                     }
                 }
-                manager.setEnabled(enabled)
-                manager.changeSong(musicTrack)
-                manager.setVolume(volume) // Ensure correct volume is set
             }
         }
     }

@@ -14,6 +14,7 @@ class BackgroundMusicManager @Inject constructor(
 ) {
     private var mediaPlayer: MediaPlayer? = null
     private var currentSong: MusicTrack = MusicTrack.AMBIENT_1
+    private var currentDynamicFileName: String? = null // For dynamic tracks not in enum
     private var volume: Float = 0.3f // Default 30% volume
     private var isEnabled: Boolean = false
     
@@ -43,16 +44,23 @@ class BackgroundMusicManager @Inject constructor(
     }
     
     fun startMusic() {
-        if (!isEnabled || currentSong == MusicTrack.NONE) return
+        if (!isEnabled) return
+        
+        // Determine which file to play
+        val fileName = currentDynamicFileName ?: currentSong.resourceName
+        
+        if (currentSong == MusicTrack.NONE || fileName.isEmpty()) {
+            return
+        }
         
         try {
             // Stop existing player
             stopMusic()
             
             // Check if music is downloaded locally
-            val musicFile = downloadManager.getMusicFile(currentSong.resourceName)
+            val musicFile = downloadManager.getMusicFile(fileName)
             if (!musicFile.exists() || musicFile.length() == 0L) {
-                Log.w("BackgroundMusic", "Music file not downloaded: ${currentSong.resourceName}")
+                Log.w("BackgroundMusic", "Music file not downloaded: $fileName")
                 return
             }
             
@@ -64,7 +72,7 @@ class BackgroundMusicManager @Inject constructor(
                 start()
             }
             
-            Log.d("BackgroundMusic", "Music started: ${currentSong.displayName}")
+            Log.d("BackgroundMusic", "Music started: $fileName")
         } catch (e: Exception) {
             Log.e("BackgroundMusic", "Failed to start music", e)
         }
@@ -106,10 +114,35 @@ class BackgroundMusicManager @Inject constructor(
             stopMusic()
             
             currentSong = newSong
+            currentDynamicFileName = null // Clear dynamic file when using enum
             if (isEnabled && newSong != MusicTrack.NONE) {
                 startMusic()
             }
         }
+    }
+    
+    /**
+     * Play a dynamic track by filename (for tracks not in the enum)
+     */
+    fun playDynamicTrack(fileName: String) {
+        // Always stop the current song first
+        stopMusic()
+        
+        currentSong = MusicTrack.NONE // Set to NONE when playing dynamic track
+        currentDynamicFileName = fileName
+        
+        if (isEnabled && fileName.isNotEmpty()) {
+            startMusic()
+        }
+        
+        Log.d("BackgroundMusic", "Playing dynamic track: $fileName")
+    }
+    
+    /**
+     * Get the currently playing filename (works for both enum and dynamic tracks)
+     */
+    fun getCurrentFileName(): String {
+        return currentDynamicFileName ?: currentSong.resourceName
     }
     
     fun setEnabled(enabled: Boolean) {
