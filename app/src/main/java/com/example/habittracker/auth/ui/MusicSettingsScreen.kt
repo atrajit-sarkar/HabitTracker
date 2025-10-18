@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import it.atraj.habittracker.data.bridge.MusicSystemBridge
+import it.atraj.habittracker.data.model.MusicMetadata
 import it.atraj.habittracker.music.BackgroundMusicManager
 import it.atraj.habittracker.music.MusicDownloadManager
 import kotlinx.coroutines.launch
@@ -36,13 +38,33 @@ data class MusicTrackData(
     val category: String = "Ambient"
 )
 
+/**
+ * Convert MusicMetadata to MusicTrackData for UI
+ */
+fun MusicMetadata.toMusicTrackData(): MusicTrackData {
+    // Try to find matching enum by filename for consistent IDs
+    val enumTrack = BackgroundMusicManager.MusicTrack.values().find { 
+        it.resourceName == this.filename 
+    }
+    
+    return MusicTrackData(
+        id = enumTrack?.name ?: this.id, // Use enum name if found, otherwise use dynamic ID
+        name = this.title,
+        fileName = this.filename,
+        artist = this.artist,
+        category = this.category
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicSettingsScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    musicSettingsViewModel: MusicSettingsViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val musicState by musicSettingsViewModel.uiState.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? it.atraj.habittracker.MainActivity
     
@@ -97,21 +119,17 @@ fun MusicSettingsScreen(
         }
     }
     
-    val tracks = remember {
-        listOf(
-            MusicTrackData("NONE", "No Music", "", "", "None"),
-            MusicTrackData("AMBIENT_1", "Peaceful Calm", "ambient_calm.mp3", "Ambient", "Ambient"),
-            MusicTrackData("AMBIENT_2", "Focus Flow", "ambient_focus.mp3", "Ambient", "Ambient"),
-            MusicTrackData("AMBIENT_3", "Nature Sounds", "ambient_nature.mp3", "Nature", "Ambient"),
-            MusicTrackData("LOFI_1", "Lo-Fi Chill", "lofi_chill.mp3", "Lo-Fi", "Lo-Fi"),
-            MusicTrackData("PIANO_1", "Soft Piano", "piano_soft.mp3", "Piano", "Classical"),
-            MusicTrackData("ROMANTIC_1", "Casa Rosa", "romantic_casa_rosa.mp3", "Guera Encantadora", "Romantic"),
-            MusicTrackData("HINDI_1", "Love Slowed", "hindi_love_slowed.mp3", "Hindi", "Romantic"),
-            MusicTrackData("JAPANESE_1", "Waguri Edit", "japanese_waguri_edit.mp3", "Waguri", "Japanese"),
-            MusicTrackData("JAPANESE_2", "Shounen Ki", "japanese_shounen_ki.mp3", "Tetsuya Takeda", "Japanese"),
-            MusicTrackData("CLAIR_OBSCUR", "Lumière", "clair_obscur_lumiere.mp3", "Clair Obscur", "Soundtrack"),
-            MusicTrackData("CYBERPUNK", "Stay At Your House", "cyberpunk_stay_at_house.mp3", "Cyberpunk Edgerunners", "Soundtrack")
-        )
+    // Build tracks list - "NONE" track + dynamic music from repository
+    val tracks = remember(musicState.musicList) {
+        val noneTrack = MusicTrackData("NONE", "No Music", "", "", "None")
+        val dynamicTracks = musicState.musicList.map { it.toMusicTrackData() }
+        listOf(noneTrack) + dynamicTracks
+    }
+    
+    // Show loading indicator when refreshing
+    LaunchedEffect(Unit) {
+        // Check for updates on screen open
+        musicSettingsViewModel.checkForUpdates()
     }
     
     // Auto-save when settings change (enabled and track immediately, volume debounced)
@@ -121,10 +139,24 @@ fun MusicSettingsScreen(
             
             // Apply immediately to music manager
             musicManager?.let { manager ->
-                val musicTrack = try {
-                    BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
-                } catch (e: Exception) {
+                val musicTrack = if (selectedTrack == "NONE") {
                     BackgroundMusicManager.MusicTrack.NONE
+                } else {
+                    // First try direct enum match
+                    try {
+                        BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
+                    } catch (e: Exception) {
+                        // If that fails, find by matching filename
+                        val selectedMetadata = musicState.musicList.find { it.id == selectedTrack }
+                        if (selectedMetadata != null) {
+                            // Map by filename
+                            BackgroundMusicManager.MusicTrack.values().find { 
+                                it.resourceName == selectedMetadata.filename 
+                            } ?: BackgroundMusicManager.MusicTrack.NONE
+                        } else {
+                            BackgroundMusicManager.MusicTrack.NONE
+                        }
+                    }
                 }
                 manager.setEnabled(enabled)
                 manager.changeSong(musicTrack)
@@ -150,6 +182,25 @@ fun MusicSettingsScreen(
                         )
                     }
                 },
+                actions = {
+                    // Refresh button
+                    IconButton(
+                        onClick = { musicSettingsViewModel.refreshMusicList() },
+                        enabled = !musicState.isRefreshing
+                    ) {
+                        if (musicState.isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh music list"
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -164,6 +215,67 @@ fun MusicSettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Error message
+            if (musicState.error != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Failed to load music",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = musicState.error ?: "Unknown error",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Loading indicator for initial load
+            if (musicState.isLoading && tracks.size <= 1) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "Loading music tracks...",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+            
             // Enable/Disable Card
             Card(
                 modifier = Modifier.fillMaxWidth(),

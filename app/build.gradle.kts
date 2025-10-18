@@ -154,6 +154,10 @@ dependencies {
     // OkHttp for update checks and SMTP
     implementation(libs.okhttp)
     
+    // Moshi for JSON parsing (dynamic music loading)
+    implementation("com.squareup.moshi:moshi:1.15.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+    
     // Lottie Animations
     implementation(libs.lottie.compose)
     

@@ -144,3 +144,6 @@ obj/
 icon_backup_*/
 pngquant/
 pngquant-windows.zip
+
+# Music repository credentials
+music-repo-info.env
