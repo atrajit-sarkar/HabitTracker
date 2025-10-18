@@ -31,7 +31,9 @@ class AppIconManager @Inject constructor(
             "default" to "it.atraj.habittracker.MainActivity",
             "anime" to "it.atraj.habittracker.MainActivity.Anime",
             "sitama" to "it.atraj.habittracker.MainActivity.Sitama",
-            "bird" to "it.atraj.habittracker.MainActivity.Bird"
+            "bird" to "it.atraj.habittracker.MainActivity.Bird",
+            // Personal themed icon (developer photo)
+            "atrajit" to "it.atraj.habittracker.MainActivity.Atrajit"
         )
         
         // Warning/Angry icons managed by OverdueHabitIconManager - DO NOT MODIFY
@@ -44,6 +46,9 @@ class AppIconManager @Inject constructor(
             "it.atraj.habittracker.MainActivity.AngrySitama",
             "it.atraj.habittracker.MainActivity.WarningBird",
             "it.atraj.habittracker.MainActivity.AngryBird"
+            ,"it.atraj.habittracker.MainActivity.WarningAtrajit",
+            "it.atraj.habittracker.MainActivity.AngryAtrajit",
+            "it.atraj.habittracker.MainActivity.Atrajit"
         )
     }
     

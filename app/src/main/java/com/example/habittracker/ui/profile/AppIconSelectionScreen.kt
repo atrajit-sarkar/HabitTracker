@@ -79,8 +79,16 @@ fun AppIconSelectionScreen(
                 iconRes = R.mipmap.ic_launcher_sitama,
                 alias = "it.atraj.habittracker.MainActivity.Sitama"
             )
+            ,
+            AppIconOption(
+                id = "atrajit",
+                name = "Atrajit",
+                iconRes = R.mipmap.ic_launcher_atrajit,
+                alias = "it.atraj.habittracker.MainActivity.Atrajit"
+            )
         )
     }
+
     
     var showConfirmationDialog by remember { mutableStateOf<AppIconOption?>(null) }
     

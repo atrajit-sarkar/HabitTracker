@@ -45,6 +45,10 @@ class OverdueHabitIconManager @Inject constructor(
     private const val WARNING_BIRD_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningBird"
     private const val ANGRY_BIRD_ACTIVITY = "it.atraj.habittracker.MainActivity.AngryBird"
         
+        // Atrajit-themed overdue icons (developer photo)
+        private const val WARNING_ATRAJIT_ACTIVITY = "it.atraj.habittracker.MainActivity.WarningAtrajit"
+        private const val ANGRY_ATRAJIT_ACTIVITY = "it.atraj.habittracker.MainActivity.AngryAtrajit"
+        
         // Custom user icon aliases - NI/custom1/custom2 removed to reduce APK size
         private val CUSTOM_ICON_ALIASES = setOf(
             "it.atraj.habittracker.MainActivity.Anime",
@@ -55,7 +59,10 @@ class OverdueHabitIconManager @Inject constructor(
             "it.atraj.habittracker.MainActivity.AngrySitama",
             "it.atraj.habittracker.MainActivity.Bird",
             "it.atraj.habittracker.MainActivity.WarningBird",
-            "it.atraj.habittracker.MainActivity.AngryBird"
+            "it.atraj.habittracker.MainActivity.AngryBird",
+            "it.atraj.habittracker.MainActivity.Atrajit",
+            "it.atraj.habittracker.MainActivity.WarningAtrajit",
+            "it.atraj.habittracker.MainActivity.AngryAtrajit"
         )
     }
     
@@ -139,7 +146,13 @@ class OverdueHabitIconManager @Inject constructor(
 
                     // Disable all other overdue/default/custom aliases except the one we just enabled
                     if (MAIN_ACTIVITY != userIconAlias) setComponentEnabledSafely(MAIN_ACTIVITY, false)
-                    listOf(WARNING_ACTIVITY, ANGRY_ACTIVITY, WARNING_ANIME_ACTIVITY, ANGRY_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                    listOf(
+                        WARNING_ACTIVITY, ANGRY_ACTIVITY,
+                        WARNING_ANIME_ACTIVITY, ANGRY_ANIME_ACTIVITY,
+                        WARNING_SITAMA_ACTIVITY, ANGRY_SITAMA_ACTIVITY,
+                        WARNING_BIRD_ACTIVITY, ANGRY_BIRD_ACTIVITY,
+                        WARNING_ATRAJIT_ACTIVITY, ANGRY_ATRAJIT_ACTIVITY
+                    ).forEach {
                         if (it != userIconAlias) setComponentEnabledSafely(it, false)
                     }
                     CUSTOM_ICON_ALIASES.forEach {
@@ -150,23 +163,61 @@ class OverdueHabitIconManager @Inject constructor(
                 }
                 
                 IconState.WARNING -> {
-                    // Enable warning icon, disable others
-                    setComponentEnabledSafely(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
-                    setComponentEnabledSafely(WARNING_ACTIVITY, true)
-                    setComponentEnabledSafely(ANGRY_ACTIVITY, false)
+                    // Enable themed warning icon (respect user's selected custom icon) and disable others
+                    val userIconId = appIconManager.getUserSelectedIconId()
+                    val warningAlias = when (userIconId) {
+                        "anime" -> WARNING_ANIME_ACTIVITY
+                        "sitama" -> WARNING_SITAMA_ACTIVITY
+                        "bird" -> WARNING_BIRD_ACTIVITY
+                        "atrajit" -> WARNING_ATRAJIT_ACTIVITY
+                        else -> WARNING_ACTIVITY
+                    }
+
+                    setComponentEnabledSafely(warningAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("warning")
-                    Log.d(TAG, "Switched to warning app icon")
+
+                    // Disable all other aliases except the one we just enabled
+                    if (MAIN_ACTIVITY != warningAlias) setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    listOf(
+                        WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, WARNING_BIRD_ACTIVITY, WARNING_ATRAJIT_ACTIVITY,
+                        ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY, ANGRY_BIRD_ACTIVITY, ANGRY_ATRAJIT_ACTIVITY
+                    ).forEach {
+                        if (it != warningAlias) setComponentEnabledSafely(it, false)
+                    }
+                    CUSTOM_ICON_ALIASES.forEach {
+                        if (it != warningAlias) setComponentEnabledSafely(it, false)
+                    }
+
+                    Log.d(TAG, "Switched to warning app icon (themed: $warningAlias)")
                 }
                 
                 IconState.CRITICAL_WARNING -> {
-                    // Enable angry icon, disable others
-                    setComponentEnabledSafely(MAIN_ACTIVITY, false)
-                    CUSTOM_ICON_ALIASES.forEach { setComponentEnabledSafely(it, false) }
-                    setComponentEnabledSafely(WARNING_ACTIVITY, false)
-                    setComponentEnabledSafely(ANGRY_ACTIVITY, true)
+                    // Enable themed angry icon (respect user's selected custom icon) and disable others
+                    val userIconId = appIconManager.getUserSelectedIconId()
+                    val angryAlias = when (userIconId) {
+                        "anime" -> ANGRY_ANIME_ACTIVITY
+                        "sitama" -> ANGRY_SITAMA_ACTIVITY
+                        "bird" -> ANGRY_BIRD_ACTIVITY
+                        "atrajit" -> ANGRY_ATRAJIT_ACTIVITY
+                        else -> ANGRY_ACTIVITY
+                    }
+
+                    setComponentEnabledSafely(angryAlias, true)
                     appIconManager.setCurrentIconIdTemporarily("angry")
-                    Log.d(TAG, "Switched to angry app icon")
+
+                    // Disable all other aliases except the one we just enabled
+                    if (MAIN_ACTIVITY != angryAlias) setComponentEnabledSafely(MAIN_ACTIVITY, false)
+                    listOf(
+                        WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, WARNING_BIRD_ACTIVITY, WARNING_ATRAJIT_ACTIVITY,
+                        ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY, ANGRY_BIRD_ACTIVITY, ANGRY_ATRAJIT_ACTIVITY
+                    ).forEach {
+                        if (it != angryAlias) setComponentEnabledSafely(it, false)
+                    }
+                    CUSTOM_ICON_ALIASES.forEach {
+                        if (it != angryAlias) setComponentEnabledSafely(it, false)
+                    }
+
+                    Log.d(TAG, "Switched to angry app icon (themed: $angryAlias)")
                 }
             }
         } catch (e: Exception) {
@@ -216,6 +267,8 @@ class OverdueHabitIconManager @Inject constructor(
                     val warningAlias = when (userIconId) {
                         "anime" -> WARNING_ANIME_ACTIVITY
                         "sitama" -> WARNING_SITAMA_ACTIVITY
+                        "bird" -> WARNING_BIRD_ACTIVITY
+                        "atrajit" -> WARNING_ATRAJIT_ACTIVITY
                         else -> WARNING_ACTIVITY
                     }
 
@@ -227,7 +280,10 @@ class OverdueHabitIconManager @Inject constructor(
 
                     // Disable all other aliases except the one we just enabled
                     if (MAIN_ACTIVITY != warningAlias) setComponentEnabled(MAIN_ACTIVITY, false)
-                    listOf(WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                    listOf(
+                        WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, WARNING_BIRD_ACTIVITY, WARNING_ATRAJIT_ACTIVITY,
+                        ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY, ANGRY_BIRD_ACTIVITY, ANGRY_ATRAJIT_ACTIVITY
+                    ).forEach {
                         if (it != warningAlias) setComponentEnabled(it, false)
                     }
                     CUSTOM_ICON_ALIASES.forEach {
@@ -243,6 +299,8 @@ class OverdueHabitIconManager @Inject constructor(
                     val angryAlias = when (userIconId) {
                         "anime" -> ANGRY_ANIME_ACTIVITY
                         "sitama" -> ANGRY_SITAMA_ACTIVITY
+                        "bird" -> ANGRY_BIRD_ACTIVITY
+                        "atrajit" -> ANGRY_ATRAJIT_ACTIVITY
                         else -> ANGRY_ACTIVITY
                     }
 
@@ -254,7 +312,10 @@ class OverdueHabitIconManager @Inject constructor(
 
                     // Disable all other aliases except the one we just enabled
                     if (MAIN_ACTIVITY != angryAlias) setComponentEnabled(MAIN_ACTIVITY, false)
-                    listOf(WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY).forEach {
+                    listOf(
+                        WARNING_ACTIVITY, WARNING_ANIME_ACTIVITY, WARNING_SITAMA_ACTIVITY, WARNING_BIRD_ACTIVITY, WARNING_ATRAJIT_ACTIVITY,
+                        ANGRY_ACTIVITY, ANGRY_ANIME_ACTIVITY, ANGRY_SITAMA_ACTIVITY, ANGRY_BIRD_ACTIVITY, ANGRY_ATRAJIT_ACTIVITY
+                    ).forEach {
                         if (it != angryAlias) setComponentEnabled(it, false)
                     }
                     CUSTOM_ICON_ALIASES.forEach {

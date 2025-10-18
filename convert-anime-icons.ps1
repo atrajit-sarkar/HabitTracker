@@ -133,3 +133,50 @@ foreach ($density in $densities.Keys) {
 }
 
 Write-Host "`nBird icons generated for all density folders."
+
+function Resolve-SourceFile([string]$baseName) {
+    # Prefer PNG, fallback to JPG
+    $png = Join-Path $sourceDir ($baseName + ".png")
+    $jpg = Join-Path $sourceDir ($baseName + ".jpg")
+    if (Test-Path $png) { return $png }
+    if (Test-Path $jpg) { return $jpg }
+    return $null
+}
+
+# Process atrajit (developer photo themed icon) - prefer PNGs
+Write-Host "`nProcessing atrajit (png/jpg)..."
+$src = Resolve-SourceFile "atrajit"
+if ($src) {
+    foreach ($density in $densities.Keys) {
+        $size = $densities[$density]
+        $outputPath = "$resDir\mipmap-$density\ic_launcher_atrajit.png"
+        Write-Host "  Creating $density ($size x $size px) from $src..."
+        Resize-Image -InputPath $src -OutputPath $outputPath -Width $size -Height $size
+    }
+} else { Write-Host "  Skipping atrajit: no source file found (atrajit.png/jpg)" }
+
+# Process angry-atrajit
+Write-Host "`nProcessing angry-atrajit (png/jpg)..."
+$src = Resolve-SourceFile "angry-atrajit"
+if ($src) {
+    foreach ($density in $densities.Keys) {
+        $size = $densities[$density]
+        $outputPath = "$resDir\mipmap-$density\ic_launcher_angry_atrajit.png"
+        Write-Host "  Creating $density ($size x $size px) from $src..."
+        Resize-Image -InputPath $src -OutputPath $outputPath -Width $size -Height $size
+    }
+} else { Write-Host "  Skipping angry-atrajit: no source file found (angry-atrajit.png/jpg)" }
+
+# Process warning-atrajit
+Write-Host "`nProcessing warning-atrajit (png/jpg)..."
+$src = Resolve-SourceFile "warning-atrajit"
+if ($src) {
+    foreach ($density in $densities.Keys) {
+        $size = $densities[$density]
+        $outputPath = "$resDir\mipmap-$density\ic_launcher_warning_atrajit.png"
+        Write-Host "  Creating $density ($size x $size px) from $src..."
+        Resize-Image -InputPath $src -OutputPath $outputPath -Width $size -Height $size
+    }
+} else { Write-Host "  Skipping warning-atrajit: no source file found (warning-atrajit.png/jpg)" }
+
+Write-Host "`nAtrajit icons generated for all density folders (where sources existed)."
