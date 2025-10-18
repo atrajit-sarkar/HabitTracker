@@ -110,8 +110,22 @@ class BackgroundMusicManager @Inject constructor(
     }
     
     fun resumeMusic() {
-        if (isEnabled && currentSong != MusicTrack.NONE) {
-            mediaPlayer?.start()
+        // Resume if music is enabled and we have either an enum track or a dynamic track
+        val hasValidTrack = (currentSong != MusicTrack.NONE) || (currentDynamicFileName != null && currentDynamicFileName!!.isNotEmpty())
+        
+        if (isEnabled && hasValidTrack) {
+            try {
+                mediaPlayer?.let { player ->
+                    if (!player.isPlaying) {
+                        player.start()
+                        Log.d("BackgroundMusic", "Music resumed - Song: ${currentSong.name}, Dynamic: $currentDynamicFileName")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BackgroundMusic", "Error resuming music", e)
+                // Try to restart the music if resume fails
+                startMusic()
+            }
         }
     }
     
