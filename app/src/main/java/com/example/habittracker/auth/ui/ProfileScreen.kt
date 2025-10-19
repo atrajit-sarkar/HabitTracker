@@ -84,7 +84,7 @@ fun GlitteringProfilePhoto(
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
         ),
         label = "rotation"
     )
@@ -95,7 +95,7 @@ fun GlitteringProfilePhoto(
         targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         ),
         label = "pulse"
     )

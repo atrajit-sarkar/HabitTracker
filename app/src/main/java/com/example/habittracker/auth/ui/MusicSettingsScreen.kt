@@ -1,7 +1,7 @@
 package it.atraj.habittracker.auth.ui
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -148,9 +148,11 @@ fun MusicSettingsScreen(
     }
     
     // Build tracks list - "NONE" track + dynamic music from repository
-    val tracks = remember(musicState.musicList) {
+    val dynamicTracks = remember(musicState.musicList) {
+        musicState.musicList.map { it.toMusicTrackData() }
+    }
+    val tracks = remember(dynamicTracks) {
         val noneTrack = MusicTrackData("NONE", "No Music", "", "", "None")
-        val dynamicTracks = musicState.musicList.map { it.toMusicTrackData() }
         listOf(noneTrack) + dynamicTracks
     }
     
@@ -218,14 +220,35 @@ fun MusicSettingsScreen(
         }
     }
     
+    // Animated background
+    val infiniteTransition = rememberInfiniteTransition(label = "background")
+    val gradientOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "gradient"
+    )
+    
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        "Background Music", 
-                        fontWeight = FontWeight.Bold
-                    ) 
+                    Column {
+                        Text(
+                            "Background Music", 
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            "${tracks.count { it.id != "NONE" }} tracks available",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -236,11 +259,21 @@ fun MusicSettingsScreen(
                     }
                 },
                 actions = {
-                    // Refresh button
+                    // Refresh button with animation
                     IconButton(
                         onClick = { musicSettingsViewModel.refreshMusicList() },
                         enabled = !musicState.isRefreshing
                     ) {
+                        val rotation by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1000, easing = LinearEasing),
+                                repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+                            ),
+                            label = "refresh_rotation"
+                        )
+                        
                         if (musicState.isRefreshing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
@@ -255,19 +288,40 @@ fun MusicSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Animated gradient background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.08f)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f * gradientOffset),
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f * (1 - gradientOffset)),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+            )
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             // Error message
             if (musicState.error != null) {
                 Card(
@@ -329,33 +383,119 @@ fun MusicSettingsScreen(
                 }
             }
             
-            // Enable/Disable Card
+            // Enable/Disable Card - Enhanced
+            val enabledScale by animateFloatAsState(
+                targetValue = if (enabled) 1.02f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                label = "enabled_scale"
+            )
+            
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .scale(enabledScale),
                 shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (enabled) 6.dp else 2.dp
+                ),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = if (enabled)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Enable Background Music",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (enabled) "Music is playing" else "Music is disabled",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Animated music icon
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (enabled) {
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.tertiary
+                                            )
+                                        )
+                                    } else {
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                                            )
+                                        )
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = enabled,
+                                transitionSpec = {
+                                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                                },
+                                label = "music_icon"
+                            ) { isEnabled ->
+                                Icon(
+                                    imageVector = if (isEnabled) Icons.Default.MusicNote else Icons.Default.MusicOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                        
+                        Column {
+                            Text(
+                                text = "Background Music",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (enabled)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (enabled)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                        )
+                                        .scale(if (enabled) enabledScale else 1f)
+                                )
+                                Text(
+                                    text = if (enabled) "Playing" else "Disabled",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (enabled)
+                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
                     }
+                    
                     Switch(
                         checked = enabled,
                         onCheckedChange = { enabled = it }
@@ -363,87 +503,270 @@ fun MusicSettingsScreen(
                 }
             }
             
-            // Volume Control - Android System UI Style (Horizontal)
-            AnimatedVisibility(visible = enabled) {
+            // Volume Control - Enhanced with visualization
+            AnimatedVisibility(
+                visible = enabled,
+                enter = fadeIn(tween(300)) + expandVertically(),
+                exit = fadeOut(tween(200)) + shrinkVertically()
+            ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Volume Icon
-                        Icon(
-                            imageVector = when {
-                                volume == 0f -> Icons.Default.VolumeOff
-                                volume < 0.5f -> Icons.Default.VolumeDown
-                                else -> Icons.Default.VolumeUp
-                            },
-                            contentDescription = "Volume",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        
-                        // Slider
-                        Slider(
-                            value = volume,
-                            onValueChange = { newVolume ->
-                                volume = newVolume
-                                isUserAdjustingVolume = true
-                                
-                                // Apply volume to music manager immediately for live feedback
-                                // Only setVolume, don't restart the song
-                                musicManager?.setVolume(newVolume)
-                                
-                                // Debounce the save to Firebase
-                                saveJob?.cancel()
-                                saveJob = scope.launch {
-                                    delay(300) // Wait 300ms after user stops adjusting
-                                    if (state.user != null) {
-                                        viewModel.updateMusicSettings(enabled, selectedTrack, newVolume)
+                        // Header - Compact
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Animated Volume Icon
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                                )
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.animation.AnimatedContent(
+                                        targetState = when {
+                                            volume == 0f -> Icons.Default.VolumeOff
+                                            volume < 0.5f -> Icons.Default.VolumeDown
+                                            else -> Icons.Default.VolumeUp
+                                        },
+                                        transitionSpec = {
+                                            scaleIn(tween(200)) togetherWith scaleOut(tween(200))
+                                        },
+                                        label = "volume_icon"
+                                    ) { icon ->
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = "Volume",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
-                                    delay(100) // Extra delay before allowing sync
-                                    isUserAdjustingVolume = false
                                 }
-                            },
-                            valueRange = 0f..1f,
-                            modifier = Modifier.weight(1f)
-                        )
+                                
+                                Column {
+                                    Text(
+                                        text = "Volume",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = when {
+                                            volume == 0f -> "Muted"
+                                            volume < 0.3f -> "Low"
+                                            volume < 0.7f -> "Medium"
+                                            else -> "High"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            
+                            // Volume Percentage - Compact
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = "${(volume * 100).toInt()}%",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                         
-                        // Volume Percentage
-                        Text(
-                            text = "${(volume * 100).toInt()}%",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.width(48.dp)
-                        )
+                        // Mini waveform visualization - Compact
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                                .padding(horizontal = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(15) { index ->
+                                val barHeight = remember { kotlin.random.Random.nextFloat() }
+                                val targetHeight = if (enabled && volume > 0) barHeight * volume else 0.1f
+                                val animatedHeight by animateFloatAsState(
+                                    targetValue = targetHeight,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "waveform_$index"
+                                )
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .fillMaxHeight(animatedHeight.coerceIn(0.1f, 1f))
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.tertiary
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Slider with labels - Compact
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Slider(
+                                value = volume,
+                                onValueChange = { newVolume ->
+                                    volume = newVolume
+                                    isUserAdjustingVolume = true
+                                    
+                                    musicManager?.setVolume(newVolume)
+                                    
+                                    saveJob?.cancel()
+                                    saveJob = scope.launch {
+                                        delay(300)
+                                        if (state.user != null) {
+                                            viewModel.updateMusicSettings(enabled, selectedTrack, newVolume)
+                                        }
+                                        delay(100)
+                                        isUserAdjustingVolume = false
+                                    }
+                                },
+                                valueRange = 0f..1f,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            )
+                            
+                            // Volume labels
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "0%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "50%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "100%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
             
-            // Music Tracks Section
+            // Section Divider with animation
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                )
+                            )
+                        )
+                )
+                Icon(
+                    imageVector = Icons.Default.LibraryMusic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+            
+            // Music Tracks Section - Compact
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 16.dp),
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Your Library",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "Your Music Library",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Manage your collection",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 
-                // Track count badge
+                // Track count badge - Compact
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     tonalElevation = 2.dp
                 ) {
                     Row(
@@ -451,29 +774,51 @@ fun MusicSettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "${tracks.count { it.id != "NONE" }} tracks",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "${tracks.count { it.id != "NONE" }}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Tracks",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
             
-            // Grid of music cards
+            // Grid of music cards - Compact
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.height(((tracks.size / 2 + 1) * 220).dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.height(((tracks.size / 2 + 1) * 180).dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(tracks) { track ->
                     val isDownloaded = track.fileName.isEmpty() || 
@@ -529,8 +874,9 @@ fun MusicSettingsScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
     }
     
     // Show music player screen
@@ -557,6 +903,17 @@ fun MusicSettingsScreen(
             },
             onPlayPauseClick = {
                 enabled = !enabled
+            },
+            allTracks = dynamicTracks,
+            onTrackChange = { newTrack ->
+                selectedMusicPlayerTrack = newTrack
+                selectedTrack = newTrack.id
+                // Stop current music and play new track
+                enabled = false
+                scope.launch {
+                    delay(100)
+                    enabled = true
+                }
             }
         )
     }
@@ -577,21 +934,61 @@ private fun CompactMusicCard(
     val (isDownloading, progress) = downloadState
     var showDeleteDialog by remember { mutableStateOf(false) }
     
-    // Animation for selection
+    // Enhanced animations
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 0.98f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        targetValue = when {
+            isDownloading && progress == 0 -> 1.02f // Subtle grow when initiating
+            isSelected -> 0.98f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
         label = "card_scale"
+    )
+    
+    val elevation by animateDpAsState(
+        targetValue = when {
+            isDownloading -> 8.dp
+            isSelected -> 12.dp
+            else -> 3.dp
+        },
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "card_elevation"
+    )
+    
+    // Shimmer and pulse effects for downloading
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "shimmer_alpha"
+    )
+    
+    // Pulsing scale for initiating download
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
     )
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.85f)
+            .aspectRatio(0.9f)
             .scale(scale),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 8.dp else 2.dp
+            defaultElevation = elevation
         ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) 
@@ -608,27 +1005,55 @@ private fun CompactMusicCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .padding(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Album art / Icon area
+                // Album art / Icon area - Enhanced
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Background gradient
+                    // Outer glow effect for selected
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .size(74.dp)
+                                .clip(CircleShape)
+                                .alpha(0.3f)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                    
+                    // Background gradient with shimmer and pulse
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(68.dp)
+                            .scale(if (isDownloading && progress == 0) pulseScale else 1f)
                             .clip(CircleShape)
                             .background(
-                                if (isSelected) {
+                                if (isDownloading) {
                                     Brush.linearGradient(
                                         colors = listOf(
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = shimmerAlpha),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = shimmerAlpha)
+                                        )
+                                    )
+                                } else if (isSelected) {
+                                    Brush.sweepGradient(
+                                        colors = listOf(
                                             MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.tertiary
+                                            MaterialTheme.colorScheme.secondary,
+                                            MaterialTheme.colorScheme.tertiary,
+                                            MaterialTheme.colorScheme.primary
                                         )
                                     )
                                 } else {
@@ -644,25 +1069,46 @@ private fun CompactMusicCard(
                     ) {
                         if (isDeleting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(28.dp),
+                                strokeWidth = 2.dp,
                                 color = Color.White
                             )
                         } else if (isDownloading) {
                             Box(contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(
-                                    progress = { if (progress == 0) 0.5f else progress / 100f },
-                                    modifier = Modifier.size(40.dp),
-                                    strokeWidth = 3.dp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = if (progress == 0) "..." else "$progress%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 9.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = progress == 0,
+                                    transitionSpec = {
+                                        fadeIn(animationSpec = tween(300)) togetherWith 
+                                        fadeOut(animationSpec = tween(300))
+                                    },
+                                    label = "download_progress"
+                                ) { isInitiating ->
+                                    if (isInitiating) {
+                                        // Smooth initiating animation
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(34.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color.White
+                                        )
+                                    } else {
+                                        // Progress indicator with percentage
+                                        Box(contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator(
+                                                progress = { progress / 100f },
+                                                modifier = Modifier.size(34.dp),
+                                                strokeWidth = 2.dp,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "$progress%",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 8.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             Icon(
@@ -671,7 +1117,7 @@ private fun CompactMusicCard(
                                 else 
                                     Icons.Default.MusicNote,
                                 contentDescription = null,
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(32.dp),
                                 tint = Color.White
                             )
                         }
@@ -683,14 +1129,14 @@ private fun CompactMusicCard(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .alpha(0.9f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
                                 text = track.category,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 maxLines = 1
@@ -705,7 +1151,7 @@ private fun CompactMusicCard(
                             contentDescription = "Selected",
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .size(20.dp),
+                                .size(18.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -713,17 +1159,22 @@ private fun CompactMusicCard(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Track info
+                // Track info - Compact
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
                         text = track.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        lineHeight = 16.sp,
                         color = if (track.id == "NONE" || isDownloaded)
                             MaterialTheme.colorScheme.onSurface
                         else
@@ -731,14 +1182,25 @@ private fun CompactMusicCard(
                     )
                     
                     if (track.artist.isNotEmpty()) {
-                        Text(
-                            text = track.artist,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = track.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                     
                     // Status text
@@ -746,13 +1208,13 @@ private fun CompactMusicCard(
                         Text(
                             text = "Tap to download",
                             style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 // Action buttons
                 Row(
@@ -765,13 +1227,13 @@ private fun CompactMusicCard(
                             // Player button
                             IconButton(
                                 onClick = onPlayerClick,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayCircle,
                                     contentDescription = "Open player",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                             
@@ -780,34 +1242,34 @@ private fun CompactMusicCard(
                             // Delete button
                             IconButton(
                                 onClick = { showDeleteDialog = true },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
                                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         } else if (!isDownloading && !isDeleting) {
-                            // Download button
+                            // Download button - Compact
                             FilledTonalButton(
                                 onClick = onDownload,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(32.dp),
-                                shape = RoundedCornerShape(8.dp)
+                                    .height(28.dp),
+                                shape = RoundedCornerShape(7.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = "Download",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 11.sp
+                                    fontSize = 10.sp
                                 )
                             }
                         }
@@ -916,9 +1378,10 @@ private fun MusicTrackCard(
                 }
                 if (isDownloading) {
                     Text(
-                        text = "Downloading... $progress%",
+                        text = if (progress == 0) "Initiating download..." else "Downloading... $progress%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Medium
                     )
                 } else if (!isDownloaded && track.fileName.isNotEmpty()) {
                     Text(
@@ -947,27 +1410,39 @@ private fun MusicTrackCard(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        // If progress is 0, show indeterminate spinner (unknown content length);
-                        // otherwise show determinate progress using a Float value.
-                        if (progress == 0) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(40.dp),
-                                strokeWidth = 3.dp,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        } else {
-                            CircularProgressIndicator(
-                                progress = { progress / 100f },
-                                modifier = Modifier.size(40.dp),
-                                strokeWidth = 3.dp,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = progress == 0,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) togetherWith 
+                                fadeOut(animationSpec = tween(300))
+                            },
+                            label = "download_progress_track"
+                        ) { isInitiating ->
+                            if (isInitiating) {
+                                // Smooth initiating spinner
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    strokeWidth = 3.dp,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            } else {
+                                // Progress with percentage overlay
+                                Box(contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(
+                                        progress = { progress / 100f },
+                                        modifier = Modifier.size(40.dp),
+                                        strokeWidth = 3.dp,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                    Text(
+                                        text = "$progress%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            text = "$progress%",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp
-                        )
                     }
                 } else if (isDownloaded) {
                     Row(

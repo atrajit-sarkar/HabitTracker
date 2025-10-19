@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,9 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,12 +44,73 @@ fun MusicPlayerScreen(
     musicManager: BackgroundMusicManager?,
     onBackClick: () -> Unit,
     onVolumeChange: (Float) -> Unit,
-    onPlayPauseClick: () -> Unit
+    onPlayPauseClick: () -> Unit,
+    allTracks: List<MusicTrackData> = emptyList(),
+    onTrackChange: (MusicTrackData) -> Unit = {}
 ) {
+    val haptic = LocalHapticFeedback.current
     var showVolumeControl by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableFloatStateOf(100f) }
     var isUserSeeking by remember { mutableStateOf(false) }
+    var repeatMode by remember { mutableStateOf(RepeatMode.OFF) }
+    var isShuffleOn by remember { mutableStateOf(false) }
+    
+    // Find current track index for next/previous functionality
+    val currentTrackIndex = remember(track, allTracks) {
+        allTracks.indexOfFirst { it.id == track.id }.takeIf { it >= 0 } ?: 0
+    }
+    
+    val hasNext = allTracks.isNotEmpty() && currentTrackIndex < allTracks.lastIndex
+    val hasPrevious = allTracks.isNotEmpty() && currentTrackIndex > 0
+    
+    // Functions for track navigation
+    fun goToNextTrack() {
+        if (hasNext) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onTrackChange(allTracks[currentTrackIndex + 1])
+        }
+    }
+    
+    fun goToPreviousTrack() {
+        if (hasPrevious) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onTrackChange(allTracks[currentTrackIndex - 1])
+        }
+    }
+    
+    // Seek forward/backward functions
+    fun seekForward() {
+        val newPosition = (currentPosition + 10000).coerceAtMost(duration)
+        currentPosition = newPosition
+        musicManager?.let { manager ->
+            try {
+                val mediaPlayer = manager.javaClass.getDeclaredField("mediaPlayer").apply {
+                    isAccessible = true
+                }.get(manager) as? android.media.MediaPlayer
+                mediaPlayer?.seekTo(newPosition.toInt())
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            } catch (e: Exception) {
+                Log.e("MusicPlayer", "Failed to seek forward", e)
+            }
+        }
+    }
+    
+    fun seekBackward() {
+        val newPosition = (currentPosition - 10000).coerceAtLeast(0f)
+        currentPosition = newPosition
+        musicManager?.let { manager ->
+            try {
+                val mediaPlayer = manager.javaClass.getDeclaredField("mediaPlayer").apply {
+                    isAccessible = true
+                }.get(manager) as? android.media.MediaPlayer
+                mediaPlayer?.seekTo(newPosition.toInt())
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            } catch (e: Exception) {
+                Log.e("MusicPlayer", "Failed to seek backward", e)
+            }
+        }
+    }
     
     val infiniteTransition = rememberInfiniteTransition(label = "music_animation")
     
@@ -79,7 +145,7 @@ fun MusicPlayerScreen(
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         ),
         label = "scale"
     )
@@ -90,7 +156,7 @@ fun MusicPlayerScreen(
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
         ),
         label = "rotation"
     )
@@ -137,24 +203,42 @@ fun MusicPlayerScreen(
             ) {
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                // Album art / Music visual
+                // Album art / Music visual - Enhanced
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Outer glow effect
+                    // Outer glow effect - Multiple layers for depth
                     if (isPlaying) {
+                        // Outer glow
                         Box(
                             modifier = Modifier
-                                .fillMaxSize(0.95f)
+                                .fillMaxSize(1.05f)
                                 .scale(scale)
-                                .clip(RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(24.dp))
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                        
+                        // Inner glow
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(0.98f)
+                                .scale(scale)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                                             Color.Transparent
                                         )
                                     )
@@ -162,13 +246,14 @@ fun MusicPlayerScreen(
                         )
                     }
                     
-                    // Main album art card
+                    // Main album art card with rotation
                     Card(
                         modifier = Modifier
                             .fillMaxSize(0.9f)
-                            .scale(if (isPlaying) scale else 1f),
+                            .scale(if (isPlaying) scale else 1f)
+                            .rotate(if (isPlaying) rotation / 20f else 0f), // Subtle rotation
                         shape = RoundedCornerShape(20.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
@@ -177,15 +262,52 @@ fun MusicPlayerScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Music icon with gradient
+                            // Animated gradient background
                             Box(
                                 modifier = Modifier
-                                    .size(120.dp)
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.sweepGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                            )
+                                        )
+                                    )
+                            )
+                            
+                            // Vinyl-style circles
+                            if (isPlaying) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                                        )
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                        )
+                                )
+                            }
+                            
+                            // Music icon with gradient and rotation
+                            Box(
+                                modifier = Modifier
+                                    .size(140.dp)
+                                    .rotate(if (isPlaying) rotation / 10f else 0f)
                                     .clip(CircleShape)
                                     .background(
                                         Brush.linearGradient(
                                             colors = listOf(
                                                 MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.secondary,
                                                 MaterialTheme.colorScheme.tertiary
                                             )
                                         )
@@ -195,9 +317,45 @@ fun MusicPlayerScreen(
                                 Icon(
                                     imageVector = Icons.Default.MusicNote,
                                     contentDescription = null,
-                                    modifier = Modifier.size(60.dp),
+                                    modifier = Modifier
+                                        .size(70.dp)
+                                        .rotate(if (isPlaying) -rotation / 10f else 0f), // Counter-rotate icon
                                     tint = Color.White
                                 )
+                            }
+                            
+                            // Status badge - Playing/Paused
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(16.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isPlaying) 
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                                else 
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isPlaying) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            .scale(if (isPlaying) scale else 1f)
+                                    )
+                                    Text(
+                                        text = if (isPlaying) "Playing" else "Paused",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isPlaying) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                             
                             // Category badge
@@ -206,7 +364,8 @@ fun MusicPlayerScreen(
                                     .align(Alignment.TopEnd)
                                     .padding(16.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                                shadowElevation = 4.dp
                             ) {
                                 Text(
                                     text = track.category,
@@ -488,63 +647,247 @@ fun MusicPlayerScreen(
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        // Volume button
-                        FilledTonalIconButton(
-                            onClick = { showVolumeControl = true },
-                            modifier = Modifier.size(64.dp),
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
+                        // Main playback controls
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = when {
-                                    currentVolume == 0f -> Icons.Default.VolumeOff
-                                    currentVolume < 0.5f -> Icons.Default.VolumeDown
-                                    else -> Icons.Default.VolumeUp
+                            // Shuffle button
+                            IconButton(
+                                onClick = { 
+                                    isShuffleOn = !isShuffleOn
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 },
-                                contentDescription = "Volume",
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shuffle,
+                                    contentDescription = "Shuffle",
+                                    tint = if (isShuffleOn) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                            
+                            // Previous track button
+                            FilledIconButton(
+                                onClick = { goToPreviousTrack() },
+                                enabled = hasPrevious,
+                                modifier = Modifier.size(56.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous Track",
+                                    modifier = Modifier.size(32.dp),
+                                    tint = if (hasPrevious) 
+                                        MaterialTheme.colorScheme.onSecondaryContainer 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                )
+                            }
+                            
+                            // Seek backward button
+                            FilledTonalIconButton(
+                                onClick = { seekBackward() },
+                                enabled = currentPosition > 0,
+                                modifier = Modifier.size(56.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Replay10,
+                                    contentDescription = "Seek Backward 10s",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            
+                            // Play/Pause button - Enhanced with animation
+                            FloatingActionButton(
+                                onClick = {
+                                    onPlayPauseClick()
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .scale(if (isPlaying) scale else 1f),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 12.dp,
+                                    pressedElevation = 16.dp
+                                )
+                            ) {
+                                AnimatedContent(
+                                    targetState = isPlaying,
+                                    transitionSpec = {
+                                        scaleIn(animationSpec = tween(200)) togetherWith
+                                        scaleOut(animationSpec = tween(200))
+                                    },
+                                    label = "play_pause_icon"
+                                ) { playing ->
+                                    Icon(
+                                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (playing) "Pause" else "Play",
+                                        modifier = Modifier.size(36.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                            
+                            // Seek forward button
+                            FilledTonalIconButton(
+                                onClick = { seekForward() },
+                                enabled = currentPosition < duration,
+                                modifier = Modifier.size(56.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Forward10,
+                                    contentDescription = "Seek Forward 10s",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            
+                            // Next track button
+                            FilledIconButton(
+                                onClick = { goToNextTrack() },
+                                enabled = hasNext,
+                                modifier = Modifier.size(56.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next Track",
+                                    modifier = Modifier.size(32.dp),
+                                    tint = if (hasNext) 
+                                        MaterialTheme.colorScheme.onSecondaryContainer 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                )
+                            }
+                            
+                            // Repeat button
+                            IconButton(
+                                onClick = { 
+                                    repeatMode = when (repeatMode) {
+                                        RepeatMode.OFF -> RepeatMode.ALL
+                                        RepeatMode.ALL -> RepeatMode.ONE
+                                        RepeatMode.ONE -> RepeatMode.OFF
+                                    }
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = when (repeatMode) {
+                                        RepeatMode.ONE -> Icons.Default.RepeatOne
+                                        else -> Icons.Default.Repeat
+                                    },
+                                    contentDescription = "Repeat",
+                                    tint = if (repeatMode != RepeatMode.OFF) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                         
-                        // Play/Pause button
-                        FloatingActionButton(
-                            onClick = onPlayPauseClick,
-                            modifier = Modifier.size(80.dp),
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            elevation = FloatingActionButtonDefaults.elevation(
-                                defaultElevation = 8.dp,
-                                pressedElevation = 12.dp
-                            )
+                        // Secondary controls row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        
-                        // Info button
-                        FilledTonalIconButton(
-                            onClick = { /* Show track info */ },
-                            modifier = Modifier.size(64.dp),
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Track info",
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                            // Volume button
+                            FilledTonalIconButton(
+                                onClick = { 
+                                    showVolumeControl = true
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                },
+                                modifier = Modifier.size(52.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = when {
+                                        currentVolume == 0f -> Icons.Default.VolumeOff
+                                        currentVolume < 0.5f -> Icons.Default.VolumeDown
+                                        else -> Icons.Default.VolumeUp
+                                    },
+                                    contentDescription = "Volume",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            
+                            // Track info indicator
+                            Card(
+                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (allTracks.isNotEmpty()) 
+                                            "Track ${currentTrackIndex + 1} of ${allTracks.size}" 
+                                        else "Single Track",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            
+                            // Favorite/Like button (placeholder)
+                            FilledTonalIconButton(
+                                onClick = { 
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                modifier = Modifier.size(52.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FavoriteBorder,
+                                    contentDescription = "Like",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
                     }
                 }
@@ -565,7 +908,7 @@ fun AnimatedGradientBackground(isPlaying: Boolean) {
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         ),
         label = "gradient_offset"
     )
@@ -626,7 +969,7 @@ fun WaveformBar(
                 durationMillis = 300 + (index * 10),
                 easing = LinearEasing
             ),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         ),
         label = "height_$index"
     )
@@ -657,4 +1000,13 @@ fun formatTime(millis: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
+}
+
+/**
+ * Repeat mode enum for music player
+ */
+enum class RepeatMode {
+    OFF,    // No repeat
+    ALL,    // Repeat all tracks
+    ONE     // Repeat current track
 }
