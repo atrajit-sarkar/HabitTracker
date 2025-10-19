@@ -1,8 +1,11 @@
 package it.atraj.habittracker.data.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Response model for music.json from GitHub repository
  */
+@Serializable
 data class MusicResponse(
     val version: String,
     val lastUpdated: String,
@@ -12,6 +15,7 @@ data class MusicResponse(
 /**
  * Individual music track metadata
  */
+@Serializable
 data class MusicMetadata(
     val id: String,
     val title: String,
@@ -31,6 +35,7 @@ data class MusicMetadata(
 /**
  * Cached music data with timestamp
  */
+@Serializable
 data class CachedMusicData(
     val response: MusicResponse,
     val cachedAt: Long = System.currentTimeMillis()

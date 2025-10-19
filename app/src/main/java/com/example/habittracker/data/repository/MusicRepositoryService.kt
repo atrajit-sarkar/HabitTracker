@@ -2,13 +2,12 @@ package it.atraj.habittracker.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.atraj.habittracker.data.model.CachedMusicData
 import it.atraj.habittracker.data.model.MusicResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -37,9 +36,10 @@ class MusicRepositoryService @Inject constructor(
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
     
-    private val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .build()
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
     
     private val cacheFile: File by lazy {
         File(context.cacheDir, CACHE_FILE_NAME)
@@ -169,8 +169,7 @@ class MusicRepositoryService @Inject constructor(
             
             val body = response.body?.string() ?: throw Exception("Empty response body")
             
-            val adapter = moshi.adapter(MusicResponse::class.java)
-            val musicResponse = adapter.fromJson(body) ?: throw Exception("Failed to parse JSON")
+            val musicResponse = json.decodeFromString<MusicResponse>(body)
             
             // Cache the result
             val cachedData = CachedMusicData(musicResponse)
@@ -192,9 +191,8 @@ class MusicRepositoryService @Inject constructor(
                 return null
             }
             
-            val json = cacheFile.readText()
-            val adapter = moshi.adapter(CachedMusicData::class.java)
-            val cached = adapter.fromJson(json)
+            val jsonText = cacheFile.readText()
+            val cached = json.decodeFromString<CachedMusicData>(jsonText)
             
             if (cached != null) {
                 Log.d(TAG, "Loaded ${cached.response.music.size} tracks from cache")
@@ -209,9 +207,8 @@ class MusicRepositoryService @Inject constructor(
     
     private fun saveToCache(data: CachedMusicData) {
         try {
-            val adapter = moshi.adapter(CachedMusicData::class.java)
-            val json = adapter.toJson(data)
-            cacheFile.writeText(json)
+            val jsonText = json.encodeToString(CachedMusicData.serializer(), data)
+            cacheFile.writeText(jsonText)
             Log.d(TAG, "Saved music to cache")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save cache", e)

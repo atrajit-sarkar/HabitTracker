@@ -35,10 +35,22 @@
 
 # Aggressive R8 optimizations
 -optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
--optimizationpasses 5
+-optimizationpasses 7
 -allowaccessmodification
 -dontpreverify
 -repackageclasses ''
+-mergeinterfacesaggressively
+
+# Enable more aggressive shrinking
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
+
+# Strip Kotlin metadata where safe
+-assumenosideeffects class kotlin.jvm.internal.Intrinsics {
+    public static void check*(...);
+    public static void throw*(...);
+}
 
 # Remove debug info
 -assumenosideeffects class kotlin.jvm.internal.Intrinsics {
