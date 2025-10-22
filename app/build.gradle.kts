@@ -35,6 +35,10 @@ android {
         val githubToken = keystoreProperties.getProperty("GITHUB_TOKEN") ?: ""
         buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
         
+        // Add GitHub Music Repo token from keystore.properties to BuildConfig
+        val githubTokenMusicRepo = keystoreProperties.getProperty("GITHUB_TOKEN_MUSIC_REPO") ?: ""
+        buildConfigField("String", "GITHUB_TOKEN_MUSIC_REPO", "\"$githubTokenMusicRepo\"")
+        
         // Add Email credentials from keystore.properties to BuildConfig
         // SMTP_AUTH_EMAIL: The actual Gmail account for authentication
         val smtpAuthEmail = keystoreProperties.getProperty("SMTP_AUTH_EMAIL") ?: ""

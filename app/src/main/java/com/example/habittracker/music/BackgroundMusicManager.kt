@@ -74,7 +74,16 @@ class BackgroundMusicManager @Inject constructor(
             Log.d("BackgroundMusic", "Creating MediaPlayer for: $fileName")
             
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(musicFile.absolutePath)
+                // Use FileInputStream and FileDescriptor for better compatibility with Android 15+
+                try {
+                    val fis = java.io.FileInputStream(musicFile)
+                    setDataSource(fis.fd)
+                    fis.close()
+                } catch (e: Exception) {
+                    Log.e("BackgroundMusic", "Failed to set data source with FileDescriptor, trying absolute path", e)
+                    setDataSource(musicFile.absolutePath)
+                }
+                
                 isLooping = true
                 setVolume(volume, volume)
                 Log.d("BackgroundMusic", "Preparing MediaPlayer...")

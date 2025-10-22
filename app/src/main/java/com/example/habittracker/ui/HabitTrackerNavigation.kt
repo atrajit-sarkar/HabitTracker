@@ -49,6 +49,8 @@ import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
 import it.atraj.habittracker.email.ui.EmailSettingsScreen
 import it.atraj.habittracker.auth.ui.MusicSettingsScreen
 import it.atraj.habittracker.ui.profile.AppIconSelectionScreen
+import it.atraj.habittracker.music.ui.*
+import it.atraj.habittracker.data.model.UserFolder
 import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -531,9 +533,150 @@ fun HabitTrackerNavigation(
                 navController.popBackStack()
             }
             
-            MusicSettingsScreen(
-                viewModel = authViewModel,
+            val onOfficialSongsClick = rememberNavigationHandler {
+                safeNavigate("music_category_browser/official")
+            }
+            
+            val onUserUploadedSongsClick = rememberNavigationHandler {
+                safeNavigate("music_category_browser/user")
+            }
+            
+            val onUploadSongClick = rememberNavigationHandler {
+                safeNavigate("music_upload")
+            }
+            
+            MusicBrowserRootScreen(
+                onBackClick = onBackClick,
+                onOfficialSongsClick = onOfficialSongsClick,
+                onUserUploadedSongsClick = onUserUploadedSongsClick,
+                onUploadSongClick = onUploadSongClick
+            )
+        }
+        
+        composable("music_category_browser/{type}") { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: "official"
+            val isOfficial = type == "official"
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val musicBrowserViewModel: MusicBrowserViewModel = hiltViewModel()
+            val state by authViewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Set current user ID
+            LaunchedEffect(state.user) {
+                state.user?.let { user ->
+                    val userId = user.email?.substringBefore("@") ?: user.uid
+                    musicBrowserViewModel.setCurrentUserId(userId)
+                }
+            }
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onCategoryClick: (String, String) -> Unit = { categoryPath, categoryName ->
+                val encodedPath = java.net.URLEncoder.encode(categoryPath, "UTF-8")
+                val encodedName = java.net.URLEncoder.encode(categoryName, "UTF-8")
+                safeNavigate("music_song_list/$encodedPath/$encodedName")
+            }
+            
+            val onUserFolderClick: (UserFolder) -> Unit = { userFolder ->
+                val encodedUserId = java.net.URLEncoder.encode(userFolder.username, "UTF-8")
+                safeNavigate("music_user_categories/$encodedUserId")
+            }
+            
+            MusicCategoryBrowserScreen(
+                isOfficial = isOfficial,
+                userId = null, // null means show user folders list
+                viewModel = musicBrowserViewModel,
+                onBackClick = onBackClick,
+                onCategoryClick = onCategoryClick,
+                onUserFolderClick = onUserFolderClick
+            )
+        }
+        
+        composable("music_user_categories/{userId}") { backStackEntry ->
+            val encodedUserId = backStackEntry.arguments?.getString("userId") ?: ""
+            val userId = java.net.URLDecoder.decode(encodedUserId, "UTF-8")
+            val musicBrowserViewModel: MusicBrowserViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onCategoryClick: (String, String) -> Unit = { categoryPath, categoryName ->
+                val encodedPath = java.net.URLEncoder.encode(categoryPath, "UTF-8")
+                val encodedName = java.net.URLEncoder.encode(categoryName, "UTF-8")
+                safeNavigate("music_song_list/$encodedPath/$encodedName")
+            }
+            
+            MusicCategoryBrowserScreen(
+                isOfficial = false,
+                userId = userId, // Show specific user's categories
+                viewModel = musicBrowserViewModel,
+                onBackClick = onBackClick,
+                onCategoryClick = onCategoryClick
+            )
+        }
+        
+        composable("music_song_list/{categoryPath}/{categoryName}") { backStackEntry ->
+            val encodedPath = backStackEntry.arguments?.getString("categoryPath") ?: ""
+            val encodedName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            val categoryPath = java.net.URLDecoder.decode(encodedPath, "UTF-8")
+            val categoryName = java.net.URLDecoder.decode(encodedName, "UTF-8")
+            
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as? it.atraj.habittracker.MainActivity
+            
+            val downloadManager = activity?.let { act ->
+                try {
+                    val field = act::class.java.getDeclaredField("downloadManager")
+                    field.isAccessible = true
+                    field.get(act) as? it.atraj.habittracker.music.MusicDownloadManager
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            
+            val musicManager = activity?.let { act ->
+                try {
+                    val field = act::class.java.getDeclaredField("musicManager")
+                    field.isAccessible = true
+                    field.get(act) as? it.atraj.habittracker.music.BackgroundMusicManager
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            MusicSongListScreen(
+                categoryPath = categoryPath,
+                categoryName = categoryName,
+                authViewModel = authViewModel,
+                musicManager = musicManager,
+                downloadManager = downloadManager,
                 onBackClick = onBackClick
+            )
+        }
+        
+        composable("music_upload") {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onUploadSuccess = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            SongUploadScreen(
+                authViewModel = authViewModel,
+                onBackClick = onBackClick,
+                onUploadSuccess = onUploadSuccess
             )
         }
         
