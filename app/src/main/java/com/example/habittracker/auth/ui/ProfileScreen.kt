@@ -1220,7 +1220,7 @@ Card(
                     ProfileSettingRow(
                         icon = Icons.Default.Download,
                         title = "YouTube Downloader",
-                        subtitle = "Download videos as MP3 or MP4",
+                        subtitle = "Download audio from YouTube videos",
                         backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                         gradientColors = listOf(
                             MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
