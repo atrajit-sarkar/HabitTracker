@@ -58,8 +58,8 @@ fun AppIconSelectionScreen(
             AppIconOption(
                 id = "default",
                 name = "Default",
-                iconRes = R.mipmap.ic_launcher,
-                alias = "it.atraj.habittracker.MainActivity"
+                iconRes = R.mipmap.ic_launcher_default,
+                alias = "it.atraj.habittracker.MainActivity.Default"
             ),
             AppIconOption(
                 id = "anime",

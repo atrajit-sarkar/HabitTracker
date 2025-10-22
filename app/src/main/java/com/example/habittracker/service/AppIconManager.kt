@@ -28,7 +28,7 @@ class AppIconManager @Inject constructor(
         
         // Available icon aliases (only user-selected custom icons)
         private val ICON_ALIASES = mapOf(
-            "default" to "it.atraj.habittracker.MainActivity",
+            "default" to "it.atraj.habittracker.MainActivity.Default",
             "anime" to "it.atraj.habittracker.MainActivity.Anime",
             "sitama" to "it.atraj.habittracker.MainActivity.Sitama",
             "bird" to "it.atraj.habittracker.MainActivity.Bird",
@@ -40,15 +40,18 @@ class AppIconManager @Inject constructor(
         private val OVERDUE_ICON_ALIASES = setOf(
             "it.atraj.habittracker.MainActivity.Warning",
             "it.atraj.habittracker.MainActivity.Angry",
+            "it.atraj.habittracker.MainActivity.WarningDefault",
+            "it.atraj.habittracker.MainActivity.AngryDefault",
             "it.atraj.habittracker.MainActivity.WarningAnime",
             "it.atraj.habittracker.MainActivity.AngryAnime",
             "it.atraj.habittracker.MainActivity.WarningSitama",
             "it.atraj.habittracker.MainActivity.AngrySitama",
             "it.atraj.habittracker.MainActivity.WarningBird",
-            "it.atraj.habittracker.MainActivity.AngryBird"
-            ,"it.atraj.habittracker.MainActivity.WarningAtrajit",
+            "it.atraj.habittracker.MainActivity.AngryBird",
+            "it.atraj.habittracker.MainActivity.WarningAtrajit",
             "it.atraj.habittracker.MainActivity.AngryAtrajit",
-            "it.atraj.habittracker.MainActivity.Atrajit"
+            "it.atraj.habittracker.MainActivity.Atrajit",
+            "it.atraj.habittracker.MainActivity.Default"
         )
     }
     

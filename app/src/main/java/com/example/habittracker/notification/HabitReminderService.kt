@@ -8,6 +8,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.app.Notification
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import android.graphics.drawable.BitmapDrawable
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -28,6 +31,77 @@ import java.time.format.FormatStyle
 object HabitReminderService {
     private const val CHANNEL_PREFIX = "habit_reminder_channel_"
     private val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+    
+    /**
+     * Get the icon resource ID of the currently active launcher icon
+     * Falls back to default notification icon if unable to retrieve
+     */
+    private fun getCurrentLauncherIconResource(context: Context): Int {
+        try {
+            val packageManager = context.packageManager
+            val packageName = context.packageName
+            
+            // Get all activity aliases for MainActivity
+            val mainActivityName = "it.atraj.habittracker.MainActivity"
+            val activityAliases = listOf(
+                mainActivityName,
+                "$mainActivityName.Default",
+                "$mainActivityName.Warning",
+                "$mainActivityName.Angry",
+                "$mainActivityName.WarningDefault",
+                "$mainActivityName.AngryDefault",
+                "$mainActivityName.Anime",
+                "$mainActivityName.WarningAnime",
+                "$mainActivityName.AngryAnime",
+                "$mainActivityName.Sitama",
+                "$mainActivityName.WarningSitama",
+                "$mainActivityName.AngrySitama",
+                "$mainActivityName.Bird",
+                "$mainActivityName.WarningBird",
+                "$mainActivityName.AngryBird",
+                "$mainActivityName.Atrajit",
+                "$mainActivityName.WarningAtrajit",
+                "$mainActivityName.AngryAtrajit"
+            )
+            
+            // Find the currently enabled launcher activity
+            for (aliasName in activityAliases) {
+                try {
+                    val componentName = ComponentName(packageName, aliasName)
+                    val componentInfo = packageManager.getActivityInfo(componentName, PackageManager.GET_META_DATA)
+                    val componentState = packageManager.getComponentEnabledSetting(componentName)
+                    
+                    // Check if this component is enabled
+                    if (componentState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+                        (componentState == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && aliasName == mainActivityName)) {
+                        
+                        // Get the icon resource ID from the activity
+                        val iconResId = componentInfo.icon
+                        if (iconResId != 0) {
+                            android.util.Log.d("HabitReminderService", "Using launcher icon from $aliasName: $iconResId")
+                            return iconResId
+                        }
+                    }
+                } catch (e: PackageManager.NameNotFoundException) {
+                    // Activity alias not found, continue to next
+                    continue
+                }
+            }
+            
+            // Fallback: Get the main application icon
+            val appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+            if (appInfo.icon != 0) {
+                android.util.Log.d("HabitReminderService", "Using application icon: ${appInfo.icon}")
+                return appInfo.icon
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HabitReminderService", "Error getting launcher icon", e)
+        }
+        
+        // Final fallback to default notification icon
+        android.util.Log.d("HabitReminderService", "Using fallback notification icon")
+        return R.drawable.ic_notification_habit
+    }
 
     /**
      * Create or update a notification channel for a specific habit
@@ -302,8 +376,11 @@ object HabitReminderService {
             reminderTime
         )
 
+        // Get current launcher icon dynamically
+        val notificationIconResId = getCurrentLauncherIconResource(context)
+
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_habit) // Use proper notification icon
+            .setSmallIcon(notificationIconResId) // Use current launcher icon dynamically
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle(habit.title)
             .setContentText(contentText)
