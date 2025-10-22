@@ -240,7 +240,14 @@ class GitHubMusicService @Inject constructor(
                 Log.d(TAG, "Song uploaded successfully: ${uploadResponse.content.download_url}")
                 
                 // Update music.json to include the new song
-                updateMusicMetadata(userId, songData, uploadResponse.content.download_url ?: "")
+                val metadataResult = updateMusicMetadata(userId, songData, uploadResponse.content.download_url ?: "")
+                
+                if (metadataResult.isFailure) {
+                    Log.e(TAG, "⚠️ WARNING: Song uploaded but music.json update FAILED!")
+                    Log.e(TAG, "File URL: ${uploadResponse.content.download_url}")
+                    Log.e(TAG, "Error: ${metadataResult.exceptionOrNull()?.message}")
+                    // Song file is uploaded but won't appear in app until music.json is manually fixed
+                }
                 
                 Result.success(uploadResponse)
             }
