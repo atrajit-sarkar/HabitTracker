@@ -32,17 +32,11 @@ class YouTubeDownloaderViewModel @Inject constructor(
         val isDownloading: Boolean = false,
         val videoMetadata: YouTubeExtractor.VideoMetadata? = null,
         val downloadProgress: MediaDownloader.DownloadProgress? = null,
-        val downloadFormat: DownloadFormat = DownloadFormat.MP3,
-        val selectedQuality: String? = null,
+        val selectedAudioStream: YouTubeExtractor.AudioStreamInfo? = null,
         val errorMessage: String? = null,
         val successMessage: String? = null,
         val downloadFolder: String = ""
     )
-    
-    enum class DownloadFormat {
-        MP3,  // Audio only
-        MP4   // Video with audio
-    }
     
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -106,10 +100,10 @@ class YouTubeDownloaderViewModel @Inject constructor(
     }
     
     /**
-     * Set download format (MP3 or MP4)
+     * Select an audio stream for download
      */
-    fun setDownloadFormat(format: DownloadFormat) {
-        _uiState.value = _uiState.value.copy(downloadFormat = format)
+    fun selectAudioStream(audioStream: YouTubeExtractor.AudioStreamInfo) {
+        _uiState.value = _uiState.value.copy(selectedAudioStream = audioStream)
     }
     
     /**
@@ -200,19 +194,13 @@ class YouTubeDownloaderViewModel @Inject constructor(
                 result.onSuccess { metadata ->
                     Log.d(TAG, "Successfully extracted metadata: ${metadata.title}")
                     
-                    // Auto-select best quality
+                    // Auto-select best audio stream
                     val bestAudio = youtubeExtractor.getBestAudioStream(metadata)
-                    val bestVideo = youtubeExtractor.getBestVideoStream(metadata)
-                    
-                    val defaultQuality = when (_uiState.value.downloadFormat) {
-                        DownloadFormat.MP3 -> bestAudio?.quality
-                        DownloadFormat.MP4 -> bestVideo?.resolution
-                    }
                     
                     _uiState.value = _uiState.value.copy(
                         isValidatingUrl = false,
                         videoMetadata = metadata,
-                        selectedQuality = defaultQuality,
+                        selectedAudioStream = bestAudio,
                         errorMessage = null
                     )
                 }
@@ -260,38 +248,25 @@ class YouTubeDownloaderViewModel @Inject constructor(
             )
             
             try {
-                val format = _uiState.value.downloadFormat
+                // Get selected audio stream or use best one
+                val audioStream = _uiState.value.selectedAudioStream 
+                    ?: youtubeExtractor.getBestAudioStream(metadata)
+                    ?: throw Exception("No audio stream available")
                 
-                // Get download URL based on format
-                val downloadUrl = when (format) {
-                    DownloadFormat.MP3 -> {
-                        val audioStream = youtubeExtractor.getBestAudioStream(metadata)
-                        audioStream?.url ?: throw Exception("No audio stream available")
-                    }
-                    DownloadFormat.MP4 -> {
-                        // NewPipe-KMP v1.0 doesn't expose direct video stream URLs
-                        // YouTube videos require HLS/DASH parsing which needs ffmpeg or ExoPlayer
-                        // For now, download audio-only for MP4 format as well
-                        Log.w(TAG, "Video downloads not supported - NewPipe-KMP API limitation")
-                        val audioStream = youtubeExtractor.getBestAudioStream(metadata)
-                        audioStream?.url ?: throw Exception("Video streams not available in NewPipe-KMP v1.0")
-                    }
-                }
+                val downloadUrl = audioStream.url
                 
-                // Generate safe filename - use only letters and numbers, no underscores or special chars
+                // Generate safe filename - use only letters and numbers
                 val safeTitle = metadata.title
                     .filter { it.isLetterOrDigit() }  // Keep ONLY alphanumeric characters
                     .take(25)  // Very short to avoid any issues
                     .ifEmpty { "audio" }  // Fallback if title has no alphanumeric chars
                 
-                val extension = when (format) {
-                    DownloadFormat.MP3 -> "m4a"  // YouTube audio streams are usually m4a
-                    DownloadFormat.MP4 -> "mp4"
-                }
+                val extension = "m4a"  // YouTube audio streams are usually m4a
                 
                 val fileName = "${safeTitle}${System.currentTimeMillis()}.$extension"  // No separator
                 
                 Log.d(TAG, "Starting download: $fileName")
+                Log.d(TAG, "Selected stream: ${audioStream.quality} - ${audioStream.format}")
                 Log.d(TAG, "Download URL: ${downloadUrl.take(100)}...")
                 
                 // Get download directory from preference

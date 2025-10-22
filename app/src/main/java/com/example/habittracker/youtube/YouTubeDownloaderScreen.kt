@@ -137,16 +137,19 @@ fun YouTubeDownloaderScreen(
                     }
                 }
                 
-                // Format Selection
+                // Audio Stream Selection
                 AnimatedVisibility(
                     visible = uiState.videoMetadata != null && !uiState.isDownloading,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    FormatSelectionCard(
-                        selectedFormat = uiState.downloadFormat,
-                        onFormatChange = viewModel::setDownloadFormat
-                    )
+                    uiState.videoMetadata?.let { metadata ->
+                        AudioStreamSelectionCard(
+                            audioStreams = metadata.audioStreams,
+                            selectedStream = uiState.selectedAudioStream,
+                            onStreamSelect = viewModel::selectAudioStream
+                        )
+                    }
                 }
                 
                 // Download Folder Selection
@@ -182,7 +185,6 @@ fun YouTubeDownloaderScreen(
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     DownloadButton(
-                        format = uiState.downloadFormat,
                         onClick = viewModel::startDownload
                     )
                 }
@@ -486,111 +488,177 @@ private fun InfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text
 }
 
 @Composable
-private fun FormatSelectionCard(
-    selectedFormat: YouTubeDownloaderViewModel.DownloadFormat,
-    onFormatChange: (YouTubeDownloaderViewModel.DownloadFormat) -> Unit
+private fun AudioStreamSelectionCard(
+    audioStreams: List<YouTubeExtractor.AudioStreamInfo>,
+    selectedStream: YouTubeExtractor.AudioStreamInfo?,
+    onStreamSelect: (YouTubeExtractor.AudioStreamInfo) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Select Format",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                FormatOption(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.AudioFile,
-                    title = "MP3",
-                    subtitle = "Audio Only",
-                    selected = selectedFormat == YouTubeDownloaderViewModel.DownloadFormat.MP3,
-                    onClick = { onFormatChange(YouTubeDownloaderViewModel.DownloadFormat.MP3) }
+                Icon(
+                    imageVector = Icons.Default.AudioFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
-                
-                FormatOption(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.VideoFile,
-                    title = "MP4",
-                    subtitle = "Video + Audio",
-                    selected = selectedFormat == YouTubeDownloaderViewModel.DownloadFormat.MP4,
-                    onClick = { onFormatChange(YouTubeDownloaderViewModel.DownloadFormat.MP4) }
+                Text(
+                    text = "Audio Quality",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun FormatOption(
-    modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = if (selected) 
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary) 
-        else 
-            null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = if (selected) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (selected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
+            
+            // Dropdown selector
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Surface(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = selectedStream?.quality ?: "Select quality",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                
+                                if (selectedStream != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = selectedStream.format,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Text(
+                                text = "${audioStreams.size} streams available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (expanded) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                // Dropdown menu
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth(0.9f)
+                ) {
+                    audioStreams.sortedByDescending { it.averageBitrate }.forEach { stream ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = stream.quality,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (selectedStream == stream) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                            
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (selectedStream == stream)
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                                else
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                            ) {
+                                                Text(
+                                                    text = stream.format,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                                    color = if (selectedStream == stream)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else
+                                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
+                                        
+                                        if (stream.averageBitrate > 0) {
+                                            Text(
+                                                text = "Bitrate: ${stream.averageBitrate / 1000}kbps",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    }
+                                    
+                                    if (selectedStream == stream) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onStreamSelect(stream)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -674,7 +742,6 @@ private fun DownloadProgressCard(
 
 @Composable
 private fun DownloadButton(
-    format: YouTubeDownloaderViewModel.DownloadFormat,
     onClick: () -> Unit
 ) {
     Button(
@@ -694,7 +761,7 @@ private fun DownloadButton(
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Download as ${format.name}",
+            text = "Download Audio (MP3)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )

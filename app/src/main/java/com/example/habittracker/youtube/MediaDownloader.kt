@@ -35,14 +35,18 @@ class MediaDownloader(private val context: Context) {
     
     companion object {
         private const val TAG = "MediaDownloader"
-        private const val BUFFER_SIZE = 8192
-        private const val TIMEOUT_SECONDS = 60L
+        private const val BUFFER_SIZE = 524288  // 512KB buffer for maximum download speed (was 64KB)
+        private const val TIMEOUT_SECONDS = 120L  // Increased timeout for large files
+        private const val PROGRESS_UPDATE_INTERVAL_MS = 250L  // Update UI every 250ms instead of 500ms
     }
     
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
     
     /**
@@ -106,9 +110,9 @@ class MediaDownloader(private val context: Context) {
                             outputStream.write(buffer, 0, bytesRead)
                             bytesDownloaded += bytesRead
                             
-                            // Emit progress update every 500ms to avoid flooding
+                            // Emit progress update every 250ms for responsive UI
                             val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastProgressEmitTime >= 500 || 
+                            if (currentTime - lastProgressEmitTime >= PROGRESS_UPDATE_INTERVAL_MS || 
                                 bytesDownloaded == totalBytes) {
                                 
                                 val elapsedSeconds = (currentTime - startTime) / 1000.0

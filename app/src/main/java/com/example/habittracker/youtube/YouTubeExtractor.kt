@@ -130,12 +130,17 @@ class YouTubeExtractor {
             
             // Extract audio streams
             val audioStreams = streamInfo.audioStreams.map { stream ->
-                Log.d(TAG, "Audio stream - URL: ${stream.content.substring(0, 50)}..., Bitrate: ${stream.averageBitrate}")
+                // NewPipe streams can have bitrate in different fields
+                val bitrate = stream.averageBitrate.takeIf { it > 0 } ?: stream.bitrate ?: 0
+                val formatName = stream.format?.name ?: stream.format?.suffix ?: "unknown"
+                
+                Log.d(TAG, "Audio stream - Format: $formatName, Bitrate: $bitrate, AvgBitrate: ${stream.averageBitrate}")
+                
                 AudioStreamInfo(
                     url = stream.content,
-                    format = stream.format?.name ?: "unknown",
-                    averageBitrate = stream.averageBitrate,
-                    quality = "${stream.averageBitrate / 1000}kbps"
+                    format = formatName,
+                    averageBitrate = bitrate,
+                    quality = if (bitrate > 0) "${bitrate / 1000}kbps" else "Unknown quality"
                 )
             }
             
