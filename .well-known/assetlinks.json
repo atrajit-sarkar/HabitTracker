@@ -1,12 +1,25 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "it.atraj.habittracker",
-    "sha256_cert_fingerprints": [
-      "6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30",
-      "B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3"
-    ]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "it.atraj.habittracker",
+      "sha256_cert_fingerprints": [
+        "6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30",
+        "B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "it.atraj.habittracker.github",
+      "sha256_cert_fingerprints": [
+        "6E816272130EDF6EA92A72C80FF0CCC17DAF59B8EA9BFDF7C6C0059F2BB30F30",
+        "B7DAB452DE23F95CE3974B9EEFBA6B39C71BE9BB62B00DB3CF92A5F31046F5F3"
+      ]
+    }
   }
-}]
+]
 

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.content.FileProvider
+import it.atraj.habittracker.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Manages app updates from GitHub releases
+ * Note: Only active for GitHub flavor, disabled for Play Store flavor
  */
 class UpdateManager(private val context: Context) {
     
@@ -41,8 +43,15 @@ class UpdateManager(private val context: Context) {
     
     /**
      * Check if update check should be performed
+     * Always returns false for Play Store flavor
      */
     fun shouldCheckForUpdate(): Boolean {
+        // Disable update checks for Play Store version
+        if (!BuildConfig.ENABLE_IN_APP_UPDATE) {
+            Log.d(TAG, "In-app updates disabled for Play Store version")
+            return false
+        }
+        
         val lastCheck = prefs.getLong(KEY_LAST_CHECK, 0)
         val now = System.currentTimeMillis()
         return (now - lastCheck) > CHECK_INTERVAL
@@ -79,8 +88,15 @@ class UpdateManager(private val context: Context) {
     
     /**
      * Check for updates from GitHub
+     * Returns null for Play Store flavor
      */
     suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
+        // Disable update checks for Play Store version
+        if (!BuildConfig.ENABLE_IN_APP_UPDATE) {
+            Log.d(TAG, "Update check skipped: Play Store version")
+            return@withContext null
+        }
+        
         try {
             Log.d(TAG, "Checking for updates from GitHub...")
             

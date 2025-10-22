@@ -26,8 +26,8 @@ android {
         applicationId = "it.atraj.habittracker"
         minSdk = 29
         targetSdk = 36
-    versionCode = 19
-    versionName = "6.0.5"
+        versionCode = 20
+        versionName = "7.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -50,6 +50,27 @@ android {
         buildConfigField("String", "SMTP_AUTH_EMAIL", "\"$smtpAuthEmail\"")
         buildConfigField("String", "EMAIL_APP_PASSWORD", "\"$emailPassword\"")
         buildConfigField("String", "EMAIL_FROM_ADDRESS", "\"$emailFromAddress\"")
+    }
+
+    // Product Flavors for GitHub and Play Store versions
+    flavorDimensions += "version"
+    productFlavors {
+        create("github") {
+            dimension = "version"
+            // GitHub version with in-app update from GitHub releases
+            applicationIdSuffix = ".github"
+            buildConfigField("Boolean", "IS_GITHUB_VERSION", "true")
+            buildConfigField("Boolean", "ENABLE_IN_APP_UPDATE", "true")
+            versionNameSuffix = "-github"
+        }
+        
+        create("playstore") {
+            dimension = "version"
+            // Play Store version without GitHub update checking
+            buildConfigField("Boolean", "IS_GITHUB_VERSION", "false")
+            buildConfigField("Boolean", "ENABLE_IN_APP_UPDATE", "false")
+            // No version suffix for clean Play Store version
+        }
     }
 
     signingConfigs {
