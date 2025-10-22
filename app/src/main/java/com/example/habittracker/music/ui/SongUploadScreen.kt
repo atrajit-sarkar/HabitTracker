@@ -10,6 +10,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.atraj.habittracker.auth.ui.AuthViewModel
 import it.atraj.habittracker.data.model.SongUploadData
 import it.atraj.habittracker.data.repository.GitHubMusicService
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -48,6 +52,7 @@ fun SongUploadScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by authViewModel.uiState.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
     
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var selectedFileName by remember { mutableStateOf("") }
@@ -57,6 +62,10 @@ fun SongUploadScreen(
     var isUploading by remember { mutableStateOf(false) }
     var uploadProgress by remember { mutableFloatStateOf(0f) }
     var showCategoryDialog by remember { mutableStateOf(false) }
+    
+    // BringIntoView requesters for text fields
+    val songTitleRequester = remember { BringIntoViewRequester() }
+    val artistNameRequester = remember { BringIntoViewRequester() }
     
     val categories = listOf(
         "Ambient",
@@ -120,7 +129,8 @@ fun SongUploadScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -252,7 +262,17 @@ fun SongUploadScreen(
                         onValueChange = { songTitle = it },
                         label = { Text("Song Title") },
                         placeholder = { Text("Enter song title") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(songTitleRequester)
+                            .onFocusEvent { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch {
+                                        delay(300)
+                                        songTitleRequester.bringIntoView()
+                                    }
+                                }
+                            },
                         singleLine = true,
                         leadingIcon = {
                             Icon(
@@ -267,7 +287,17 @@ fun SongUploadScreen(
                         onValueChange = { artistName = it },
                         label = { Text("Artist Name") },
                         placeholder = { Text("Enter artist name") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(artistNameRequester)
+                            .onFocusEvent { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch {
+                                        delay(300)
+                                        artistNameRequester.bringIntoView()
+                                    }
+                                }
+                            },
                         singleLine = true,
                         leadingIcon = {
                             Icon(
@@ -275,9 +305,7 @@ fun SongUploadScreen(
                                 contentDescription = null
                             )
                         }
-                    )
-                    
-                    // Category Selection
+                    )                    // Category Selection
                     OutlinedButton(
                         onClick = { showCategoryDialog = true },
                         modifier = Modifier.fillMaxWidth()
