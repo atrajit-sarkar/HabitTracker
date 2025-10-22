@@ -125,4 +125,20 @@ class MusicBrowserViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+    
+    /**
+     * Upload a song to GitHub
+     */
+    suspend fun uploadSong(
+        userId: String,
+        songData: it.atraj.habittracker.data.model.SongUploadData
+    ): Result<it.atraj.habittracker.data.model.GitHubUploadResponse> {
+        return try {
+            Log.d(TAG, "Starting upload for song: ${songData.title}")
+            gitHubMusicService.uploadSong(userId, songData)
+        } catch (e: Exception) {
+            Log.e(TAG, "Upload failed", e)
+            Result.failure(e)
+        }
+    }
 }

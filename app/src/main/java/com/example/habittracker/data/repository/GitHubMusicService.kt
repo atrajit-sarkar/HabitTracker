@@ -8,6 +8,7 @@ import it.atraj.habittracker.BuildConfig
 import it.atraj.habittracker.data.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -27,6 +28,7 @@ class GitHubMusicService @Inject constructor(
     companion object {
         private const val TAG = "GitHubMusicService"
         private const val GITHUB_API_BASE = "https://api.github.com"
+        private const val GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
         private const val REPO_OWNER = "gongobongofounder"
         private const val REPO_NAME = "HabitTracker-Music"
         private const val BRANCH = "main"
@@ -347,18 +349,122 @@ class GitHubMusicService @Inject constructor(
         downloadUrl: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // This is a simplified version
-            // In production, you'd want to:
-            // 1. Fetch current music.json
-            // 2. Parse it
-            // 3. Add new song metadata
-            // 4. Update the file
+            val token = getGitHubToken()
+            if (token.isEmpty()) {
+                return@withContext Result.failure(Exception("GitHub token not configured"))
+            }
             
-            Log.d(TAG, "Music metadata update would happen here")
-            Result.success(Unit)
+            Log.d(TAG, "Fetching current music.json...")
+            
+            // 1. Fetch current music.json
+            val musicJsonUrl = "$GITHUB_RAW_BASE/$REPO_OWNER/$REPO_NAME/$BRANCH/music.json"
+            val fetchRequest = Request.Builder()
+                .url(musicJsonUrl)
+                .get()
+                .build()
+            
+            val currentMusicData = httpClient.newCall(fetchRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch music.json: ${response.code}")
+                    return@withContext Result.failure(Exception("Failed to fetch music.json"))
+                }
+                
+                val jsonString = response.body?.string() ?: "{\"songs\":[]}"
+                json.decodeFromString<MusicJsonData>(jsonString)
+            }
+            
+            Log.d(TAG, "Current music.json has ${currentMusicData.songs.size} songs")
+            
+            // 2. Create new song metadata
+            val timestamp = System.currentTimeMillis()
+            val newSong = MusicMetadata(
+                id = "${timestamp}_${userId}:${songData.title}",
+                title = songData.title,
+                artist = songData.artist,
+                category = songData.category.lowercase(),
+                url = downloadUrl,
+                duration = songData.duration,
+                tags = songData.tags,
+                uploadedBy = userId,
+                uploaderName = songData.uploaderName,
+                source = "MANUAL"
+            )
+            
+            // 3. Add new song to the list
+            val updatedSongs = currentMusicData.songs + newSong
+            val updatedMusicData = MusicJsonData(songs = updatedSongs)
+            
+            Log.d(TAG, "Updated music.json will have ${updatedSongs.size} songs")
+            
+            // 4. Get current file SHA (required for updating)
+            val getFileUrl = "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/contents/music.json"
+            val getFileRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .get()
+                .build()
+            
+            val fileSha = httpClient.newCall(getFileRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to get file SHA: ${response.code}")
+                    return@withContext Result.failure(Exception("Failed to get file SHA"))
+                }
+                
+                val responseBody = response.body?.string() ?: ""
+                val fileInfo = json.decodeFromString<GitHubFileContent>(responseBody)
+                fileInfo.sha
+            }
+            
+            Log.d(TAG, "Got file SHA: $fileSha")
+            
+            // 5. Encode updated JSON to Base64
+            val updatedJsonString = json.encodeToString(kotlinx.serialization.serializer(), updatedMusicData)
+            val base64Content = Base64.encodeToString(updatedJsonString.toByteArray(), Base64.NO_WRAP)
+            
+            // 6. Update music.json on GitHub
+            val updateRequest = GitHubUploadRequest(
+                message = "Add song: ${songData.title} by ${songData.artist}",
+                content = base64Content,
+                branch = BRANCH,
+                sha = fileSha
+            )
+            
+            val requestBody = json.encodeToString(
+                GitHubUploadRequest.serializer(),
+                updateRequest
+            ).toRequestBody(jsonMediaType)
+            
+            val putRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .put(requestBody)
+                .build()
+            
+            httpClient.newCall(putRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: ""
+                    Log.e(TAG, "Failed to update music.json: ${response.code} - $errorBody")
+                    return@withContext Result.failure(
+                        Exception("Failed to update music.json: ${response.code}")
+                    )
+                }
+                
+                Log.d(TAG, "✅ Successfully updated music.json")
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating music metadata", e)
             Result.failure(e)
         }
     }
+    
+    /**
+     * Internal data class for music.json structure
+     */
+    @Serializable
+    private data class MusicJsonData(
+        val songs: List<MusicMetadata>
+    )
 }

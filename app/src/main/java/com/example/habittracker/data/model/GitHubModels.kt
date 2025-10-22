@@ -96,6 +96,7 @@ data class SongUploadData(
     val fileData: ByteArray,
     val title: String,
     val artist: String,
+    val uploaderName: String = "",
     val duration: Int = 0,
     val tags: List<String> = emptyList()
 ) {

@@ -59,6 +59,7 @@ fun SongUploadScreen(
     
     val categories = listOf(
         "Ambient",
+        "Anime",
         "Classical",
         "Electronic",
         "Focus",
@@ -333,35 +334,60 @@ fun SongUploadScreen(
                             } ?: throw Exception("Failed to read file")
                             
                             // Create upload data
+                            val currentUser = state.user
+                            if (currentUser == null) {
+                                Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+                                isUploading = false
+                                return@launch
+                            }
+                            
+                            val userId = currentUser.email?.substringBefore("@")?.ifEmpty { currentUser.uid } ?: currentUser.uid
+                            val uploaderName = currentUser.displayName ?: currentUser.email?.substringBefore("@") ?: "Unknown"
+                            
                             val uploadData = SongUploadData(
                                 fileName = selectedFileName,
                                 category = selectedCategory.lowercase(),
                                 fileData = fileData,
                                 title = songTitle,
                                 artist = artistName,
+                                uploaderName = uploaderName,
                                 duration = 0,
                                 tags = listOf(selectedCategory.lowercase())
                             )
                             
-                            // Upload using GitHubMusicService
-                            // Note: This requires the service to be injected properly
-                            // For now, show a success message
-                            Toast.makeText(
-                                context,
-                                "Upload functionality will be connected to GitHub service",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            // Upload using GitHubMusicService via ViewModel
+                            Log.d("SongUpload", "Starting upload for: ${uploadData.title}")
                             
-                            isUploading = false
-                            uploadProgress = 0f
+                            val result = musicBrowserViewModel.uploadSong(userId, uploadData)
                             
-                            // Reset form
-                            selectedFileUri = null
-                            selectedFileName = ""
-                            songTitle = ""
-                            artistName = ""
-                            
-                            onUploadSuccess()
+                            result.onSuccess { response ->
+                                Log.d("SongUpload", "Upload successful!")
+                                Toast.makeText(
+                                    context,
+                                    "✅ Song uploaded successfully!\n${songTitle} is now available in the ${selectedCategory} category",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                
+                                isUploading = false
+                                uploadProgress = 0f
+                                
+                                // Reset form
+                                selectedFileUri = null
+                                selectedFileName = ""
+                                songTitle = ""
+                                artistName = ""
+                                
+                                onUploadSuccess()
+                            }.onFailure { error ->
+                                Log.e("SongUpload", "Upload failed: ${error.message}", error)
+                                Toast.makeText(
+                                    context,
+                                    "❌ Upload failed: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                isUploading = false
+                                uploadProgress = 0f
+                            }
                         } catch (e: Exception) {
                             Log.e("SongUpload", "Upload failed", e)
                             Toast.makeText(
