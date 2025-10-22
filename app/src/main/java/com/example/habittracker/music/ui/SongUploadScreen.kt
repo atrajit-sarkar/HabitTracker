@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -297,6 +298,53 @@ fun SongUploadScreen(
                 }
             }
             
+            // Upload Progress
+            AnimatedVisibility(
+                visible = isUploading,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Uploading...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Progress Bar
+                        LinearProgressIndicator(
+                            progress = { uploadProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Percentage Text
+                        Text(
+                            text = "${(uploadProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+            
             // Upload Button
             Button(
                 onClick = {
@@ -357,11 +405,16 @@ fun SongUploadScreen(
                             
                             // Upload using GitHubMusicService via ViewModel
                             Log.d("SongUpload", "Starting upload for: ${uploadData.title}")
+                            uploadProgress = 0f
                             
-                            val result = musicBrowserViewModel.uploadSong(userId, uploadData)
+                            val result = musicBrowserViewModel.uploadSong(userId, uploadData) { progress ->
+                                // Update progress on main thread
+                                uploadProgress = progress / 100f
+                            }
                             
                             result.onSuccess { response ->
                                 Log.d("SongUpload", "Upload successful!")
+                                uploadProgress = 1f
                                 Toast.makeText(
                                     context,
                                     "✅ Song uploaded successfully!\n${songTitle} is now available in the ${selectedCategory} category",

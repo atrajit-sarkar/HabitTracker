@@ -127,17 +127,34 @@ class MusicBrowserViewModel @Inject constructor(
     }
     
     /**
-     * Upload a song to GitHub
+     * Upload a song to GitHub with progress tracking
      */
     suspend fun uploadSong(
         userId: String,
-        songData: it.atraj.habittracker.data.model.SongUploadData
+        songData: it.atraj.habittracker.data.model.SongUploadData,
+        onProgress: ((Int) -> Unit)? = null
     ): Result<it.atraj.habittracker.data.model.GitHubUploadResponse> {
         return try {
             Log.d(TAG, "Starting upload for song: ${songData.title}")
-            gitHubMusicService.uploadSong(userId, songData)
+            gitHubMusicService.uploadSong(userId, songData, onProgress)
         } catch (e: Exception) {
             Log.e(TAG, "Upload failed", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Delete a user's own song from GitHub
+     */
+    suspend fun deleteSong(
+        currentUserId: String,
+        song: MusicMetadata
+    ): Result<String> {
+        return try {
+            Log.d(TAG, "Deleting song: ${song.title}")
+            gitHubMusicService.deleteSong(currentUserId, song)
+        } catch (e: Exception) {
+            Log.e(TAG, "Delete failed", e)
             Result.failure(e)
         }
     }

@@ -13,10 +13,50 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.Buffer
+import okio.BufferedSink
+import okio.ForwardingSink
+import okio.Sink
+import okio.buffer
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Custom RequestBody that tracks upload progress
+ */
+private class ProgressRequestBody(
+    private val requestBody: RequestBody,
+    private val onProgress: ((Int) -> Unit)?
+) : RequestBody() {
+    
+    override fun contentType() = requestBody.contentType()
+    
+    override fun contentLength() = requestBody.contentLength()
+    
+    override fun writeTo(sink: BufferedSink) {
+        val progressSink = object : ForwardingSink(sink) {
+            var bytesWritten = 0L
+            val contentLength = contentLength()
+            
+            override fun write(source: Buffer, byteCount: Long) {
+                super.write(source, byteCount)
+                bytesWritten += byteCount
+                
+                if (contentLength > 0) {
+                    val progress = (100 * bytesWritten / contentLength).toInt()
+                    onProgress?.invoke(progress)
+                }
+            }
+        }
+        
+        val bufferedSink = progressSink.buffer()
+        requestBody.writeTo(bufferedSink)
+        bufferedSink.flush()
+    }
+}
 
 /**
  * Service for interacting with GitHub API to manage music repository
@@ -182,7 +222,8 @@ class GitHubMusicService @Inject constructor(
      */
     suspend fun uploadSong(
         userId: String,
-        songData: SongUploadData
+        songData: SongUploadData,
+        onProgress: ((Int) -> Unit)? = null
     ): Result<GitHubUploadResponse> = withContext(Dispatchers.IO) {
         try {
             val token = getGitHubToken()
@@ -199,7 +240,9 @@ class GitHubMusicService @Inject constructor(
             val filePath = "$USER_SONGS_PATH/$userId/${songData.category}/$sanitizedFileName"
             
             // Encode file data to Base64
+            onProgress?.invoke(10) // Starting upload
             val base64Content = Base64.encodeToString(songData.fileData, Base64.NO_WRAP)
+            onProgress?.invoke(20) // Encoding complete
             
             // Create upload request
             val uploadRequest = GitHubUploadRequest(
@@ -208,16 +251,24 @@ class GitHubMusicService @Inject constructor(
                 branch = BRANCH
             )
             
-            val requestBody = json.encodeToString(
+            val requestBodyJson = json.encodeToString(
                 GitHubUploadRequest.serializer(),
                 uploadRequest
-            ).toRequestBody(jsonMediaType)
+            )
+            
+            // Wrap with progress tracking
+            val baseRequestBody = requestBodyJson.toRequestBody(jsonMediaType)
+            val progressRequestBody = ProgressRequestBody(baseRequestBody) { progress ->
+                // Map progress from 20-80% for file upload
+                val mappedProgress = 20 + ((progress * 60) / 100)
+                onProgress?.invoke(mappedProgress)
+            }
             
             val request = Request.Builder()
                 .url("$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/contents/$filePath")
                 .header("Authorization", "token $token")
                 .header("Accept", "application/vnd.github.v3+json")
-                .put(requestBody)
+                .put(progressRequestBody)
                 .build()
             
             Log.d(TAG, "Uploading song to: $filePath")
@@ -232,12 +283,15 @@ class GitHubMusicService @Inject constructor(
                     )
                 }
                 
+                onProgress?.invoke(85) // Upload complete
+                
                 val uploadResponse = json.decodeFromString(
                     GitHubUploadResponse.serializer(),
                     responseBody
                 )
                 
                 Log.d(TAG, "Song uploaded successfully: ${uploadResponse.content.download_url}")
+                onProgress?.invoke(90) // Starting metadata update
                 
                 // Update music.json to include the new song
                 val metadataResult = updateMusicMetadata(userId, songData, uploadResponse.content.download_url ?: "")
@@ -246,9 +300,14 @@ class GitHubMusicService @Inject constructor(
                     Log.e(TAG, "⚠️ WARNING: Song uploaded but music.json update FAILED!")
                     Log.e(TAG, "File URL: ${uploadResponse.content.download_url}")
                     Log.e(TAG, "Error: ${metadataResult.exceptionOrNull()?.message}")
-                    // Song file is uploaded but won't appear in app until music.json is manually fixed
+                    // Return failure so user knows something went wrong
+                    return@withContext Result.failure(
+                        Exception("Song file uploaded but failed to update music.json. Song won't appear in app until manually fixed.")
+                    )
                 }
                 
+                onProgress?.invoke(100) // Complete
+                Log.d(TAG, "✅ Upload complete with music.json updated")
                 Result.success(uploadResponse)
             }
         } catch (e: Exception) {
@@ -376,11 +435,11 @@ class GitHubMusicService @Inject constructor(
                     return@withContext Result.failure(Exception("Failed to fetch music.json"))
                 }
                 
-                val jsonString = response.body?.string() ?: "{\"songs\":[]}"
-                json.decodeFromString<MusicJsonData>(jsonString)
+                val jsonString = response.body?.string() ?: throw Exception("Empty music.json")
+                json.decodeFromString<MusicResponse>(jsonString)
             }
             
-            Log.d(TAG, "Current music.json has ${currentMusicData.songs.size} songs")
+            Log.d(TAG, "Current music.json has ${currentMusicData.music.size} songs")
             
             // 2. Create new song metadata
             val timestamp = System.currentTimeMillis()
@@ -398,8 +457,11 @@ class GitHubMusicService @Inject constructor(
             )
             
             // 3. Add new song to the list
-            val updatedSongs = currentMusicData.songs + newSong
-            val updatedMusicData = MusicJsonData(songs = updatedSongs)
+            val updatedSongs = currentMusicData.music + newSong
+            val updatedMusicData = currentMusicData.copy(
+                music = updatedSongs,
+                lastUpdated = java.time.Instant.now().toString()
+            )
             
             Log.d(TAG, "Updated music.json will have ${updatedSongs.size} songs")
             
@@ -426,7 +488,7 @@ class GitHubMusicService @Inject constructor(
             Log.d(TAG, "Got file SHA: $fileSha")
             
             // 5. Encode updated JSON to Base64
-            val updatedJsonString = json.encodeToString(kotlinx.serialization.serializer(), updatedMusicData)
+            val updatedJsonString = json.encodeToString(MusicResponse.serializer(), updatedMusicData)
             val base64Content = Base64.encodeToString(updatedJsonString.toByteArray(), Base64.NO_WRAP)
             
             // 6. Update music.json on GitHub
@@ -468,10 +530,190 @@ class GitHubMusicService @Inject constructor(
     }
     
     /**
-     * Internal data class for music.json structure
+     * Internal data class for music.json structure (matches actual format)
      */
     @Serializable
     private data class MusicJsonData(
-        val songs: List<MusicMetadata>
+        val version: String = "1.0.1",
+        val lastUpdated: String,
+        val music: List<MusicMetadata>
     )
+    
+    /**
+     * Delete a user-uploaded song from GitHub
+     * Only allows deletion of songs uploaded by the current user
+     */
+    suspend fun deleteSong(
+        currentUserId: String,
+        song: MusicMetadata
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val token = getGitHubToken()
+            if (token.isEmpty()) {
+                return@withContext Result.failure(Exception("GitHub token not configured"))
+            }
+            
+            // Check if user owns this song
+            if (song.uploadedBy != currentUserId) {
+                return@withContext Result.failure(Exception("You can only delete your own songs"))
+            }
+            
+            Log.d(TAG, "Deleting song: ${song.title}")
+            
+            // Extract file path from URL
+            val urlPath = song.url.substringAfter("$REPO_NAME/main/")
+            
+            // 1. Get file SHA
+            val getFileUrl = "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/contents/$urlPath"
+            val getFileRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .get()
+                .build()
+            
+            val fileSha = httpClient.newCall(getFileRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to get file info: ${response.code}")
+                    return@withContext Result.failure(Exception("Failed to get file info"))
+                }
+                val responseBody = response.body?.string() ?: ""
+                val fileInfo = json.decodeFromString<GitHubFileContent>(responseBody)
+                fileInfo.sha
+            }
+            
+            // 2. Delete file from GitHub
+            val deleteRequestBody = json.encodeToString(
+                kotlinx.serialization.serializer(),
+                mapOf(
+                    "message" to "Delete song: ${song.title}",
+                    "sha" to fileSha,
+                    "branch" to BRANCH
+                )
+            ).toRequestBody(jsonMediaType)
+            
+            val deleteFileRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .delete(deleteRequestBody)
+                .build()
+            
+            httpClient.newCall(deleteFileRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: ""
+                    Log.e(TAG, "Failed to delete file: ${response.code} - $errorBody")
+                    return@withContext Result.failure(Exception("Failed to delete file"))
+                }
+                Log.d(TAG, "✅ File deleted from GitHub")
+            }
+            
+            // 3. Remove from music.json
+            val removeResult = removeSongFromMusicJson(song.id)
+            if (removeResult.isFailure) {
+                return@withContext Result.failure(
+                    Exception("File deleted but failed to update music.json: ${removeResult.exceptionOrNull()?.message}")
+                )
+            }
+            
+            Log.d(TAG, "✅ Song deleted successfully")
+            Result.success("Song deleted successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting song", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Remove a song from music.json by ID
+     */
+    private suspend fun removeSongFromMusicJson(songId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val token = getGitHubToken()
+            if (token.isEmpty()) {
+                return@withContext Result.failure(Exception("GitHub token not configured"))
+            }
+            
+            // Fetch current music.json
+            val musicJsonUrl = "$GITHUB_RAW_BASE/$REPO_OWNER/$REPO_NAME/$BRANCH/music.json"
+            val fetchRequest = Request.Builder()
+                .url(musicJsonUrl)
+                .get()
+                .build()
+            
+            val currentMusicData = httpClient.newCall(fetchRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("Failed to fetch music.json"))
+                }
+                val jsonString = response.body?.string() ?: throw Exception("Empty music.json")
+                json.decodeFromString<MusicResponse>(jsonString)
+            }
+            
+            // Remove the song
+            val updatedSongs = currentMusicData.music.filter { it.id != songId }
+            
+            if (updatedSongs.size == currentMusicData.music.size) {
+                return@withContext Result.failure(Exception("Song not found in music.json"))
+            }
+            
+            // Get file SHA
+            val getFileUrl = "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/contents/music.json"
+            val getFileRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .get()
+                .build()
+            
+            val fileSha = httpClient.newCall(getFileRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("Failed to get file SHA"))
+                }
+                val responseBody = response.body?.string() ?: ""
+                val fileInfo = json.decodeFromString<GitHubFileContent>(responseBody)
+                fileInfo.sha
+            }
+            
+            // Update music.json
+            val updatedData = currentMusicData.copy(
+                music = updatedSongs,
+                lastUpdated = java.time.Instant.now().toString()
+            )
+            
+            val updatedJsonString = json.encodeToString(MusicResponse.serializer(), updatedData)
+            val base64Content = Base64.encodeToString(updatedJsonString.toByteArray(), Base64.NO_WRAP)
+            
+            val updateRequest = GitHubUploadRequest(
+                message = "Remove deleted song from music.json",
+                content = base64Content,
+                branch = BRANCH,
+                sha = fileSha
+            )
+            
+            val requestBody = json.encodeToString(
+                GitHubUploadRequest.serializer(),
+                updateRequest
+            ).toRequestBody(jsonMediaType)
+            
+            val putRequest = Request.Builder()
+                .url(getFileUrl)
+                .header("Authorization", "token $token")
+                .header("Accept", "application/vnd.github.v3+json")
+                .put(requestBody)
+                .build()
+            
+            httpClient.newCall(putRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: ""
+                    Log.e(TAG, "Failed to update music.json: ${response.code} - $errorBody")
+                    return@withContext Result.failure(Exception("Failed to update music.json"))
+                }
+                Log.d(TAG, "✅ music.json updated")
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing song from music.json", e)
+            Result.failure(e)
+        }
+    }
 }
