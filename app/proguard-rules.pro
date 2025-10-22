@@ -163,3 +163,39 @@
     ** downloadManager;
     ** musicManager;
 }
+
+# ========== Ktor Client ==========
+# Keep Ktor classes for YouTube downloader
+-keep class io.ktor.** { *; }
+-keepclassmembers class io.ktor.** { *; }
+-dontwarn io.ktor.**
+
+# Keep Ktor plugins
+-keep class io.ktor.client.plugins.** { *; }
+-keep class io.ktor.client.engine.** { *; }
+-keep class io.ktor.client.request.** { *; }
+
+# SLF4J (logging framework used by Ktor)
+-dontwarn org.slf4j.**
+-keep class org.slf4j.** { *; }
+
+# ========== NewPipe Extractor ==========
+# Keep NewPipe classes for YouTube extraction
+-keep class org.schabi.newpipe.** { *; }
+-keep class com.yushosei.newpipe.** { *; }
+-keepclassmembers class org.schabi.newpipe.** { *; }
+-keepclassmembers class com.yushosei.newpipe.** { *; }
+-dontwarn org.schabi.newpipe.**
+-dontwarn com.yushosei.newpipe.**
+
+# Keep YouTube extractor classes
+-keep class it.atraj.habittracker.youtube.** { *; }
+-keepclassmembers class it.atraj.habittracker.youtube.** { *; }
+
+# Mozilla Rhino (JavaScript engine used by NewPipe)
+-dontwarn org.mozilla.javascript.**
+-keep class org.mozilla.javascript.** { *; }
+
+# Jsoup (HTML parser used by NewPipe)
+-dontwarn org.jsoup.**
+-keep class org.jsoup.** { *; }

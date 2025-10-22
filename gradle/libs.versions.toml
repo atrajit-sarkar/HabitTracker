@@ -25,6 +25,8 @@ coil = "2.7.0"
 vico = "2.0.0-alpha.28"
 okhttp = "4.12.0"
 lottie = "6.5.2"
+ktor = "3.0.0"
+newpipeExtractorKmp = "1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -80,6 +82,16 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 
 # Lottie Animations
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
+
+# YouTube / NewPipe Extractor KMP
+newpipe-extractor-kmp = { group = "io.github.yushosei", name = "newpipe-extractor-kmp", version.ref = "newpipeExtractorKmp" }
+
+# Ktor Client (required by NewPipe KMP)
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

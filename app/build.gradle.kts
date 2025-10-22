@@ -183,6 +183,16 @@ dependencies {
     // Apache Commons Codec for Base64 encoding (for SMTP)
     implementation("commons-codec:commons-codec:1.15")
 
+    // YouTube / NewPipe Extractor KMP
+    implementation(libs.newpipe.extractor.kmp)
+    
+    // Ktor Client (required by NewPipe KMP)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

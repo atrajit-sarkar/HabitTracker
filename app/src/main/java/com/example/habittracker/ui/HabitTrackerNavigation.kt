@@ -37,6 +37,7 @@ import it.atraj.habittracker.auth.ui.ProfileScreen
 import it.atraj.habittracker.data.local.Habit
 import it.atraj.habittracker.util.rememberNavigationHandler
 import it.atraj.habittracker.ui.statistics.StatisticsScreen
+import it.atraj.habittracker.youtube.YouTubeDownloaderScreen
 import it.atraj.habittracker.ui.social.SearchUsersScreen
 import it.atraj.habittracker.ui.social.FriendsListScreen
 import it.atraj.habittracker.ui.social.LeaderboardScreen
@@ -457,6 +458,10 @@ fun HabitTrackerNavigation(
                 safeNavigate("app_icon_selection")
             }
             
+            val onYouTubeDownloaderClick = rememberNavigationHandler {
+                safeNavigate("youtube_downloader")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -470,7 +475,8 @@ fun HabitTrackerNavigation(
                 onLanguageSettingsClick = onLanguageSettingsClick,
                 onEmailSettingsClick = onEmailSettingsClick,
                 onMusicSettingsClick = onMusicSettingsClick,
-                onAppIconSelectionClick = onAppIconSelectionClick
+                onAppIconSelectionClick = onAppIconSelectionClick,
+                onYouTubeDownloaderClick = onYouTubeDownloaderClick
             )
         }
         
@@ -691,6 +697,17 @@ fun HabitTrackerNavigation(
                 friendName = friendName,
                 friendAvatar = friendAvatar,
                 friendPhotoUrl = friendPhotoUrl,
+                onBackClick = onBackClick
+            )
+        }
+        
+        // YouTube Downloader Screen
+        composable("youtube_downloader") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            YouTubeDownloaderScreen(
                 onBackClick = onBackClick
             )
         }

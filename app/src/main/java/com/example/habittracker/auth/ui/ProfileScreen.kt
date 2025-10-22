@@ -254,7 +254,8 @@ fun ProfileScreen(
     onLanguageSettingsClick: () -> Unit = {},
     onEmailSettingsClick: () -> Unit = {},
     onMusicSettingsClick: () -> Unit = {},
-    onAppIconSelectionClick: () -> Unit = {}
+    onAppIconSelectionClick: () -> Unit = {},
+    onYouTubeDownloaderClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val habitState by habitViewModel.uiState.collectAsStateWithLifecycle()
@@ -1210,6 +1211,26 @@ Card(
                         onClick = onAppIconSelectionClick
                     )
                     
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // YouTube Downloader
+                    ProfileSettingRow(
+                        icon = Icons.Default.Download,
+                        title = "YouTube Downloader",
+                        subtitle = "Download videos as MP3 or MP4",
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        onClick = onYouTubeDownloaderClick
+                    )
+
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 20.dp),
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
