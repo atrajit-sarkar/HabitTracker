@@ -139,6 +139,10 @@ fun MusicSettingsScreen(
     val scope = rememberCoroutineScope()
     var saveJob by remember { mutableStateOf<Job?>(null) }
     
+    // Track previous values to detect actual changes (not just initialization)
+    val previousEnabled = remember { mutableStateOf<Boolean?>(null) }
+    val previousTrack = remember { mutableStateOf<String?>(null) }
+    
     // Cleanup when leaving screen
     DisposableEffect(Unit) {
         onDispose {
@@ -164,60 +168,79 @@ fun MusicSettingsScreen(
     
             // Auto-save when settings change (enabled and track immediately, volume debounced)
     LaunchedEffect(enabled, selectedTrack) {
-        if (state.user != null && !isUserAdjustingVolume) {
-            viewModel.updateMusicSettings(enabled, selectedTrack, volume)
+        // Only trigger music changes if values actually changed from previous state
+        // This prevents triggering on initial screen load
+        if (previousEnabled.value != null && previousTrack.value != null) {
+            val enabledChanged = previousEnabled.value != enabled
+            val trackChanged = previousTrack.value != selectedTrack
             
-            Log.d("MusicSettings", "Settings changed - enabled: $enabled, selectedTrack: $selectedTrack, volume: $volume")
-            
-            // Apply immediately to music manager
-            musicManager?.let { manager ->
-                manager.setEnabled(enabled)
-                manager.setVolume(volume) // Ensure correct volume is set
+            if (enabledChanged || trackChanged) {
+                Log.d("MusicSettings", "Settings actually changed - enabled: $enabledChanged, track: $trackChanged")
                 
-                if (selectedTrack == "NONE") {
-                    // Stop any playing music immediately when NONE is selected
-                    manager.stopMusic()
-                    manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                    Log.d("MusicSettings", "Changed to NONE track - music stopped")
-                } else {
-                    // First try direct enum match
-                    val enumTrack = try {
-                        BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
-                    } catch (e: Exception) {
-                        null
-                    }
+                if (state.user != null && !isUserAdjustingVolume) {
+                    viewModel.updateMusicSettings(enabled, selectedTrack, volume)
                     
-                    if (enumTrack != null) {
-                        // Use enum-based playback
-                        manager.changeSong(enumTrack)
-                        Log.d("MusicSettings", "Playing enum track: ${enumTrack.name} (${enumTrack.resourceName})")
-                    } else {
-                        // Use dynamic track playback by filename
-                        val selectedMetadata = musicState.musicList.find { it.id == selectedTrack }
-                        Log.d("MusicSettings", "Looking for track ID: $selectedTrack in ${musicState.musicList.size} tracks")
+                    Log.d("MusicSettings", "Settings changed - enabled: $enabled, selectedTrack: $selectedTrack, volume: $volume")
+                    
+                    // Apply immediately to music manager
+                    musicManager?.let { manager ->
+                        manager.setEnabled(enabled)
+                        manager.setVolume(volume) // Ensure correct volume is set
                         
-                        if (selectedMetadata != null) {
-                            Log.d("MusicSettings", "Found metadata - title: ${selectedMetadata.title}, filename: ${selectedMetadata.filename}")
-                            
-                            // Check if file is downloaded
-                            val isDownloaded = downloadManager?.isMusicDownloaded(selectedMetadata.filename) ?: false
-                            Log.d("MusicSettings", "Is file downloaded? $isDownloaded")
-                            
-                            if (isDownloaded) {
-                                manager.playDynamicTrack(selectedMetadata.filename)
-                                Log.d("MusicSettings", "✅ Attempting to play dynamic track: ${selectedMetadata.filename}")
-                            } else {
-                                Log.w("MusicSettings", "⚠️ File not downloaded: ${selectedMetadata.filename}")
-                                manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                            }
-                        } else {
+                        if (selectedTrack == "NONE") {
+                            // Stop any playing music immediately when NONE is selected
+                            manager.stopMusic()
                             manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                            Log.w("MusicSettings", "❌ Track not found in music list: $selectedTrack")
+                            Log.d("MusicSettings", "Changed to NONE track - music stopped")
+                        } else {
+                            // First try direct enum match
+                            val enumTrack = try {
+                                BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
+                            } catch (e: Exception) {
+                                null
+                            }
+                            
+                            if (enumTrack != null) {
+                                // Use enum-based playback
+                                manager.changeSong(enumTrack)
+                                Log.d("MusicSettings", "Playing enum track: ${enumTrack.name} (${enumTrack.resourceName})")
+                            } else {
+                                // Use dynamic track playback by filename
+                                val selectedMetadata = musicState.musicList.find { it.id == selectedTrack }
+                                Log.d("MusicSettings", "Looking for track ID: $selectedTrack in ${musicState.musicList.size} tracks")
+                                
+                                if (selectedMetadata != null) {
+                                    Log.d("MusicSettings", "Found metadata - title: ${selectedMetadata.title}, filename: ${selectedMetadata.filename}")
+                                    
+                                    // Check if file is downloaded
+                                    val isDownloaded = downloadManager?.isMusicDownloaded(selectedMetadata.filename) ?: false
+                                    Log.d("MusicSettings", "Is file downloaded? $isDownloaded")
+                                    
+                                    if (isDownloaded) {
+                                        manager.playDynamicTrack(selectedMetadata.filename)
+                                        Log.d("MusicSettings", "✅ Attempting to play dynamic track: ${selectedMetadata.filename}")
+                                    } else {
+                                        Log.w("MusicSettings", "⚠️ File not downloaded: ${selectedMetadata.filename}")
+                                        manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                                    }
+                                } else {
+                                    manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                                    Log.w("MusicSettings", "❌ Track not found in music list: $selectedTrack")
+                                }
+                            }
                         }
-                    }
+                    } ?: Log.e("MusicSettings", "❌ MusicManager is null!")
                 }
-            } ?: Log.e("MusicSettings", "❌ MusicManager is null!")
+            } else {
+                Log.d("MusicSettings", "Values set but unchanged - skipping music manager update")
+            }
+        } else {
+            Log.d("MusicSettings", "First initialization - recording initial values")
         }
+        
+        // Update previous values for next comparison
+        previousEnabled.value = enabled
+        previousTrack.value = selectedTrack
     }
     
     // Animated background

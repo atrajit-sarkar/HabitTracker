@@ -75,7 +75,7 @@ fun MusicSongListScreen(
     val scope = rememberCoroutineScope()
     var saveJob by remember { mutableStateOf<Job?>(null) }
     
-    // Sync state with user data
+    // Sync state with user data (one-way sync only - don't trigger music changes here)
     LaunchedEffect(authState.user?.musicEnabled, authState.user?.musicTrack, authState.user?.musicVolume) {
         authState.user?.let { user ->
             enabled = user.musicEnabled
@@ -104,42 +104,39 @@ fun MusicSongListScreen(
         state.currentSongs.map { it.toMusicTrackData() }
     }
     
-    // Auto-save when settings change
-    LaunchedEffect(enabled, selectedTrack) {
-        if (authState.user != null && !isUserAdjustingVolume) {
-            authViewModel.updateMusicSettings(enabled, selectedTrack, volume)
+    // Function to handle music changes (only called when user interacts)
+    fun handleMusicChange(newEnabled: Boolean, newTrack: String, newVolume: Float) {
+        authViewModel.updateMusicSettings(newEnabled, newTrack, newVolume)
+        
+        Log.d("MusicSongList", "User changed settings - enabled: $newEnabled, track: $newTrack, volume: $newVolume")
+        
+        // Apply immediately to music manager
+        musicManager?.let { manager ->
+            manager.setEnabled(newEnabled)
+            manager.setVolume(newVolume)
             
-            Log.d("MusicSongList", "Settings changed - enabled: $enabled, selectedTrack: $selectedTrack, volume: $volume")
-            
-            // Apply immediately to music manager
-            musicManager?.let { manager ->
-                manager.setEnabled(enabled)
-                manager.setVolume(volume)
+            if (newTrack == "NONE") {
+                manager.stopMusic()
+                manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
+                Log.d("MusicSongList", "Changed to NONE track - music stopped")
+            } else {
+                val enumTrack = try {
+                    BackgroundMusicManager.MusicTrack.valueOf(newTrack)
+                } catch (e: Exception) {
+                    null
+                }
                 
-                if (selectedTrack == "NONE") {
-                    manager.stopMusic()
-                    manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                    Log.d("MusicSongList", "Changed to NONE track - music stopped")
+                if (enumTrack != null) {
+                    manager.changeSong(enumTrack)
+                    Log.d("MusicSongList", "Playing enum track: ${enumTrack.name}")
                 } else {
-                    val enumTrack = try {
-                        BackgroundMusicManager.MusicTrack.valueOf(selectedTrack)
-                    } catch (e: Exception) {
-                        null
-                    }
-                    
-                    if (enumTrack != null) {
-                        manager.changeSong(enumTrack)
-                        Log.d("MusicSongList", "Playing enum track: ${enumTrack.name}")
-                    } else {
-                        val selectedMetadata = state.currentSongs.find { it.id == selectedTrack }
-                        if (selectedMetadata != null) {
-                            val isDownloaded = downloadManager?.isMusicDownloaded(selectedMetadata.filename) ?: false
-                            if (isDownloaded) {
-                                manager.playDynamicTrack(selectedMetadata.filename)
-                                Log.d("MusicSongList", "Playing dynamic track: ${selectedMetadata.filename}")
-                            } else {
-                                manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
-                            }
+                    // For dynamic tracks
+                    val selectedMetadata = state.currentSongs.find { it.id == newTrack }
+                    if (selectedMetadata != null) {
+                        val isDownloaded = downloadManager?.isMusicDownloaded(selectedMetadata.filename) ?: false
+                        if (isDownloaded) {
+                            manager.playDynamicTrack(selectedMetadata.filename)
+                            Log.d("MusicSongList", "Playing dynamic track: ${selectedMetadata.filename}")
                         } else {
                             manager.changeSong(BackgroundMusicManager.MusicTrack.NONE)
                         }
@@ -394,7 +391,10 @@ fun MusicSongListScreen(
                                     
                                     Switch(
                                         checked = enabled,
-                                        onCheckedChange = { enabled = it }
+                                        onCheckedChange = { 
+                                            enabled = it
+                                            handleMusicChange(it, selectedTrack, volume)
+                                        }
                                     )
                                 }
                             }
@@ -525,7 +525,9 @@ fun MusicSongListScreen(
                                     onSelect = {
                                         if (track.id == "NONE" || isDownloaded) {
                                             selectedTrack = track.id
-                                            if (!enabled) enabled = true
+                                            val newEnabled = if (!enabled) true else enabled
+                                            enabled = newEnabled
+                                            handleMusicChange(newEnabled, track.id, volume)
                                         }
                                     },
                                     onPlayerClick = {
@@ -556,6 +558,7 @@ fun MusicSongListScreen(
                                                 downloadStates.remove(track.fileName)
                                                 if (selectedTrack == track.id) {
                                                     selectedTrack = "NONE"
+                                                    handleMusicChange(enabled, "NONE", volume)
                                                 }
                                             } finally {
                                                 deletingStates.remove(track.fileName)
@@ -584,12 +587,15 @@ fun MusicSongListScreen(
                 },
                 onPlayPauseClick = { 
                     selectedTrack = selectedMusicPlayerTrack!!.id
-                    if (!enabled) enabled = true else enabled = !enabled
+                    val newEnabled = if (!enabled) true else !enabled
+                    enabled = newEnabled
+                    handleMusicChange(newEnabled, selectedMusicPlayerTrack!!.id, volume)
                 },
                 allTracks = tracks,
                 onTrackChange = { newTrack ->
                     selectedMusicPlayerTrack = newTrack
                     selectedTrack = newTrack.id
+                    handleMusicChange(enabled, newTrack.id, volume)
                 }
             )
         }

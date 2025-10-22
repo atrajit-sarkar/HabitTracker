@@ -43,13 +43,25 @@ class MusicDownloadManager @Inject constructor(
      * Get URL for a music file by checking dynamic repository first, then legacy
      */
     private suspend fun getMusicUrl(fileName: String): String? {
-        // Try to get from dynamic music repository
+        // Try to get from dynamic music repository (cached)
         try {
             val musicData = musicRepositoryService.getCachedMusicSync()
             val track = musicData?.music?.find { it.filename == fileName }
             if (track != null) {
                 Log.d("MusicDownload", "Found URL in dynamic repository: $fileName -> ${track.url}")
                 return track.url
+            }
+            
+            // Not found in cache - try refreshing from network
+            Log.d("MusicDownload", "File not in cache, refreshing metadata...")
+            val refreshResult = musicRepositoryService.refreshMusicMetadata()
+            if (refreshResult.isSuccess) {
+                val refreshedData = refreshResult.getOrNull()
+                val refreshedTrack = refreshedData?.music?.find { it.filename == fileName }
+                if (refreshedTrack != null) {
+                    Log.d("MusicDownload", "Found URL after refresh: $fileName -> ${refreshedTrack.url}")
+                    return refreshedTrack.url
+                }
             }
         } catch (e: Exception) {
             Log.w("MusicDownload", "Could not get URL from dynamic repository: ${e.message}")
@@ -59,6 +71,8 @@ class MusicDownloadManager @Inject constructor(
         return legacyMusicUrls[fileName].also {
             if (it != null) {
                 Log.d("MusicDownload", "Using legacy URL for: $fileName")
+            } else {
+                Log.e("MusicDownload", "No URL found for: $fileName")
             }
         }
     }
