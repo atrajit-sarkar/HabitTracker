@@ -1298,6 +1298,9 @@ private fun MonthCalendar(
     val dayOfWeekValue = firstDayOfMonth.dayOfWeek.value
     val firstDayOfWeek = if (dayOfWeekValue == 7) 0 else dayOfWeekValue
     val today = LocalDate.now()
+    
+    // Get first completion date to know when streak tracking starts
+    val firstCompletionDate = completedDates.minOrNull()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Day headers
@@ -1375,7 +1378,10 @@ private fun MonthCalendar(
                     },
                     streakLevel = date?.let { streakAtDate[it] } ?: 0,
                     isGraceDay = isGraceDay,
-                    isFreezeDay = isFreezeDay
+                    isFreezeDay = isFreezeDay,
+                    isBeforeFirstCompletion = date?.let { d -> 
+                        firstCompletionDate?.let { d < it } ?: true 
+                    } ?: false
                 )
             }
         }
@@ -1392,7 +1398,8 @@ private fun CalendarDay(
     onClick: () -> Unit = {},
     streakLevel: Int = 0,  // 0 = broken/none, 1-4 = building, 5+ = strong
     isGraceDay: Boolean = false,  // Grace day indicator
-    isFreezeDay: Boolean = false  // Freeze day indicator
+    isFreezeDay: Boolean = false,  // Freeze day indicator
+    isBeforeFirstCompletion: Boolean = false  // Before first completion - no streak tracking yet
 ) {
     // Allow selecting any past date (incl. before habit creation) for backfill
     val isClickable = date != null && !date.isAfter(LocalDate.now())
@@ -1430,9 +1437,8 @@ private fun CalendarDay(
         isSelected -> MaterialTheme.colorScheme.primary
         // Don't show red border on today - user still has time to complete
         isToday && !isCompleted -> MaterialTheme.colorScheme.primary
-        isCompleted && streakBorderColor != null -> streakBorderColor  // Apply streak color to completed days
-        // Only apply red border to past dates that are truly broken (not grace/freeze protected)
-        !isToday && !isCompleted && streakBorderColor != null && !isGraceDay && !isFreezeDay -> streakBorderColor
+        // Apply streak color only to completed days that are after first completion
+        isCompleted && streakBorderColor != null && !isBeforeFirstCompletion -> streakBorderColor
         isBeforeHabitCreation && isClickable -> MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
         else -> null
     }
