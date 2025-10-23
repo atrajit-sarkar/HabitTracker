@@ -897,7 +897,8 @@ class HabitViewModel @Inject constructor(
                 longestStreak = longestStreak,
                 totalCompletions = totalCompletions,
                 completionRate = completionRate.coerceAtMost(1.0f),
-                completedDates = completedDates
+                completedDates = completedDates,
+                completions = completions
             )
         }
     }

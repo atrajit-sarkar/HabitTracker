@@ -48,13 +48,16 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
+import it.atraj.habittracker.data.local.HabitCompletion
+import it.atraj.habittracker.data.StreakCalculator
 
 data class HabitProgress(
     val currentStreak: Int,
     val longestStreak: Int,
     val totalCompletions: Int,
     val completionRate: Float,
-    val completedDates: Set<LocalDate>
+    val completedDates: Set<LocalDate>,
+    val completions: List<HabitCompletion> = emptyList()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,7 +136,8 @@ fun HabitDetailsScreen(
                 completedDates = progress.completedDates,
                 selectedDate = selectedDate,
                 onDateSelected = onSelectDate,
-                progress = progress
+                progress = progress,
+                userRewards = userRewards
             )
 
             // Habit Information
@@ -1185,7 +1189,8 @@ private fun CalendarSection(
     completedDates: Set<LocalDate>,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
-    progress: HabitProgress
+    progress: HabitProgress,
+    userRewards: it.atraj.habittracker.data.local.UserRewards
 ) {
     var currentMonth by remember(selectedDate) { mutableStateOf(YearMonth.from(selectedDate)) }
     
@@ -1250,7 +1255,8 @@ private fun CalendarSection(
                         currentMonth = YearMonth.from(date)
                         onDateSelected(date)
                     },
-                    progress = progress
+                    progress = progress,
+                    userRewards = userRewards
                 )
                 
                 // Helper text
@@ -1277,12 +1283,15 @@ private fun MonthCalendar(
     habitCreationDate: LocalDate,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
-    progress: HabitProgress
+    progress: HabitProgress,
+    userRewards: it.atraj.habittracker.data.local.UserRewards
 ) {
     // Calculate streak at each date for proper coloring
     val streakAtDate = remember(completedDates) {
         calculateStreakAtEachDate(completedDates, habitCreationDate)
     }
+    
+    val completions = progress.completions
     val firstDayOfMonth = month.atDay(1)
     val lastDayOfMonth = month.atEndOfMonth()
     // Fix for Android 10/11 compatibility - use proper modulo calculation
@@ -1322,13 +1331,32 @@ private fun MonthCalendar(
                 } else null
 
                 // Determine if this is a grace day
+                // Grace only shows on PAST dates (not today) - user still has time to complete today
                 val isGraceDay = date?.let { d ->
-                    if (d !in completedDates && d >= habitCreationDate) {
+                    if (d !in completedDates && d >= habitCreationDate && d < today) {
                         // Check if there's a completion before this date
                         val previousCompletions = completedDates.filter { it < d }.sorted()
                         if (previousCompletions.isNotEmpty()) {
                             val lastCompletion = previousCompletions.last()
-                            ChronoUnit.DAYS.between(lastCompletion, d) == 1L
+                            // Use StreakCalculator for consistent logic
+                            StreakCalculator.isGraceDay(lastCompletion, d, completions)
+                        } else false
+                    } else false
+                } ?: false
+                
+                // Determine if this is a freeze day
+                // Freeze only shows on PAST dates protected by streak freeze
+                val isFreezeDay = date?.let { d ->
+                    if (d !in completedDates && d >= habitCreationDate && d < today) {
+                        val previousCompletions = completedDates.filter { it < d }.sorted()
+                        if (previousCompletions.isNotEmpty()) {
+                            val lastCompletion = previousCompletions.last()
+                            StreakCalculator.isFreezeDay(
+                                lastCompletedDate = lastCompletion,
+                                date = d,
+                                completions = completions,
+                                freezeDaysAvailable = userRewards.freezeDays
+                            )
                         } else false
                     } else false
                 } ?: false
@@ -1346,7 +1374,8 @@ private fun MonthCalendar(
                         }
                     },
                     streakLevel = date?.let { streakAtDate[it] } ?: 0,
-                    isGraceDay = isGraceDay
+                    isGraceDay = isGraceDay,
+                    isFreezeDay = isFreezeDay
                 )
             }
         }
@@ -1362,13 +1391,16 @@ private fun CalendarDay(
     isSelected: Boolean,
     onClick: () -> Unit = {},
     streakLevel: Int = 0,  // 0 = broken/none, 1-4 = building, 5+ = strong
-    isGraceDay: Boolean = false  // Grace day indicator
+    isGraceDay: Boolean = false,  // Grace day indicator
+    isFreezeDay: Boolean = false  // Freeze day indicator
 ) {
     // Allow selecting any past date (incl. before habit creation) for backfill
     val isClickable = date != null && !date.isAfter(LocalDate.now())
 
+    // Background color with special handling for freeze days
     val backgroundColor = when {
         date == null -> Color.Transparent
+        isFreezeDay -> Color(0xFFE0F7FA)  // Light frost cyan background for freeze days
         isCompleted -> MaterialTheme.colorScheme.primary
         isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
@@ -1378,6 +1410,7 @@ private fun CalendarDay(
 
     val textColor = when {
         date == null -> Color.Transparent
+        isFreezeDay -> Color(0xFF006064)  // Dark cyan for freeze day icon
         isCompleted -> MaterialTheme.colorScheme.onPrimary
         isSelected -> MaterialTheme.colorScheme.primary
         isClickable -> MaterialTheme.colorScheme.onSurface
@@ -1395,8 +1428,11 @@ private fun CalendarDay(
     val borderColor = when {
         isSelected && isCompleted -> MaterialTheme.colorScheme.onPrimary
         isSelected -> MaterialTheme.colorScheme.primary
-        isToday && !isCompleted -> if (streakBorderColor != null) streakBorderColor else MaterialTheme.colorScheme.primary
+        // Don't show red border on today - user still has time to complete
+        isToday && !isCompleted -> MaterialTheme.colorScheme.primary
         isCompleted && streakBorderColor != null -> streakBorderColor  // Apply streak color to completed days
+        // Only apply red border to past dates that are truly broken (not grace/freeze protected)
+        !isToday && !isCompleted && streakBorderColor != null && !isGraceDay && !isFreezeDay -> streakBorderColor
         isBeforeHabitCreation && isClickable -> MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
         else -> null
     }
@@ -1408,20 +1444,30 @@ private fun CalendarDay(
             shape = CircleShape
         )
 
-    // Grace day gets special icy border
+    // Grace day gets special icy border (light blue gradient)
     if (isGraceDay) {
         dayModifier = dayModifier.border(
             width = 3.dp,
             brush = Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFF87CEEB).copy(alpha = 0.8f),
-                    Color(0xFFB0E0E6).copy(alpha = 0.6f),
+                    Color(0xFF87CEEB).copy(alpha = 0.8f),  // Sky blue
+                    Color(0xFFB0E0E6).copy(alpha = 0.6f),  // Powder blue
                     Color(0xFF87CEEB).copy(alpha = 0.8f)
                 )
             ),
             shape = CircleShape
         )
-    } else if (borderColor != null) {
+    } 
+    // Freeze day gets frosty border (darker cyan to complement the frost background)
+    else if (isFreezeDay) {
+        dayModifier = dayModifier.border(
+            width = 2.dp,
+            color = Color(0xFF00838F),  // Dark cyan border
+            shape = CircleShape
+        )
+    } 
+    // Regular border colors (streak-based or selection)
+    else if (borderColor != null) {
         dayModifier = dayModifier.border(
             width = 2.dp,
             color = borderColor,
@@ -1451,20 +1497,32 @@ private fun CalendarDay(
         contentAlignment = Alignment.Center
     ) {
         if (date != null) {
-            if (isCompleted) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Completed",
-                    tint = textColor,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                Text(
-                    text = date.dayOfMonth.toString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = textColor,
-                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
-                )
+            when {
+                isCompleted -> {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Completed",
+                        tint = textColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                isFreezeDay -> {
+                    // Show snowflake icon for freeze-protected days
+                    Icon(
+                        imageVector = Icons.Default.AcUnit,  // Snowflake/frost icon
+                        contentDescription = "Freeze day",
+                        tint = Color(0xFF00838F),  // Dark cyan
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                else -> {
+                    Text(
+                        text = date.dayOfMonth.toString(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor,
+                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
             }
         }
     }

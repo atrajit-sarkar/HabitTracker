@@ -62,12 +62,12 @@ object StreakCalculator {
         
         Log.d(TAG, "Days since last completion: $daysSinceLastCompletion")
         
-        // If completed today or yesterday, we're good
-        if (daysSinceLastCompletion <= 1) {
+        // If completed today, we're good
+        if (daysSinceLastCompletion == 0) {
             val currentStreak = calculateCurrentStreak(sortedCompletions)
             val diamondsEarned = calculateDiamonds(habit.highestStreakAchieved, currentStreak)
             
-            Log.d(TAG, "Recent completion, current streak: $currentStreak, diamonds: $diamondsEarned")
+            Log.d(TAG, "Completed today, current streak: $currentStreak, diamonds: $diamondsEarned")
             
             return StreakCalculationResult(
                 newStreak = currentStreak,
@@ -77,8 +77,24 @@ object StreakCalculator {
             )
         }
         
+        // If last completion was yesterday, streak is maintained but no new diamonds
+        // (user still has today to complete and continue the streak)
+        if (daysSinceLastCompletion == 1) {
+            val currentStreak = calculateCurrentStreak(sortedCompletions)
+            
+            Log.d(TAG, "Last completion yesterday, maintaining streak: $currentStreak")
+            
+            return StreakCalculationResult(
+                newStreak = currentStreak,
+                diamondsEarned = 0,
+                freezeDaysUsed = 0,
+                graceUsed = false
+            )
+        }
+        
         // We have missed days - apply grace and freeze logic
-        val missedDays = daysSinceLastCompletion - 1 // Don't count yesterday
+        // Only count completed missed days (not including today)
+        val missedDays = daysSinceLastCompletion - 1 // Don't count today
         
         Log.d(TAG, "Missed $missedDays days")
         
@@ -201,9 +217,14 @@ object StreakCalculator {
     /**
      * Determine if a missed day should show grace visual
      * Grace applies to the first missed day after last completion
+     * Only shows for PAST dates (not today) since today is still ongoing
      */
     fun isGraceDay(lastCompletedDate: LocalDate?, date: LocalDate, completions: List<HabitCompletion>): Boolean {
         if (lastCompletedDate == null) return false
+        
+        // Don't show grace on today - user still has time to complete
+        val today = LocalDate.now()
+        if (date >= today) return false
         
         // Check if this date is exactly 1 day after the last completion
         val daysSince = ChronoUnit.DAYS.between(lastCompletedDate, date).toInt()
@@ -221,6 +242,7 @@ object StreakCalculator {
     /**
      * Determine if a missed day is protected by a freeze
      * Freeze applies to missed days after the grace day
+     * Only shows for PAST dates (not today) since today is still ongoing
      */
     fun isFreezeDay(
         lastCompletedDate: LocalDate?,
@@ -229,6 +251,10 @@ object StreakCalculator {
         freezeDaysAvailable: Int
     ): Boolean {
         if (lastCompletedDate == null || freezeDaysAvailable <= 0) return false
+        
+        // Don't show freeze on today - user still has time to complete
+        val today = LocalDate.now()
+        if (date >= today) return false
         
         val daysSince = ChronoUnit.DAYS.between(lastCompletedDate, date).toInt()
         
