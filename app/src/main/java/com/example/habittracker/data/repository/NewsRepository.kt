@@ -49,7 +49,74 @@ class NewsRepository @Inject constructor(
     }
     
     /**
-     * Get count of unread news messages
+     * Get count of unread news messages - REAL-TIME
+     * Waits for user authentication before starting listeners
+     */
+    fun getUnreadCountFlow(): Flow<Int> = callbackFlow {
+        // Wait a bit for auth to initialize if needed
+        var userId = auth.currentUser?.uid
+        var retries = 0
+        while (userId == null && retries < 10) {
+            Log.d(TAG, "Waiting for user authentication... (attempt ${retries + 1})")
+            kotlinx.coroutines.delay(500)
+            userId = auth.currentUser?.uid
+            retries++
+        }
+        
+        if (userId == null) {
+            Log.w(TAG, "User not authenticated after waiting, returning 0 unread count")
+            trySend(0)
+            close()
+            return@callbackFlow
+        }
+        
+        Log.d(TAG, "Starting unread count flow for user: $userId")
+        
+        var allNewsIds = setOf<String>()
+        var readNewsIds = setOf<String>()
+        
+        // Listen to all news
+        val newsListener = newsCollection.addSnapshotListener { newsSnapshot, newsError ->
+            if (newsError != null) {
+                Log.e(TAG, "Error fetching news for count", newsError)
+                return@addSnapshotListener
+            }
+            
+            allNewsIds = newsSnapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
+            // Count only read news that still exist
+            val validReadCount = readNewsIds.intersect(allNewsIds).size
+            val unreadCount = allNewsIds.size - validReadCount
+            Log.d(TAG, "News updated: total=${allNewsIds.size}, validRead=$validReadCount, unread=$unreadCount")
+            trySend(unreadCount)
+        }
+        
+        // Listen to read news
+        val readNewsListener = firestore.collection("users")
+            .document(userId)
+            .collection("read_news")
+            .addSnapshotListener { readSnapshot, readError ->
+                if (readError != null) {
+                    Log.e(TAG, "Error fetching read news", readError)
+                    return@addSnapshotListener
+                }
+                
+                readNewsIds = readSnapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
+                // Count only read news that still exist
+                val validReadCount = readNewsIds.intersect(allNewsIds).size
+                val unreadCount = allNewsIds.size - validReadCount
+                Log.d(TAG, "Read news updated: total=${allNewsIds.size}, validRead=$validReadCount, unread=$unreadCount")
+                trySend(unreadCount)
+            }
+        
+        awaitClose { 
+            Log.d(TAG, "Removing unread count listeners")
+            newsListener.remove()
+            readNewsListener.remove()
+        }
+    }
+    
+    /**
+     * Get count of unread news messages (one-time)
      */
     suspend fun getUnreadCount(): Int {
         return try {

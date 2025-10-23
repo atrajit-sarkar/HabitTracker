@@ -133,16 +133,15 @@ fun NewsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (news.priority != "normal") {
-                    PriorityBadge(news.priority)
-                }
+                // Always show priority badge for all types
+                PriorityBadge(news.priority)
                 
                 Spacer(modifier = Modifier.weight(1f))
                 
                 Text(
                     text = formatTimestamp(news.timestamp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = getTextColor(news.priority)
                 )
             }
             
@@ -151,22 +150,30 @@ fun NewsCard(
                 text = news.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = getTextColor(news.priority)
             )
             
             HorizontalDivider()
             
             // Markdown content
+            val isSystemInDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
             AndroidView(
                 factory = { ctx ->
                     TextView(ctx).apply {
-                        setTextColor(Color.BLACK)
                         textSize = 14f
                         setLineSpacing(4f, 1f)
                         autoLinkMask = Linkify.WEB_URLS
                     }
                 },
                 update = { textView ->
+                    // Set text color based on priority and theme
+                    val textColor = when (news.priority.lowercase()) {
+                        "urgent" -> android.graphics.Color.WHITE
+                        "high" -> android.graphics.Color.WHITE
+                        "low" -> if (isSystemInDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+                        else -> if (isSystemInDarkTheme) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+                    }
+                    textView.setTextColor(textColor)
                     markwon.setMarkdown(textView, news.content)
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -184,7 +191,7 @@ fun NewsCard(
                         Text(
                             text = "By ${news.author}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = getTextColor(news.priority)
                         )
                     }
                     
@@ -193,7 +200,11 @@ fun NewsCard(
                             text = "v${news.version}",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = when (news.priority.lowercase()) {
+                                "urgent" -> MaterialTheme.colorScheme.onError
+                                "high" -> MaterialTheme.colorScheme.onTertiary
+                                else -> MaterialTheme.colorScheme.primary
+                            }
                         )
                     }
                 }
@@ -204,26 +215,36 @@ fun NewsCard(
 
 @Composable
 fun PriorityBadge(priority: String) {
-    val (color, icon, text) = when (priority.lowercase()) {
-        "urgent" -> Triple(
+    val (color, textColor, icon, text) = when (priority.lowercase()) {
+        "urgent" -> Tuple4(
             MaterialTheme.colorScheme.error,
+            MaterialTheme.colorScheme.onError,
             Icons.Default.Warning,
             "URGENT"
         )
-        "high" -> Triple(
+        "high" -> Tuple4(
             MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.onTertiary,
             Icons.Default.Info,
             "IMPORTANT"
         )
-        "low" -> Triple(
+        "low" -> Tuple4(
             MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             Icons.Default.Star,
+            "TIP"
+        )
+        "normal" -> Tuple4(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
+            Icons.Default.Info,
             "INFO"
         )
-        else -> Triple(
-            MaterialTheme.colorScheme.primary,
+        else -> Tuple4(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
             Icons.Default.Info,
-            "UPDATE"
+            "INFO"
         )
     }
     
@@ -241,17 +262,25 @@ fun PriorityBadge(priority: String) {
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onError
+                tint = textColor
             )
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onError
+                color = textColor
             )
         }
     }
 }
+
+// Helper data class for 4 values
+private data class Tuple4<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
 
 @Composable
 fun EmptyNewsState() {
@@ -292,6 +321,16 @@ fun getPriorityBackgroundColor(priority: String): androidx.compose.ui.graphics.C
         "high" -> MaterialTheme.colorScheme.tertiaryContainer
         "low" -> MaterialTheme.colorScheme.surfaceVariant
         else -> MaterialTheme.colorScheme.surface
+    }
+}
+
+@Composable
+fun getTextColor(priority: String): androidx.compose.ui.graphics.Color {
+    return when (priority.lowercase()) {
+        "urgent" -> MaterialTheme.colorScheme.onErrorContainer
+        "high" -> MaterialTheme.colorScheme.onTertiaryContainer
+        "low" -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onSurface
     }
 }
 

@@ -182,7 +182,14 @@ fun AddHabitScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         } else {
-                            Text(text = stringResource(id = if (state.isEditMode) R.string.update_habit else R.string.create_habit))
+                            Text(
+                                text = stringResource(id = if (state.isEditMode) R.string.update_habit else R.string.create_habit),
+                                maxLines = 1,
+                                softWrap = false,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontSize = 13.sp
+                                )
+                            )
                         }
                     }
                 }

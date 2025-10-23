@@ -217,6 +217,11 @@ fun HabitTrackerNavigation(
             val newsViewModel: NewsViewModel = hiltViewModel()
             val unreadNewsCount by newsViewModel.unreadCount.collectAsStateWithLifecycle()
             
+            // Debug: Log unread count in navigation
+            LaunchedEffect(unreadNewsCount) {
+                android.util.Log.d("HabitTrackerNav", "Unread count in navigation: $unreadNewsCount")
+            }
+            
             // Refresh habits when screen becomes visible to recalculate completion states
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {

@@ -1,5 +1,6 @@
 package it.atraj.habittracker.ui.news
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.atraj.habittracker.data.local.AppNews
@@ -16,6 +17,8 @@ class NewsViewModel @Inject constructor(
     private val newsRepository: NewsRepository
 ) : ViewModel() {
     
+    private val TAG = "NewsViewModel"
+    
     private val _news = MutableStateFlow<List<AppNews>>(emptyList())
     val news: StateFlow<List<AppNews>> = _news.asStateFlow()
     
@@ -26,8 +29,9 @@ class NewsViewModel @Inject constructor(
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
     init {
+        Log.d(TAG, "NewsViewModel initialized")
         loadNews()
-        loadUnreadCount()
+        loadUnreadCountRealtime()
     }
     
     private fun loadNews() {
@@ -43,12 +47,16 @@ class NewsViewModel @Inject constructor(
         }
     }
     
-    private fun loadUnreadCount() {
+    private fun loadUnreadCountRealtime() {
         viewModelScope.launch {
             try {
-                val count = newsRepository.getUnreadCount()
-                _unreadCount.value = count
+                Log.d(TAG, "Starting to collect unread count flow")
+                newsRepository.getUnreadCountFlow().collect { count ->
+                    Log.d(TAG, "Unread count updated in ViewModel: $count")
+                    _unreadCount.value = count
+                }
             } catch (e: Exception) {
+                Log.e(TAG, "Error collecting unread count", e)
                 _unreadCount.value = 0
             }
         }
@@ -58,7 +66,7 @@ class NewsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 newsRepository.markAsRead(newsId)
-                loadUnreadCount()
+                // No need to reload - real-time listener will update automatically
             } catch (e: Exception) {
                 // Handle error silently
             }
@@ -69,7 +77,7 @@ class NewsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 newsRepository.markAllAsRead(_news.value)
-                _unreadCount.value = 0
+                // No need to reload - real-time listener will update automatically
             } catch (e: Exception) {
                 // Handle error silently
             }
@@ -77,7 +85,7 @@ class NewsViewModel @Inject constructor(
     }
     
     fun refreshNews() {
+        // News is already real-time, but this can force a refresh if needed
         loadNews()
-        loadUnreadCount()
     }
 }

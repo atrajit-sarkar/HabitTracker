@@ -334,6 +334,11 @@ fun HabitHomeScreen(
     
     val context = LocalContext.current
 
+    // Debug: Log unread news count
+    LaunchedEffect(unreadNewsCount) {
+        android.util.Log.d("HomeScreen", "Unread news count updated: $unreadNewsCount")
+    }
+
     // Close drawer when returning to home screen
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -465,28 +470,31 @@ fun HabitHomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.clickableOnce { onNewsClick() }
                     ) {
-                        Box {
-                            BadgedBox(
-                                badge = {
-                                    if (unreadNewsCount > 0) {
-                                        Badge {
-                                            Text(
-                                                text = unreadNewsCount.toString(),
-                                                fontSize = 9.sp
-                                            )
-                                        }
-                                    }
+                        BadgedBox(
+                            badge = {
+                                // Always show badge for testing - will show "0" if no unread news
+                                Badge(
+                                    containerColor = if (unreadNewsCount > 0) 
+                                        MaterialTheme.colorScheme.error 
+                                    else 
+                                        MaterialTheme.colorScheme.secondary
+                                ) {
+                                    Text(
+                                        text = unreadNewsCount.toString(),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                            ) {
-                                // Use the app's current launcher icon dynamically
-                                Image(
-                                    painter = painterResource(id = currentIconRes),
-                                    contentDescription = "App Icon",
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                )
                             }
+                        ) {
+                            // Use the app's current launcher icon dynamically
+                            Image(
+                                painter = painterResource(id = currentIconRes),
+                                contentDescription = "App Icon",
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                            )
                         }
                         
                         Text(
