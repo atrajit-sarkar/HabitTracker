@@ -55,12 +55,9 @@
             android:hardwareAccelerated="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.HabitTracker.Splash"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:windowSoftInputMode="adjustResize"
+            android:enabled="true">
+            <!-- NO LAUNCHER intent-filter here - handled by activity-aliases -->
             
             <!-- Deep link for email notifications (custom scheme) -->
             <intent-filter>
@@ -101,7 +98,7 @@
             android:name=".MainActivity.Default"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:enabled="false"
+            android:enabled="true"
             android:icon="@mipmap/ic_launcher_default"
             android:roundIcon="@mipmap/ic_launcher_default"
             android:label="@string/app_name">
