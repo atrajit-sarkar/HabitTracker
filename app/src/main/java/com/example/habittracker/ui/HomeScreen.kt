@@ -13,6 +13,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,11 +59,14 @@ import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -115,6 +119,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -138,9 +143,46 @@ import it.atraj.habittracker.data.local.NotificationSound
 import it.atraj.habittracker.ui.DeleteHabitConfirmationDialog
 import it.atraj.habittracker.ui.dialogs.FirstLaunchNotificationDialog
 import it.atraj.habittracker.util.clickableOnce
+import it.atraj.habittracker.service.AppIconManager
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+
+// Helper function to get icon resource from icon ID
+// Handles warning/angry variants based on user's selected theme
+private fun getIconResourceFromId(iconId: String, userSelectedIconId: String): Int {
+    return when (iconId) {
+        "warning" -> {
+            // Show warning icon matching user's selected theme
+            when (userSelectedIconId) {
+                "default" -> R.mipmap.ic_launcher_warning_default
+                "anime" -> R.mipmap.ic_launcher_warning_anime
+                "bird" -> R.mipmap.ic_launcher_warning_bird
+                "sitama" -> R.mipmap.ic_launcher_warning_sitama
+                "atrajit" -> R.mipmap.ic_launcher_warning_atrajit
+                else -> R.mipmap.ic_launcher_warning_default
+            }
+        }
+        "angry" -> {
+            // Show angry icon matching user's selected theme
+            when (userSelectedIconId) {
+                "default" -> R.mipmap.ic_launcher_angry_default
+                "anime" -> R.mipmap.ic_launcher_angry_anime
+                "bird" -> R.mipmap.ic_launcher_angry_bird
+                "sitama" -> R.mipmap.ic_launcher_angry_sitama
+                "atrajit" -> R.mipmap.ic_launcher_angry_atrajit
+                else -> R.mipmap.ic_launcher_angry_default
+            }
+        }
+        "default" -> R.mipmap.ic_launcher_default
+        "anime" -> R.mipmap.ic_launcher_anime
+        "bird" -> R.mipmap.ic_launcher_bird
+        "sitama" -> R.mipmap.ic_launcher_sitama
+        "atrajit" -> R.mipmap.ic_launcher_atrajit
+        else -> R.mipmap.ic_launcher_default
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,6 +190,7 @@ fun HabitHomeRoute(
     state: HabitScreenState,
     user: User?,
     userRewards: it.atraj.habittracker.data.local.UserRewards,
+    unreadNewsCount: Int = 0,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
@@ -161,7 +204,8 @@ fun HabitHomeRoute(
     onStartSelectionMode: (Long) -> Unit = {},
     onExitSelectionMode: () -> Unit = {},
     onDeleteSelectedHabits: () -> Unit = {},
-    onFreezeStoreClick: () -> Unit = {}
+    onFreezeStoreClick: () -> Unit = {},
+    onNewsClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -224,6 +268,7 @@ fun HabitHomeRoute(
         state = state,
         user = user,
         userRewards = userRewards,
+        unreadNewsCount = unreadNewsCount,
         snackbarHostState = snackbarHostState,
         onAddHabitClick = onAddHabitClick,
         onToggleReminder = onToggleReminder,
@@ -232,6 +277,7 @@ fun HabitHomeRoute(
         onHabitDetailsClick = onHabitDetailsClick,
         onTrashClick = onTrashClick,
         onProfileClick = onProfileClick,
+        onNewsClick = onNewsClick,
         notificationPermissionVisible = shouldShowPermissionCard,
         onRequestNotificationPermission = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -254,6 +300,7 @@ fun HabitHomeScreen(
     state: HabitScreenState,
     user: User?,
     userRewards: it.atraj.habittracker.data.local.UserRewards,
+    unreadNewsCount: Int = 0,
     snackbarHostState: SnackbarHostState,
     onAddHabitClick: () -> Unit,
     onToggleReminder: (Long, Boolean) -> Unit,
@@ -262,6 +309,7 @@ fun HabitHomeScreen(
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onNewsClick: () -> Unit = {},
     notificationPermissionVisible: Boolean,
     onRequestNotificationPermission: () -> Unit,
     onDismissPermissionCard: () -> Unit,
@@ -384,11 +432,73 @@ fun HabitHomeScreen(
                 // Normal top bar
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(id = R.string.home_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // App launcher icon with news badge - clickable to navigate to news
+                    // Get current app icon dynamically
+                    val context = LocalContext.current
+                    val appIconManager = remember { AppIconManager(context) }
+                    
+                    // State to hold current icon resource
+                    var currentIconRes by remember { 
+                        mutableStateOf(
+                            getIconResourceFromId(
+                                appIconManager.getCurrentIconId(),
+                                appIconManager.getUserSelectedIconId()
+                            )
+                        ) 
+                    }
+                    
+                    // Refresh icon periodically to catch changes
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            delay(500) // Check every 500ms
+                            val currentIconId = appIconManager.getCurrentIconId()
+                            val userSelectedIconId = appIconManager.getUserSelectedIconId()
+                            val newIconRes = getIconResourceFromId(currentIconId, userSelectedIconId)
+                            if (currentIconRes != newIconRes) {
+                                currentIconRes = newIconRes
+                            }
+                        }
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.clickableOnce { onNewsClick() }
+                    ) {
+                        Box {
+                            BadgedBox(
+                                badge = {
+                                    if (unreadNewsCount > 0) {
+                                        Badge {
+                                            Text(
+                                                text = unreadNewsCount.toString(),
+                                                fontSize = 9.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            ) {
+                                // Use the app's current launcher icon dynamically
+                                Image(
+                                    painter = painterResource(id = currentIconRes),
+                                    contentDescription = "App Icon",
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                )
+                            }
+                        }
+                        
+                        Text(
+                            text = "HT",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 2.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(

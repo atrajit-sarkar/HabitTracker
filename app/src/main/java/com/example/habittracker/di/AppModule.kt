@@ -4,6 +4,7 @@ import android.content.Context
 import coil.ImageLoader
 import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.data.firestore.FirestoreHabitRepository
+import it.atraj.habittracker.data.repository.NewsRepository
 import it.atraj.habittracker.image.OptimizedImageLoader
 import it.atraj.habittracker.notification.HabitReminderScheduler
 import it.atraj.habittracker.notification.HabitReminderSchedulerImpl
@@ -56,4 +57,13 @@ object AppModule {
     fun provideHabitReminderScheduler(
         @ApplicationContext context: Context
     ): HabitReminderScheduler = HabitReminderSchedulerImpl(context)
+    
+    @Provides
+    @Singleton
+    fun provideNewsRepository(
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): NewsRepository {
+        return NewsRepository(firestore, auth)
+    }
 }

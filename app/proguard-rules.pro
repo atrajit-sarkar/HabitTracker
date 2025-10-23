@@ -199,3 +199,22 @@
 # Jsoup (HTML parser used by NewPipe)
 -dontwarn org.jsoup.**
 -keep class org.jsoup.** { *; }
+
+# ========== Markwon (Markdown Rendering) ==========
+# Keep Markwon classes for news rendering
+-keep class io.noties.markwon.** { *; }
+-keepclassmembers class io.noties.markwon.** { *; }
+-dontwarn io.noties.markwon.**
+
+# AndroidSVG (optional Markwon feature)
+-dontwarn com.caverock.androidsvg.**
+
+# CommonMark (optional Markwon feature)
+-dontwarn org.commonmark.ext.gfm.strikethrough.**
+
+# GIF support (optional Markwon feature)
+-dontwarn pl.droidsonroids.gif.**
+
+# Keep markdown parser classes
+-keep class org.commonmark.** { *; }
+-dontwarn org.commonmark.**

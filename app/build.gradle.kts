@@ -207,6 +207,11 @@ dependencies {
     
     // Apache Commons Codec for Base64 encoding (for SMTP)
     implementation("commons-codec:commons-codec:1.15")
+    
+    // Markwon for Markdown rendering
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:image:4.6.2")
+    implementation("io.noties.markwon:html:4.6.2")
 
     // YouTube / NewPipe Extractor KMP
     implementation(libs.newpipe.extractor.kmp)

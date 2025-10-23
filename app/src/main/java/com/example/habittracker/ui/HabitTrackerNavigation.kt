@@ -46,6 +46,8 @@ import it.atraj.habittracker.ui.chat.ChatListScreen
 import it.atraj.habittracker.ui.chat.ChatScreen
 import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
 import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
+import it.atraj.habittracker.ui.news.NewsScreen
+import it.atraj.habittracker.ui.news.NewsViewModel
 import it.atraj.habittracker.email.ui.EmailSettingsScreen
 import it.atraj.habittracker.auth.ui.MusicSettingsScreen
 import it.atraj.habittracker.ui.profile.AppIconSelectionScreen
@@ -211,6 +213,10 @@ fun HabitTrackerNavigation(
             val authViewModel: AuthViewModel = hiltViewModel()
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
             
+            // Get NewsViewModel for unread count
+            val newsViewModel: NewsViewModel = hiltViewModel()
+            val unreadNewsCount by newsViewModel.unreadCount.collectAsStateWithLifecycle()
+            
             // Refresh habits when screen becomes visible to recalculate completion states
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
@@ -245,12 +251,16 @@ fun HabitTrackerNavigation(
             val onNotificationGuideClick = rememberNavigationHandler {
                 safeNavigate("notification_setup_guide")
             }
+            val onNewsClick = rememberNavigationHandler {
+                safeNavigate("news")
+            }
             
             
             HabitHomeRoute(
                 state = state,
                 user = authState.user,
                 userRewards = userRewards,
+                unreadNewsCount = unreadNewsCount,
                 onAddHabitClick = onAddHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
@@ -271,7 +281,8 @@ fun HabitTrackerNavigation(
                 onStartSelectionMode = viewModel::startSelectionMode,
                 onExitSelectionMode = viewModel::exitSelectionMode,
                 onDeleteSelectedHabits = viewModel::deleteSelectedHabits,
-                onFreezeStoreClick = { safeNavigate("freeze_store") }
+                onFreezeStoreClick = { safeNavigate("freeze_store") },
+                onNewsClick = onNewsClick
             )
         }
         
@@ -503,6 +514,16 @@ fun HabitTrackerNavigation(
             
             NotificationSetupGuideScreen(
                 onNavigateBack = onBackClick
+            )
+        }
+        
+        composable("news") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            NewsScreen(
+                onBackClick = onBackClick
             )
         }
         
