@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +21,7 @@ private const val TAG = "UserRewardsRepository"
 private const val USERS_COLLECTION = "users"
 private const val DIAMONDS_FIELD = "diamonds"
 private const val FREEZE_DAYS_FIELD = "freeze_days"
+private const val FIRST_FREEZE_PURCHASE_DATE_FIELD = "first_freeze_purchase_date"
 
 @Singleton
 class UserRewardsRepository @Inject constructor(
@@ -46,7 +50,22 @@ class UserRewardsRepository @Inject constructor(
                             val diamonds = (snapshot?.get(DIAMONDS_FIELD) as? Long)?.toInt() ?: 0
                             val freezeDays = (snapshot?.get(FREEZE_DAYS_FIELD) as? Long)?.toInt() ?: 0
                             
-                            trySend(UserRewards(diamonds = diamonds, freezeDays = freezeDays))
+                            // Parse first freeze purchase date
+                            val firstFreezePurchaseDate = try {
+                                (snapshot?.get(FIRST_FREEZE_PURCHASE_DATE_FIELD) as? com.google.firebase.Timestamp)
+                                    ?.toDate()
+                                    ?.toInstant()
+                                    ?.atZone(ZoneId.systemDefault())
+                                    ?.toLocalDate()
+                            } catch (e: Exception) {
+                                null
+                            }
+                            
+                            trySend(UserRewards(
+                                diamonds = diamonds, 
+                                freezeDays = freezeDays,
+                                firstFreezePurchaseDate = firstFreezePurchaseDate
+                            ))
                         }
                     
                     awaitClose { listener.remove() }
@@ -69,7 +88,22 @@ class UserRewardsRepository @Inject constructor(
             val diamonds = (snapshot.get(DIAMONDS_FIELD) as? Long)?.toInt() ?: 0
             val freezeDays = (snapshot.get(FREEZE_DAYS_FIELD) as? Long)?.toInt() ?: 0
             
-            UserRewards(diamonds = diamonds, freezeDays = freezeDays)
+            // Parse first freeze purchase date
+            val firstFreezePurchaseDate = try {
+                (snapshot.get(FIRST_FREEZE_PURCHASE_DATE_FIELD) as? com.google.firebase.Timestamp)
+                    ?.toDate()
+                    ?.toInstant()
+                    ?.atZone(ZoneId.systemDefault())
+                    ?.toLocalDate()
+            } catch (e: Exception) {
+                null
+            }
+            
+            UserRewards(
+                diamonds = diamonds, 
+                freezeDays = freezeDays,
+                firstFreezePurchaseDate = firstFreezePurchaseDate
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Error getting user rewards", e)
             UserRewards()
@@ -124,10 +158,19 @@ class UserRewardsRepository @Inject constructor(
                 val newDiamonds = currentDiamonds - cost
                 val newFreezeDays = currentFreezeDays + days
                 
-                transaction.update(docRef, mapOf(
+                val updates = mutableMapOf<String, Any>(
                     DIAMONDS_FIELD to newDiamonds,
                     FREEZE_DAYS_FIELD to newFreezeDays
-                ))
+                )
+                
+                // Set first purchase date if this is the first time purchasing
+                if (!snapshot.contains(FIRST_FREEZE_PURCHASE_DATE_FIELD) || snapshot.get(FIRST_FREEZE_PURCHASE_DATE_FIELD) == null) {
+                    val now = com.google.firebase.Timestamp.now()
+                    updates[FIRST_FREEZE_PURCHASE_DATE_FIELD] = now
+                    Log.d(TAG, "Setting first freeze purchase date to $now")
+                }
+                
+                transaction.update(docRef, updates)
             }.await()
             
             Log.d(TAG, "Purchased $days freeze days for $cost diamonds")
@@ -191,6 +234,25 @@ class UserRewardsRepository @Inject constructor(
             }
             if (!snapshot.contains(FREEZE_DAYS_FIELD)) {
                 docRef.update(FREEZE_DAYS_FIELD, 0).await()
+            }
+            
+            // MIGRATION: For existing users who have freeze days but no purchase date
+            // Set the purchase date to a past date (e.g., account creation or a reasonable fallback)
+            // This ensures backward compatibility
+            val freezeDays = (snapshot.get(FREEZE_DAYS_FIELD) as? Long)?.toInt() ?: 0
+            val hasPurchaseDate = snapshot.contains(FIRST_FREEZE_PURCHASE_DATE_FIELD) && 
+                                  snapshot.get(FIRST_FREEZE_PURCHASE_DATE_FIELD) != null
+            
+            if (freezeDays > 0 && !hasPurchaseDate) {
+                // Set to today's date for legacy users (August 24, 2025)
+                // This ensures their existing freeze days work on all dates from today onwards
+                val legacyDate = LocalDate.of(2025, 8, 24)
+                val timestamp = com.google.firebase.Timestamp(
+                    legacyDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(),
+                    0
+                )
+                docRef.update(FIRST_FREEZE_PURCHASE_DATE_FIELD, timestamp).await()
+                Log.d(TAG, "Migrated legacy user with $freezeDays freeze days - set purchase date to $legacyDate")
             }
             
             Log.d(TAG, "Initialized user rewards")

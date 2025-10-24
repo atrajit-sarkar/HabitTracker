@@ -1349,6 +1349,7 @@ private fun MonthCalendar(
                 
                 // Determine if this is a freeze day
                 // Freeze only shows on PAST dates protected by streak freeze
+                // AND only for dates after freeze was first purchased
                 val isFreezeDay = date?.let { d ->
                     if (d !in completedDates && d >= habitCreationDate && d < today) {
                         val previousCompletions = completedDates.filter { it < d }.sorted()
@@ -1358,7 +1359,8 @@ private fun MonthCalendar(
                                 lastCompletedDate = lastCompletion,
                                 date = d,
                                 completions = completions,
-                                freezeDaysAvailable = userRewards.freezeDays
+                                freezeDaysAvailable = userRewards.freezeDays,
+                                firstFreezePurchaseDate = userRewards.firstFreezePurchaseDate
                             )
                         } else false
                     } else false

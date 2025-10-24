@@ -241,14 +241,27 @@ object StreakCalculator {
     
     /**
      * Determine if a missed day is protected by a freeze
-     * Freeze applies to missed days after the grace day
-     * Only shows for PAST dates (not today) since today is still ongoing
+     * 
+     * IMPORTANT: This should only show freeze for dates that are ACTUALLY protected.
+     * The issue is that freeze days are consumed chronologically across ALL gaps in the habit,
+     * not per-gap. We need to simulate the entire streak calculation to know which specific
+     * dates consumed freeze days.
+     * 
+     * Simplified approach: A date gets a freeze icon ONLY if:
+     * 1. It's a missed day (not completed)
+     * 2. It's after the first freeze purchase date
+     * 3. It's part of the CURRENT ongoing gap (from most recent completion to today)
+     * 4. It's within the freeze coverage for that current gap
+     * 
+     * For old/historical gaps, we DON'T show freeze icons because we can't accurately
+     * determine which historical days actually consumed freeze vs penalty.
      */
     fun isFreezeDay(
         lastCompletedDate: LocalDate?,
         date: LocalDate,
         completions: List<HabitCompletion>,
-        freezeDaysAvailable: Int
+        freezeDaysAvailable: Int,
+        firstFreezePurchaseDate: LocalDate? = null
     ): Boolean {
         if (lastCompletedDate == null || freezeDaysAvailable <= 0) return false
         
@@ -256,25 +269,59 @@ object StreakCalculator {
         val today = LocalDate.now()
         if (date >= today) return false
         
-        val daysSince = ChronoUnit.DAYS.between(lastCompletedDate, date).toInt()
+        // Don't show freeze for dates before freeze was purchased
+        if (firstFreezePurchaseDate != null && date < firstFreezePurchaseDate) {
+            return false
+        }
+        
+        // Make sure it's not actually completed
+        val isCompleted = completions.any { it.completedDate == date }
+        if (isCompleted) return false
+        
+        // CRITICAL FIX: Only show freeze icons for the MOST RECENT gap
+        // (from last completion to today), not for historical gaps
+        val sortedCompletions = completions.sortedByDescending { it.completedDate }
+        if (sortedCompletions.isEmpty()) return false
+        
+        val mostRecentCompletion = sortedCompletions.first().completedDate
+        
+        // Only process if this date is in the current gap (after most recent completion)
+        if (date <= mostRecentCompletion) {
+            return false // This is a historical gap, don't show freeze
+        }
+        
+        // Calculate days since most recent completion
+        val daysSince = ChronoUnit.DAYS.between(mostRecentCompletion, date).toInt()
         
         // Freeze applies after grace day (day 2+)
         if (daysSince >= 2) {
-            // Make sure it's not actually completed
-            val isCompleted = completions.any { it.completedDate == date }
-            if (isCompleted) return false
+            // Find all missed dates in current gap (from most recent completion to today)
+            val allMissedDatesInCurrentGap = mutableListOf<LocalDate>()
+            val daysSinceToToday = ChronoUnit.DAYS.between(mostRecentCompletion, today).toInt()
             
-            // Count how many missed days before this one
-            val missedDaysBefore = (1 until daysSince).count { daysAgo ->
-                val checkDate = lastCompletedDate.plusDays(daysAgo.toLong())
-                !completions.any { it.completedDate == checkDate }
+            for (i in 1 until daysSinceToToday) { // Exclude today
+                val checkDate = mostRecentCompletion.plusDays(i.toLong())
+                if (!completions.any { it.completedDate == checkDate }) {
+                    allMissedDatesInCurrentGap.add(checkDate)
+                }
             }
+            allMissedDatesInCurrentGap.sort()
             
-            // First missed day is grace (don't count it)
-            val freezeDaysNeeded = missedDaysBefore - 1
+            // Find position of this date
+            val positionOfThisDate = allMissedDatesInCurrentGap.indexOf(date) + 1 // 1-indexed
             
-            // This day is protected if we have enough freeze days
-            return freezeDaysNeeded < freezeDaysAvailable
+            if (positionOfThisDate < 1) return false // Date not in missed dates list
+            
+            // Calculate protection:
+            // Position 1 = Grace (no freeze icon)
+            // Positions 2 to (1 + freezeDaysAvailable) = Freeze protected
+            // Beyond that = Penalty (no freeze icon)
+            
+            val graceDays = 1
+            val freezeProtectedDays = freezeDaysAvailable
+            val totalProtectedDays = graceDays + freezeProtectedDays
+            
+            return positionOfThisDate > graceDays && positionOfThisDate <= totalProtectedDays
         }
         
         return false
