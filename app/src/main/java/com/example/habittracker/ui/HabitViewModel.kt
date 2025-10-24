@@ -62,6 +62,10 @@ class HabitViewModel @Inject constructor(
     // Purchased themes state
     private val _purchasedThemes = MutableStateFlow<List<String>>(listOf("DEFAULT"))
     val purchasedThemes: StateFlow<List<String>> = _purchasedThemes.asStateFlow()
+    
+    // Purchased hero backgrounds state
+    private val _purchasedHeroBackgrounds = MutableStateFlow<List<String>>(listOf("itachi"))
+    val purchasedHeroBackgrounds: StateFlow<List<String>> = _purchasedHeroBackgrounds.asStateFlow()
 
     init {
         // Observe current user for stats updates
@@ -88,6 +92,16 @@ class HabitViewModel @Inject constructor(
                 if (user != null) {
                     val themes = userRewardsRepository.getPurchasedThemes()
                     _purchasedThemes.value = themes
+                }
+            }
+        }
+        
+        // Load purchased hero backgrounds
+        viewModelScope.launch {
+            authRepository.currentUser.collectLatest { user ->
+                if (user != null) {
+                    val backgrounds = userRewardsRepository.getPurchasedHeroBackgrounds()
+                    _purchasedHeroBackgrounds.value = backgrounds
                 }
             }
         }
@@ -684,6 +698,24 @@ class HabitViewModel @Inject constructor(
             success
         } catch (e: Exception) {
             android.util.Log.e("HabitViewModel", "Error purchasing theme", e)
+            false
+        }
+    }
+    
+    /**
+     * Purchase a hero background with diamonds
+     */
+    suspend fun purchaseHeroBackground(heroId: String, cost: Int): Boolean {
+        return try {
+            val success = userRewardsRepository.purchaseHeroBackground(heroId, cost)
+            if (success) {
+                // Refresh purchased hero backgrounds list
+                val backgrounds = userRewardsRepository.getPurchasedHeroBackgrounds()
+                _purchasedHeroBackgrounds.value = backgrounds
+            }
+            success
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error purchasing hero background", e)
             false
         }
     }

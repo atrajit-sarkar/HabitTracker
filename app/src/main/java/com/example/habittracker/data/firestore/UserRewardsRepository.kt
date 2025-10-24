@@ -23,6 +23,7 @@ private const val DIAMONDS_FIELD = "diamonds"
 private const val FREEZE_DAYS_FIELD = "freeze_days"
 private const val FIRST_FREEZE_PURCHASE_DATE_FIELD = "first_freeze_purchase_date"
 private const val PURCHASED_THEMES_FIELD = "purchased_themes"
+private const val PURCHASED_HERO_BACKGROUNDS_FIELD = "purchased_hero_backgrounds"
 
 @Singleton
 class UserRewardsRepository @Inject constructor(
@@ -337,6 +338,80 @@ class UserRewardsRepository @Inject constructor(
             false
         } catch (e: Exception) {
             Log.e(TAG, "Error purchasing theme", e)
+            false
+        }
+    }
+    
+    /**
+     * Get list of purchased hero backgrounds for current user
+     */
+    suspend fun getPurchasedHeroBackgrounds(): List<String> {
+        val userId = authRepository.currentUserSync?.uid ?: return listOf("itachi")
+        
+        return try {
+            val snapshot = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            @Suppress("UNCHECKED_CAST")
+            val backgrounds = snapshot.get(PURCHASED_HERO_BACKGROUNDS_FIELD) as? List<String> ?: listOf("itachi")
+            
+            // Ensure itachi is always included (free default)
+            if (!backgrounds.contains("itachi")) {
+                backgrounds + "itachi"
+            } else {
+                backgrounds
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting purchased hero backgrounds", e)
+            listOf("itachi")
+        }
+    }
+    
+    /**
+     * Purchase a hero background with diamonds
+     * Returns true if purchase successful, false if not enough diamonds or already purchased
+     */
+    suspend fun purchaseHeroBackground(heroId: String, cost: Int): Boolean {
+        val userId = authRepository.currentUserSync?.uid ?: return false
+        
+        return try {
+            firestore.runTransaction { transaction ->
+                val docRef = firestore.collection(USERS_COLLECTION).document(userId)
+                val snapshot = transaction.get(docRef)
+                
+                // Check current diamonds
+                val currentDiamonds = (snapshot.get(DIAMONDS_FIELD) as? Long)?.toInt() ?: 0
+                
+                if (currentDiamonds < cost) {
+                    throw IllegalStateException("Not enough diamonds")
+                }
+                
+                // Check if already purchased
+                @Suppress("UNCHECKED_CAST")
+                val purchasedBackgrounds = (snapshot.get(PURCHASED_HERO_BACKGROUNDS_FIELD) as? List<String>) 
+                    ?: listOf("itachi")
+                
+                if (purchasedBackgrounds.contains(heroId)) {
+                    throw IllegalStateException("Hero background already purchased")
+                }
+                
+                // Deduct diamonds and add hero background
+                val newDiamonds = currentDiamonds - cost
+                val newPurchasedBackgrounds = purchasedBackgrounds + heroId
+                
+                transaction.update(docRef, DIAMONDS_FIELD, newDiamonds)
+                transaction.update(docRef, PURCHASED_HERO_BACKGROUNDS_FIELD, newPurchasedBackgrounds)
+            }.await()
+            
+            Log.d(TAG, "Purchased hero background $heroId for $cost diamonds")
+            true
+        } catch (e: IllegalStateException) {
+            Log.d(TAG, "Hero background purchase failed: ${e.message}")
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error purchasing hero background", e)
             false
         }
     }

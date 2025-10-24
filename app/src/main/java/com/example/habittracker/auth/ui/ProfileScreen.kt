@@ -268,11 +268,14 @@ fun ProfileScreen(
     var showSetNameDialog by remember { mutableStateOf(false) }
     var showAnimationPicker by remember { mutableStateOf(false) }
     var showEnlargedPhotoDialog by remember { mutableStateOf(false) }
+    var showHeroBackgroundPicker by remember { mutableStateOf(false) }
     
     // Profile card animation preference (stored in SharedPreferences)
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
     var selectedAnimation by remember { mutableStateOf(prefs.getString("profile_animation", "none") ?: "none") }
+    var heroBackgroundType by remember { mutableStateOf(prefs.getString("hero_background_type", "solid") ?: "solid") }
+    var heroBackgroundImage by remember { mutableStateOf(prefs.getString("hero_background_image", "itachi") ?: "itachi") }
     
     // Track if avatar data has been loaded at least once to prevent flash
     var avatarLoaded by remember { mutableStateOf(false) }
@@ -375,21 +378,55 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Background gradient layer (bottom) - Optimized with remember
-                    val gradientBrush = remember {
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0x26000000), // Use hex colors to avoid theme lookups
-                                Color(0x26000000)
-                            )
+                    // Background layer (bottom) - Solid color or custom hero image
+                    if (heroBackgroundType == "image") {
+                        // Hero image background
+                        val heroImageRes = when (heroBackgroundImage) {
+                            "itachi" -> R.drawable.itachi_hero
+                            "almight" -> R.drawable.almight_hero
+                            "tsunade" -> R.drawable.tsunade_hero
+                            "yorichi" -> R.drawable.yorichi_hero
+                            else -> R.drawable.itachi_hero // Default to Itachi
+                        }
+                        
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(heroImageRes)
+                                .size(Size.ORIGINAL)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Hero background",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .matchParentSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.85f // Slightly transparent for better text readability
+                        )
+                        
+                        // Dark overlay for better text visibility on hero images
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .matchParentSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Black.copy(alpha = 0.3f),
+                                            Color.Black.copy(alpha = 0.5f),
+                                            Color.Black.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                )
+                        )
+                    } else {
+                        // Solid color background (default)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .matchParentSize()
+                                .background(MaterialTheme.colorScheme.primaryContainer)
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .matchParentSize()
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                    )
                     
                     // Animation overlay layer (middle) - fills entire card
                     // Optimized: Only load animation composition when selected
@@ -465,24 +502,30 @@ fun ProfileScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // Dynamic text colors based on background type
+                            val textColor = if (heroBackgroundType == "image") Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+                            val subtextColor = if (heroBackgroundType == "image") Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            val badgeColor = if (heroBackgroundType == "image") Color.White else MaterialTheme.colorScheme.primary
+                            val badgeBackgroundColor = if (heroBackgroundType == "image") Color.White.copy(alpha = 0.25f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            
                             Text(
                                 text = state.user?.effectiveDisplayName ?: "User",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = textColor,
                                 textAlign = TextAlign.Center
                             )
                             Text(
                                 text = state.user?.email ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                color = subtextColor,
                                 textAlign = TextAlign.Center
                             )
                             
                             // Account type badge
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                color = badgeBackgroundColor,
                                 modifier = Modifier.padding(top = 4.dp)
                             ) {
                                 Row(
@@ -494,13 +537,13 @@ fun ProfileScreen(
                                         imageVector = if (state.user?.photoUrl != null) Icons.Default.Person else Icons.Default.Email,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = badgeColor
                                     )
                                     Text(
                                         text = if (state.user?.photoUrl != null) "Google Account" else "Email Account",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = badgeColor
                                     )
                                 }
                             }
@@ -1190,6 +1233,33 @@ Card(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                     
+                    // Hero Background
+                    ProfileSettingRow(
+                        icon = Icons.Default.Wallpaper,
+                        title = "Hero Background",
+                        subtitle = when {
+                            heroBackgroundType == "solid" -> "Solid Color"
+                            heroBackgroundImage == "itachi" -> "Itachi Uchiha"
+                            heroBackgroundImage == "almight" -> "All Might"
+                            heroBackgroundImage == "tsunade" -> "Tsunade Senju"
+                            heroBackgroundImage == "yorichi" -> "Yoriichi Tsugikuni"
+                            else -> "Custom Image"
+                        },
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        gradientColors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        ),
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        onClick = { showHeroBackgroundPicker = true }
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
                     // Profile Animation
                     ProfileSettingRow(
                         icon = Icons.Default.Animation,
@@ -1493,6 +1563,24 @@ Card(
                 selectedAnimation = animation
                 prefs.edit().putString("profile_animation", animation).apply()
                 showAnimationPicker = false
+            }
+        )
+    }
+    
+    // Hero Background Picker Dialog
+    if (showHeroBackgroundPicker) {
+        HeroBackgroundPickerDialog(
+            currentType = heroBackgroundType,
+            currentImage = heroBackgroundImage,
+            onDismiss = { showHeroBackgroundPicker = false },
+            onSelect = { type, image ->
+                heroBackgroundType = type
+                heroBackgroundImage = image
+                prefs.edit()
+                    .putString("hero_background_type", type)
+                    .putString("hero_background_image", image)
+                    .apply()
+                showHeroBackgroundPicker = false
             }
         )
     }
@@ -2045,6 +2133,574 @@ private fun AnimationOption(
                     contentDescription = "Selected",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroBackgroundPickerDialog(
+    currentType: String,
+    currentImage: String,
+    onDismiss: () -> Unit,
+    onSelect: (String, String) -> Unit
+) {
+    var selectedType by remember { mutableStateOf(currentType) }
+    var selectedImage by remember { mutableStateOf(currentImage) }
+    var showPurchaseDialog by remember { mutableStateOf(false) }
+    var pendingPurchase by remember { mutableStateOf<Pair<String, Int>?>(null) } // heroId to cost
+    
+    // Get habitViewModel to access diamonds and purchased backgrounds
+    val habitViewModel: HabitViewModel = hiltViewModel()
+    val userRewards by habitViewModel.userRewards.collectAsStateWithLifecycle()
+    val purchasedBackgrounds by habitViewModel.purchasedHeroBackgrounds.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    
+    // Hero background prices (itachi is free)
+    val heroPrices = mapOf(
+        "itachi" to 0,
+        "almight" to 15,
+        "tsunade" to 15,
+        "yorichi" to 20
+    )
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Hero Background",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 500.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Choose the background for your profile card",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                // Background Type Selection
+                Text(
+                    text = "Background Type",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Solid Color Option
+                HeroBackgroundOption(
+                    title = "Solid Color",
+                    subtitle = "Use theme color background",
+                    icon = Icons.Default.ColorLens,
+                    isSelected = selectedType == "solid",
+                    onClick = { 
+                        selectedType = "solid"
+                    }
+                )
+                
+                // Custom Image Option
+                HeroBackgroundOption(
+                    title = "Custom Image",
+                    subtitle = "Use hero character image",
+                    icon = Icons.Default.Image,
+                    isSelected = selectedType == "image",
+                    onClick = { 
+                        selectedType = "image"
+                    }
+                )
+                
+                // Image Selection (only visible when image type is selected)
+                AnimatedVisibility(visible = selectedType == "image") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HorizontalDivider()
+                        
+                        Text(
+                            text = "Select Hero Image",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        // Itachi Uchiha Option (Free/Default)
+                        HeroImageOption(
+                            title = "Itachi Uchiha",
+                            subtitle = "Naruto - Sharingan Master",
+                            imageRes = R.drawable.itachi_hero,
+                            isSelected = selectedImage == "itachi",
+                            isPurchased = true, // Always unlocked
+                            cost = 0,
+                            currentDiamonds = userRewards.diamonds,
+                            onClick = { selectedImage = "itachi" },
+                            onPurchaseClick = { }
+                        )
+                        
+                        // All Might Option
+                        HeroImageOption(
+                            title = "All Might",
+                            subtitle = "My Hero Academia - Symbol of Peace",
+                            imageRes = R.drawable.almight_hero,
+                            isSelected = selectedImage == "almight",
+                            isPurchased = purchasedBackgrounds.contains("almight"),
+                            cost = heroPrices["almight"] ?: 15,
+                            currentDiamonds = userRewards.diamonds,
+                            onClick = { selectedImage = "almight" },
+                            onPurchaseClick = {
+                                if (!purchasedBackgrounds.contains("almight")) {
+                                    pendingPurchase = "almight" to (heroPrices["almight"] ?: 15)
+                                    showPurchaseDialog = true
+                                }
+                            }
+                        )
+                        
+                        // Tsunade Option
+                        HeroImageOption(
+                            title = "Tsunade Senju",
+                            subtitle = "Naruto - Fifth Hokage",
+                            imageRes = R.drawable.tsunade_hero,
+                            isSelected = selectedImage == "tsunade",
+                            isPurchased = purchasedBackgrounds.contains("tsunade"),
+                            cost = heroPrices["tsunade"] ?: 15,
+                            currentDiamonds = userRewards.diamonds,
+                            onClick = { selectedImage = "tsunade" },
+                            onPurchaseClick = {
+                                if (!purchasedBackgrounds.contains("tsunade")) {
+                                    pendingPurchase = "tsunade" to (heroPrices["tsunade"] ?: 15)
+                                    showPurchaseDialog = true
+                                }
+                            }
+                        )
+                        
+                        // Yoriichi Option
+                        HeroImageOption(
+                            title = "Yoriichi Tsugikuni",
+                            subtitle = "Demon Slayer - Sun Breathing Creator",
+                            imageRes = R.drawable.yorichi_hero,
+                            isSelected = selectedImage == "yorichi",
+                            isPurchased = purchasedBackgrounds.contains("yorichi"),
+                            cost = heroPrices["yorichi"] ?: 20,
+                            currentDiamonds = userRewards.diamonds,
+                            onClick = { selectedImage = "yorichi" },
+                            onPurchaseClick = {
+                                if (!purchasedBackgrounds.contains("yorichi")) {
+                                    pendingPurchase = "yorichi" to (heroPrices["yorichi"] ?: 20)
+                                    showPurchaseDialog = true
+                                }
+                            }
+                        )
+                        
+                        // Note about animations
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Profile animations will be displayed over the hero image",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // Check if selected image is purchased
+                    val isImagePurchased = selectedImage == "itachi" || purchasedBackgrounds.contains(selectedImage)
+                    
+                    if (selectedType == "image" && !isImagePurchased) {
+                        // Show purchase dialog if trying to use unpurchased hero
+                        pendingPurchase = selectedImage to (heroPrices[selectedImage] ?: 15)
+                        showPurchaseDialog = true
+                    } else {
+                        onSelect(selectedType, selectedImage)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+    
+    // Purchase Confirmation Dialog
+    if (showPurchaseDialog && pendingPurchase != null) {
+        val (heroId, cost) = pendingPurchase!!
+        val hasEnoughDiamonds = userRewards.diamonds >= cost
+        
+        AlertDialog(
+            onDismissRequest = { showPurchaseDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Diamond,
+                    contentDescription = null,
+                    tint = if (hasEnoughDiamonds) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = if (hasEnoughDiamonds) "Purchase Hero Background?" else "Insufficient Diamonds",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val heroName = when (heroId) {
+                        "almight" -> "All Might"
+                        "tsunade" -> "Tsunade Senju"
+                        "yorichi" -> "Yoriichi Tsugikuni"
+                        else -> "Hero"
+                    }
+                    
+                    if (hasEnoughDiamonds) {
+                        Text(
+                            text = "Purchase $heroName background for 💎 $cost diamonds?",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "Your balance: 💎 ${userRewards.diamonds} → 💎 ${userRewards.diamonds - cost}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "You need 💎 $cost diamonds to purchase $heroName.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = "Your balance: 💎 ${userRewards.diamonds}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Earn diamonds by completing habits and maintaining streaks!",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (hasEnoughDiamonds) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val success = habitViewModel.purchaseHeroBackground(heroId, cost)
+                                if (success) {
+                                    selectedImage = heroId
+                                    showPurchaseDialog = false
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Text("Purchase")
+                    }
+                } else {
+                    Button(
+                        onClick = { showPurchaseDialog = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("OK")
+                    }
+                }
+            },
+            dismissButton = {
+                if (hasEnoughDiamonds) {
+                    TextButton(onClick = { showPurchaseDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun HeroBackgroundOption(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = if (isSelected) 
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary) 
+        else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroImageOption(
+    title: String,
+    subtitle: String,
+    imageRes: Int,
+    isSelected: Boolean,
+    isPurchased: Boolean,
+    cost: Int,
+    currentDiamonds: Int,
+    onClick: () -> Unit,
+    onPurchaseClick: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasEnoughDiamonds = currentDiamonds >= cost
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = isPurchased,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isSelected -> MaterialTheme.colorScheme.primaryContainer
+                !isPurchased -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+        ),
+        border = if (isSelected) 
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary) 
+        else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Preview thumbnail
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(imageRes)
+                        .size(Size.ORIGINAL)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Hero preview",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (!isPurchased) Modifier.alpha(0.4f) else Modifier
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+                
+                // Lock overlay for unpurchased
+                if (!isPurchased) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Locked",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) 
+                        MaterialTheme.colorScheme.primary 
+                    else if (!isPurchased)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    else 
+                        MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (!isPurchased) 0.5f else 1f
+                    )
+                )
+                
+                // Show price for unpurchased items
+                if (!isPurchased && cost > 0) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Diamond,
+                            contentDescription = null,
+                            tint = if (hasEnoughDiamonds) 
+                                MaterialTheme.colorScheme.tertiary 
+                            else 
+                                MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "$cost",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (hasEnoughDiamonds) 
+                                MaterialTheme.colorScheme.tertiary 
+                            else 
+                                MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+            
+            // Right side icon/button
+            if (isPurchased) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            } else {
+                // Purchase button
+                IconButton(
+                    onClick = onPurchaseClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = "Purchase",
+                        tint = if (hasEnoughDiamonds) 
+                            MaterialTheme.colorScheme.tertiary 
+                        else 
+                            MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+    
+    // Free badge for itachi
+    if (cost == 0 && isPurchased) {
+        Box(
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.tertiary
+            ) {
+                Text(
+                    text = "FREE",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
             }
         }

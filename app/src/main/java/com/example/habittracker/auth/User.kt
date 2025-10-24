@@ -10,7 +10,8 @@ data class User(
     val musicEnabled: Boolean = false, // Background music on/off
     val musicTrack: String = "NONE", // Selected music track name
     val musicVolume: Float = 0.3f, // Music volume (0.0 to 1.0)
-    val purchasedThemes: List<String> = listOf("DEFAULT") // List of purchased theme IDs (DEFAULT is always unlocked)
+    val purchasedThemes: List<String> = listOf("DEFAULT"), // List of purchased theme IDs (DEFAULT is always unlocked)
+    val purchasedHeroBackgrounds: List<String> = listOf("itachi") // List of purchased hero background IDs (itachi is always unlocked)
 ) {
     // Property to get the effective display name (custom name if set, otherwise original name)
     val effectiveDisplayName: String
