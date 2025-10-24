@@ -46,6 +46,7 @@ import it.atraj.habittracker.ui.chat.ChatListScreen
 import it.atraj.habittracker.ui.chat.ChatScreen
 import it.atraj.habittracker.ui.settings.NotificationSetupGuideScreen
 import it.atraj.habittracker.ui.settings.LanguageSelectorScreen
+import it.atraj.habittracker.ui.settings.ThemeSelectorScreen
 import it.atraj.habittracker.ui.news.NewsScreen
 import it.atraj.habittracker.ui.news.NewsViewModel
 import it.atraj.habittracker.email.ui.EmailSettingsScreen
@@ -480,6 +481,10 @@ fun HabitTrackerNavigation(
                 safeNavigate("youtube_downloader")
             }
             
+            val onThemeSelectorClick = rememberNavigationHandler {
+                safeNavigate("theme_selector")
+            }
+            
             ProfileScreen(
                 viewModel = authViewModel,
                 onBackClick = onBackClick,
@@ -491,6 +496,7 @@ fun HabitTrackerNavigation(
                 onNotificationGuideClick = onNotificationGuideClick,
                 onCheckForUpdates = onCheckForUpdates,
                 onLanguageSettingsClick = onLanguageSettingsClick,
+                onThemeSelectorClick = onThemeSelectorClick,
                 onEmailSettingsClick = onEmailSettingsClick,
                 onMusicSettingsClick = onMusicSettingsClick,
                 onAppIconSelectionClick = onAppIconSelectionClick,
@@ -539,6 +545,19 @@ fun HabitTrackerNavigation(
             
             LanguageSelectorScreen(
                 onBackClick = onBackClick
+            )
+        }
+        
+        composable("theme_selector") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            ThemeSelectorScreen(
+                onBackClick = onBackClick,
+                onThemeSelected = { theme ->
+                    // Theme is applied automatically, no need to recreate activity
+                }
             )
         }
         

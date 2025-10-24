@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import it.atraj.habittracker.auth.GoogleSignInHelper
@@ -167,7 +168,12 @@ class MainActivity : ComponentActivity() {
         }
         
         setContent {
-            HabitTrackerTheme {
+            // Get saved theme with reactive state observation
+            val context = LocalContext.current
+            val themeManager = remember { it.atraj.habittracker.ui.theme.ThemeManager.getInstance(context) }
+            val currentTheme by themeManager.currentThemeFlow.collectAsState()
+            
+            HabitTrackerTheme(customTheme = currentTheme) {
                 // State for update dialog
                 var showUpdateDialog by remember { mutableStateOf(false) }
                 var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }

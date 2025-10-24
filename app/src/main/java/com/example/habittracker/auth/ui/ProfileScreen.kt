@@ -253,6 +253,7 @@ fun ProfileScreen(
     onNotificationGuideClick: () -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
     onLanguageSettingsClick: () -> Unit = {},
+    onThemeSelectorClick: () -> Unit = {},
     onEmailSettingsClick: () -> Unit = {},
     onMusicSettingsClick: () -> Unit = {},
     onAppIconSelectionClick: () -> Unit = {},
@@ -865,6 +866,67 @@ fun ProfileScreen(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = stringResource(R.string.language_settings),
                             tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
+                    // Theme Selector
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { onThemeSelectorClick() }
+                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "🎨",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "App Theme",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = "Customize your experience",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "App Theme",
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(32.dp)
                         )
                     }
