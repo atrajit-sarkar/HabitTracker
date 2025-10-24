@@ -43,6 +43,7 @@ fun ThemeSelectorScreen(
     val themeManager = rememberThemeManager()
     var selectedTheme by remember { mutableStateOf(themeManager.getCurrentTheme()) }
     val purchasedThemes by viewModel.purchasedThemes.collectAsState()
+    val themesLoaded by viewModel.themesLoaded.collectAsState()
     val userRewards by viewModel.userRewards.collectAsState()
     val scope = rememberCoroutineScope()
     
@@ -80,44 +81,55 @@ fun ThemeSelectorScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            item {
-                Text(
-                    text = "🎨 Available Themes",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+        if (!themesLoaded) {
+            // Show loading indicator while themes data is being fetched
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-            
-            items(AppTheme.values().toList()) { theme ->
-                val isUnlocked = theme.price == 0 || purchasedThemes.contains(theme.name)
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                item {
+                    Text(
+                        text = "🎨 Available Themes",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
                 
-                ThemeCard(
-                    theme = theme,
-                    isSelected = theme == selectedTheme,
-                    isUnlocked = isUnlocked,
-                    currentDiamonds = userRewards.diamonds,
-                    onClick = {
-                        if (isUnlocked) {
-                            selectedTheme = theme
-                            themeManager.setTheme(theme)
-                            onThemeSelected(theme)
-                        } else {
-                            // Show purchase dialog
-                            if (userRewards.diamonds >= theme.price) {
-                                showPurchaseDialog = theme
+                items(AppTheme.values().toList()) { theme ->
+                    val isUnlocked = theme.price == 0 || purchasedThemes.contains(theme.name)
+                    
+                    ThemeCard(
+                        theme = theme,
+                        isSelected = theme == selectedTheme,
+                        isUnlocked = isUnlocked,
+                        currentDiamonds = userRewards.diamonds,
+                        onClick = {
+                            if (isUnlocked) {
+                                selectedTheme = theme
+                                themeManager.setTheme(theme)
+                                onThemeSelected(theme)
                             } else {
-                                showInsufficientDiamondsDialog = true
-                            }
+                                // Show purchase dialog
+                                if (userRewards.diamonds >= theme.price) {
+                                    showPurchaseDialog = theme
+                                } else {
+                                    showInsufficientDiamondsDialog = true
+                                }
                         }
                     }
                 )
@@ -158,6 +170,7 @@ fun ThemeSelectorScreen(
                     }
                 }
             }
+        }
         }
     }
     

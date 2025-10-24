@@ -60,8 +60,12 @@ class HabitViewModel @Inject constructor(
     val userRewards: StateFlow<UserRewards> = _userRewards.asStateFlow()
     
     // Purchased themes state
-    private val _purchasedThemes = MutableStateFlow<List<String>>(listOf("DEFAULT"))
+    private val _purchasedThemes = MutableStateFlow<List<String>>(emptyList()) // Start with empty list
     val purchasedThemes: StateFlow<List<String>> = _purchasedThemes.asStateFlow()
+    
+    // Flag to track if themes have been loaded
+    private val _themesLoaded = MutableStateFlow(false)
+    val themesLoaded: StateFlow<Boolean> = _themesLoaded.asStateFlow()
     
     // Purchased hero backgrounds state
     private val _purchasedHeroBackgrounds = MutableStateFlow<List<String>>(listOf("itachi"))
@@ -86,12 +90,16 @@ class HabitViewModel @Inject constructor(
             }
         }
         
-        // Load purchased themes
+        // Load purchased themes eagerly
         viewModelScope.launch {
             authRepository.currentUser.collectLatest { user ->
                 if (user != null) {
                     val themes = userRewardsRepository.getPurchasedThemes()
                     _purchasedThemes.value = themes
+                    _themesLoaded.value = true
+                } else {
+                    _purchasedThemes.value = emptyList()
+                    _themesLoaded.value = false
                 }
             }
         }
