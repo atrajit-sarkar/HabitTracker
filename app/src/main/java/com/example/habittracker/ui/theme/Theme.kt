@@ -350,6 +350,136 @@ private val SakuraDarkColorScheme = darkColorScheme(
     outlineVariant = Color(0xFF49454F)
 )
 
+// ========================================
+// 🎮 CALL OF DUTY MODERN WARFARE THEME
+// ========================================
+private val CodMwLightColorScheme = lightColorScheme(
+    primary = CodTanDark,                 // Military tan
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFE8DED2),
+    onPrimaryContainer = Color(0xFF2D2418),
+    
+    secondary = CodGreenDark,             // Military green
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFD4E3C4),
+    onSecondaryContainer = Color(0xFF1A2410),
+    
+    tertiary = CodOrangeDark,             // Alert orange
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFDCC5),
+    onTertiaryContainer = Color(0xFF2D1600),
+    
+    background = Color(0xFFFFFBFE),
+    onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE),
+    onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFE8E0D8),
+    onSurfaceVariant = Color(0xFF4A4539),
+    
+    error = Color(0xFFBA1A1A),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    outline = Color(0xFF7B7569),
+    outlineVariant = Color(0xFFCCC2B6)
+)
+
+private val CodMwDarkColorScheme = darkColorScheme(
+    primary = CodTanLight,                // Lighter tan for dark mode
+    onPrimary = Color(0xFF3D3427),
+    primaryContainer = CodTanDark,
+    onPrimaryContainer = Color(0xFFE8DED2),
+    
+    secondary = CodGreenLight,            // Brighter green for dark mode
+    onSecondary = Color(0xFF283A18),
+    secondaryContainer = CodGreenDark,
+    onSecondaryContainer = Color(0xFFD4E3C4),
+    
+    tertiary = CodOrangeLight,            // Bright orange for dark mode
+    onTertiary = Color(0xFF4D1F00),
+    tertiaryContainer = CodOrangeDark,
+    onTertiaryContainer = Color(0xFFFFDCC5),
+    
+    background = Color(0xFF1C1B1F),
+    onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F),
+    onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF49454F),
+    onSurfaceVariant = Color(0xFFCAC4D0),
+    
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = Color(0xFF938F99),
+    outlineVariant = Color(0xFF49454F)
+)
+
+// ========================================
+// ✨ GENSHIN IMPACT THEME
+// ========================================
+private val GenshinLightColorScheme = lightColorScheme(
+    primary = GenshinBlueDark,            // Celestial blue
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFE1F5FE),
+    onPrimaryContainer = Color(0xFF001D33),
+    
+    secondary = GenshinGoldDark,          // Golden primogems
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFFFFECB3),
+    onSecondaryContainer = Color(0xFF2D2200),
+    
+    tertiary = GenshinPurpleDark,         // Vision purple
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFF3E5F5),
+    onTertiaryContainer = Color(0xFF33203B),
+    
+    background = Color(0xFFFFFBFE),
+    onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE),
+    onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFE1F5FE),
+    onSurfaceVariant = Color(0xFF42474E),
+    
+    error = Color(0xFFBA1A1A),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    outline = Color(0xFF74777F),
+    outlineVariant = Color(0xFFC4C6CF)
+)
+
+private val GenshinDarkColorScheme = darkColorScheme(
+    primary = GenshinBlueLight,           // Bright celestial blue
+    onPrimary = Color(0xFF003258),
+    primaryContainer = GenshinBlueDark,
+    onPrimaryContainer = Color(0xFFE1F5FE),
+    
+    secondary = GenshinGoldLight,         // Bright golden
+    onSecondary = Color(0xFF3D2F00),
+    secondaryContainer = GenshinGoldDark,
+    onSecondaryContainer = Color(0xFFFFECB3),
+    
+    tertiary = GenshinPurpleLight,        // Bright purple
+    onTertiary = Color(0xFF381E42),
+    tertiaryContainer = GenshinPurpleDark,
+    onTertiaryContainer = Color(0xFFF3E5F5),
+    
+    background = Color(0xFF1C1B1F),
+    onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F),
+    onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF49454F),
+    onSurfaceVariant = Color(0xFFCAC4D0),
+    
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = Color(0xFF938F99),
+    outlineVariant = Color(0xFF49454F)
+)
+
 @Composable
 fun HabitTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -367,6 +497,8 @@ fun HabitTrackerTheme(
                 AppTheme.ITACHI -> if (darkTheme) ItachiDarkColorScheme else ItachiLightColorScheme
                 AppTheme.ALL_MIGHT -> if (darkTheme) AllMightDarkColorScheme else AllMightLightColorScheme
                 AppTheme.SAKURA -> if (darkTheme) SakuraDarkColorScheme else SakuraLightColorScheme
+                AppTheme.COD_MW -> if (darkTheme) CodMwDarkColorScheme else CodMwLightColorScheme
+                AppTheme.GENSHIN -> if (darkTheme) GenshinDarkColorScheme else GenshinLightColorScheme
                 AppTheme.DEFAULT -> if (darkTheme) DarkColorScheme else LightColorScheme
             }
         }
@@ -388,11 +520,13 @@ fun HabitTrackerTheme(
 }
 
 // Theme enum for selection
-enum class AppTheme(val displayName: String, val emoji: String) {
-    DEFAULT("Default", "🎨"),
-    HALLOWEEN("Halloween", "🎃"),
-    EASTER("Easter Egg", "🥚"),
-    ITACHI("Itachi Uchiha", "🔴"),
-    ALL_MIGHT("All Might", "💪"),
-    SAKURA("Sakura", "🌸")
+enum class AppTheme(val displayName: String, val emoji: String, val price: Int = 0) {
+    DEFAULT("Default", "🎨", 0),        // Free
+    HALLOWEEN("Halloween", "🎃", 10),
+    EASTER("Easter Egg", "🥚", 10),
+    ITACHI("Itachi Uchiha", "🔴", 10),
+    ALL_MIGHT("All Might", "💪", 10),
+    SAKURA("Sakura", "🌸", 10),
+    COD_MW("Call of Duty MW", "🎮", 10),
+    GENSHIN("Genshin Impact", "✨", 10)
 }

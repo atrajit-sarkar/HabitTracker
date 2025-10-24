@@ -58,6 +58,10 @@ class HabitViewModel @Inject constructor(
     // User rewards state
     private val _userRewards = MutableStateFlow(UserRewards())
     val userRewards: StateFlow<UserRewards> = _userRewards.asStateFlow()
+    
+    // Purchased themes state
+    private val _purchasedThemes = MutableStateFlow<List<String>>(listOf("DEFAULT"))
+    val purchasedThemes: StateFlow<List<String>> = _purchasedThemes.asStateFlow()
 
     init {
         // Observe current user for stats updates
@@ -75,6 +79,16 @@ class HabitViewModel @Inject constructor(
         viewModelScope.launch {
             userRewardsRepository.observeUserRewards().collectLatest { rewards ->
                 _userRewards.value = rewards
+            }
+        }
+        
+        // Load purchased themes
+        viewModelScope.launch {
+            authRepository.currentUser.collectLatest { user ->
+                if (user != null) {
+                    val themes = userRewardsRepository.getPurchasedThemes()
+                    _purchasedThemes.value = themes
+                }
             }
         }
         
@@ -652,6 +666,24 @@ class HabitViewModel @Inject constructor(
             userRewardsRepository.purchaseFreezeDays(days, cost)
         } catch (e: Exception) {
             android.util.Log.e("HabitViewModel", "Error purchasing freeze days", e)
+            false
+        }
+    }
+    
+    /**
+     * Purchase a theme with diamonds
+     */
+    suspend fun purchaseTheme(themeId: String, cost: Int): Boolean {
+        return try {
+            val success = userRewardsRepository.purchaseTheme(themeId, cost)
+            if (success) {
+                // Refresh purchased themes list
+                val themes = userRewardsRepository.getPurchasedThemes()
+                _purchasedThemes.value = themes
+            }
+            success
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error purchasing theme", e)
             false
         }
     }

@@ -9,7 +9,8 @@ data class User(
     val customDisplayName: String? = null, // Custom name set by user, overrides displayName
     val musicEnabled: Boolean = false, // Background music on/off
     val musicTrack: String = "NONE", // Selected music track name
-    val musicVolume: Float = 0.3f // Music volume (0.0 to 1.0)
+    val musicVolume: Float = 0.3f, // Music volume (0.0 to 1.0)
+    val purchasedThemes: List<String> = listOf("DEFAULT") // List of purchased theme IDs (DEFAULT is always unlocked)
 ) {
     // Property to get the effective display name (custom name if set, otherwise original name)
     val effectiveDisplayName: String

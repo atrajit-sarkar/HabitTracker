@@ -22,6 +22,7 @@ private const val USERS_COLLECTION = "users"
 private const val DIAMONDS_FIELD = "diamonds"
 private const val FREEZE_DAYS_FIELD = "freeze_days"
 private const val FIRST_FREEZE_PURCHASE_DATE_FIELD = "first_freeze_purchase_date"
+private const val PURCHASED_THEMES_FIELD = "purchased_themes"
 
 @Singleton
 class UserRewardsRepository @Inject constructor(
@@ -236,6 +237,11 @@ class UserRewardsRepository @Inject constructor(
                 docRef.update(FREEZE_DAYS_FIELD, 0).await()
             }
             
+            // Initialize purchased themes with DEFAULT theme
+            if (!snapshot.contains(PURCHASED_THEMES_FIELD)) {
+                docRef.update(PURCHASED_THEMES_FIELD, listOf("DEFAULT")).await()
+            }
+            
             // MIGRATION: For existing users who have freeze days but no purchase date
             // Set the purchase date to a past date (e.g., account creation or a reasonable fallback)
             // This ensures backward compatibility
@@ -258,6 +264,80 @@ class UserRewardsRepository @Inject constructor(
             Log.d(TAG, "Initialized user rewards")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing user rewards", e)
+        }
+    }
+    
+    /**
+     * Get list of purchased themes for current user
+     */
+    suspend fun getPurchasedThemes(): List<String> {
+        val userId = authRepository.currentUserSync?.uid ?: return listOf("DEFAULT")
+        
+        return try {
+            val snapshot = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            @Suppress("UNCHECKED_CAST")
+            val themes = snapshot.get(PURCHASED_THEMES_FIELD) as? List<String> ?: listOf("DEFAULT")
+            
+            // Ensure DEFAULT is always included
+            if (!themes.contains("DEFAULT")) {
+                themes + "DEFAULT"
+            } else {
+                themes
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting purchased themes", e)
+            listOf("DEFAULT")
+        }
+    }
+    
+    /**
+     * Purchase a theme with diamonds
+     * Returns true if purchase successful, false if not enough diamonds or already purchased
+     */
+    suspend fun purchaseTheme(themeId: String, cost: Int): Boolean {
+        val userId = authRepository.currentUserSync?.uid ?: return false
+        
+        return try {
+            firestore.runTransaction { transaction ->
+                val docRef = firestore.collection(USERS_COLLECTION).document(userId)
+                val snapshot = transaction.get(docRef)
+                
+                // Check current diamonds
+                val currentDiamonds = (snapshot.get(DIAMONDS_FIELD) as? Long)?.toInt() ?: 0
+                
+                if (currentDiamonds < cost) {
+                    throw IllegalStateException("Not enough diamonds")
+                }
+                
+                // Check if already purchased
+                @Suppress("UNCHECKED_CAST")
+                val purchasedThemes = (snapshot.get(PURCHASED_THEMES_FIELD) as? List<String>) 
+                    ?: listOf("DEFAULT")
+                
+                if (purchasedThemes.contains(themeId)) {
+                    throw IllegalStateException("Theme already purchased")
+                }
+                
+                // Deduct diamonds and add theme
+                val newDiamonds = currentDiamonds - cost
+                val newPurchasedThemes = purchasedThemes + themeId
+                
+                transaction.update(docRef, DIAMONDS_FIELD, newDiamonds)
+                transaction.update(docRef, PURCHASED_THEMES_FIELD, newPurchasedThemes)
+            }.await()
+            
+            Log.d(TAG, "Purchased theme $themeId for $cost diamonds")
+            true
+        } catch (e: IllegalStateException) {
+            Log.d(TAG, "Theme purchase failed: ${e.message}")
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error purchasing theme", e)
+            false
         }
     }
 }

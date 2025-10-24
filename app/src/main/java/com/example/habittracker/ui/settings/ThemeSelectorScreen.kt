@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,19 +22,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import it.atraj.habittracker.R
+import it.atraj.habittracker.ui.HabitViewModel
 import it.atraj.habittracker.ui.theme.AppTheme
 import it.atraj.habittracker.ui.theme.rememberThemeManager
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeSelectorScreen(
     onBackClick: () -> Unit,
-    onThemeSelected: (AppTheme) -> Unit
+    onThemeSelected: (AppTheme) -> Unit,
+    viewModel: HabitViewModel = hiltViewModel()
 ) {
     val themeManager = rememberThemeManager()
     var selectedTheme by remember { mutableStateOf(themeManager.getCurrentTheme()) }
+    val purchasedThemes by viewModel.purchasedThemes.collectAsState()
+    val userRewards by viewModel.userRewards.collectAsState()
+    val scope = rememberCoroutineScope()
+    
+    var showPurchaseDialog by remember { mutableStateOf<AppTheme?>(null) }
+    var showInsufficientDiamondsDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -84,13 +99,26 @@ fun ThemeSelectorScreen(
             }
             
             items(AppTheme.values().toList()) { theme ->
+                val isUnlocked = theme.price == 0 || purchasedThemes.contains(theme.name)
+                
                 ThemeCard(
                     theme = theme,
                     isSelected = theme == selectedTheme,
+                    isUnlocked = isUnlocked,
+                    currentDiamonds = userRewards.diamonds,
                     onClick = {
-                        selectedTheme = theme
-                        themeManager.setTheme(theme)
-                        onThemeSelected(theme)
+                        if (isUnlocked) {
+                            selectedTheme = theme
+                            themeManager.setTheme(theme)
+                            onThemeSelected(theme)
+                        } else {
+                            // Show purchase dialog
+                            if (userRewards.diamonds >= theme.price) {
+                                showPurchaseDialog = theme
+                            } else {
+                                showInsufficientDiamondsDialog = true
+                            }
+                        }
                     }
                 )
             }
@@ -132,12 +160,82 @@ fun ThemeSelectorScreen(
             }
         }
     }
+    
+    // Purchase confirmation dialog
+    showPurchaseDialog?.let { theme ->
+        AlertDialog(
+            onDismissRequest = { showPurchaseDialog = null },
+            icon = {
+                Text(text = theme.emoji, style = MaterialTheme.typography.headlineLarge)
+            },
+            title = {
+                Text(text = "Purchase ${theme.displayName}?")
+            },
+            text = {
+                Column {
+                    Text("This will unlock the ${theme.displayName} theme for 💎 ${theme.price} diamonds.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Your balance: 💎 ${userRewards.diamonds} diamonds",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            val success = viewModel.purchaseTheme(theme.name, theme.price)
+                            if (success) {
+                                selectedTheme = theme
+                                themeManager.setTheme(theme)
+                                onThemeSelected(theme)
+                            }
+                            showPurchaseDialog = null
+                        }
+                    }
+                ) {
+                    Text("Purchase")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPurchaseDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Insufficient diamonds dialog
+    if (showInsufficientDiamondsDialog) {
+        AlertDialog(
+            onDismissRequest = { showInsufficientDiamondsDialog = false },
+            icon = {
+                Text(text = "💎", style = MaterialTheme.typography.headlineLarge)
+            },
+            title = {
+                Text(text = "Not Enough Diamonds")
+            },
+            text = {
+                Text("You need more diamonds to unlock this theme. Complete habits to earn diamonds!")
+            },
+            confirmButton = {
+                TextButton(onClick = { showInsufficientDiamondsDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ThemeCard(
     theme: AppTheme,
     isSelected: Boolean,
+    isUnlocked: Boolean,
+    currentDiamonds: Int,
     onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(
@@ -152,6 +250,8 @@ private fun ThemeCard(
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) 
             MaterialTheme.colorScheme.primary 
+        else if (!isUnlocked)
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         else 
             MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         animationSpec = tween(300),
@@ -189,7 +289,7 @@ private fun ThemeCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Theme preview with color circles
+                // Theme preview with color circles or character images
                 Box(
                     modifier = Modifier
                         .size(60.dp)
@@ -199,10 +299,47 @@ private fun ThemeCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = theme.emoji,
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    // Show character images for Itachi and All Might themes
+                    when (theme) {
+                        AppTheme.ITACHI -> {
+                            Image(
+                                painter = painterResource(id = R.drawable.itachi_theme),
+                                contentDescription = "Itachi Uchiha",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        AppTheme.ALL_MIGHT -> {
+                            Image(
+                                painter = painterResource(id = R.drawable.allmight_theme),
+                                contentDescription = "All Might",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        AppTheme.COD_MW -> {
+                            Image(
+                                painter = painterResource(id = R.drawable.call_of_duty_theme),
+                                contentDescription = "Call of Duty Modern Warfare",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        AppTheme.GENSHIN -> {
+                            Image(
+                                painter = painterResource(id = R.drawable.genshin_impact_theme),
+                                contentDescription = "Genshin Impact",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        else -> {
+                            Text(
+                                text = theme.emoji,
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                        }
+                    }
                 }
                 
                 Column {
@@ -240,21 +377,58 @@ private fun ThemeCard(
                 }
             }
             
-            // Check icon for selected theme
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+            // Right side: Lock icon with price OR check icon for selected
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (!isUnlocked) {
+                    // Show lock icon and price for locked themes
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Locked",
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💎",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = theme.price.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (currentDiamonds >= theme.price) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                } else if (isSelected) {
+                    // Check icon for selected theme
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -301,5 +475,17 @@ private fun getThemePreview(theme: AppTheme): Pair<List<Color>, String> {
             Color(0xFFE1BEE7),
             Color(0xFFA5D6A7)
         ) to "Cherry blossom pink"
+        
+        AppTheme.COD_MW -> listOf(
+            Color(0xFF8D7B68),
+            Color(0xFF556B2F),
+            Color(0xFFFF6B35)
+        ) to "Military tactical theme"
+        
+        AppTheme.GENSHIN -> listOf(
+            Color(0xFF4FC3F7),
+            Color(0xFFFFB300),
+            Color(0xFF9C27B0)
+        ) to "Celestial adventure"
     }
 }

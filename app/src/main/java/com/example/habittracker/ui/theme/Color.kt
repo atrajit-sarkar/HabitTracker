@@ -125,3 +125,50 @@ val SakuraGreenLight = Color(0xFF81C784)   // Brighter green for dark mode
 val SakuraBackground = Color(0xFFFFF0F5)
 val SakuraSurface = Color(0xFFFFF8FA)
 val SakuraSurfaceVariant = Color(0xFFFFE4EE)
+
+// ========================================
+// 🎮 CALL OF DUTY MODERN WARFARE THEME
+// ========================================
+// Primary: Military Olive/Tan
+val CodTan = Color(0xFF8D7B68)
+val CodTanDark = Color(0xFF6B5D4F)
+val CodTanLight = Color(0xFFA89B88)
+
+// Secondary: Military Green
+val CodGreen = Color(0xFF556B2F)
+val CodGreenDark = Color(0xFF3C4F21)
+val CodGreenLight = Color(0xFF6B8E23)
+
+// Tertiary: Orange (explosion/alert)
+val CodOrange = Color(0xFFFF6B35)
+val CodOrangeDark = Color(0xFFCC5429)
+val CodOrangeLight = Color(0xFFFF8C5E)
+
+// Surface & Background
+val CodBackground = Color(0xFF1A1A1A)
+val CodSurface = Color(0xFF2A2A2A)
+val CodSurfaceVariant = Color(0xFF3A3A3A)
+
+// ========================================
+// ✨ GENSHIN IMPACT THEME
+// ========================================
+// Primary: Celestial Blue
+val GenshinBlue = Color(0xFF4FC3F7)
+val GenshinBlueDark = Color(0xFF0288D1)
+val GenshinBlueLight = Color(0xFF81D4FA)
+
+// Secondary: Golden (Primogems)
+val GenshinGold = Color(0xFFFFB300)
+val GenshinGoldDark = Color(0xFFFF8F00)
+val GenshinGoldLight = Color(0xFFFFCA28)
+
+// Tertiary: Purple (Vision)
+val GenshinPurple = Color(0xFF9C27B0)
+val GenshinPurpleDark = Color(0xFF7B1FA2)
+val GenshinPurpleLight = Color(0xFFAB47BC)
+
+// Surface & Background
+val GenshinBackground = Color(0xFFF0F8FF)
+val GenshinSurface = Color(0xFFFFFFFF)
+val GenshinSurfaceVariant = Color(0xFFE1F5FE)
+
