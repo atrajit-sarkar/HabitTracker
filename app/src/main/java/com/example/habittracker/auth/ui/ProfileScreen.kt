@@ -2566,7 +2566,7 @@ private fun HeroImageOption(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Preview thumbnail
+            // Preview thumbnail with FREE overlay
             Box(
                 modifier = Modifier
                     .size(60.dp)
@@ -2602,6 +2602,41 @@ private fun HeroImageOption(
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+                }
+                
+                // FREE overlay badge for free items (positioned at top-right corner)
+                if (cost == 0 && isPurchased) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.95f),
+                            shadowElevation = 2.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CardGiftcard,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiary
+                                )
+                                Text(
+                                    text = "FREE",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiary,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2682,26 +2717,6 @@ private fun HeroImageOption(
                             MaterialTheme.colorScheme.error
                     )
                 }
-            }
-        }
-    }
-    
-    // Free badge for itachi
-    if (cost == 0 && isPurchased) {
-        Box(
-            modifier = Modifier.padding(start = 12.dp, top = 8.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = MaterialTheme.colorScheme.tertiary
-            ) {
-                Text(
-                    text = "FREE",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiary
-                )
             }
         }
     }
