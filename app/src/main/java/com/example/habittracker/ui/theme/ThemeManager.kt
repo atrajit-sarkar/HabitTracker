@@ -36,6 +36,13 @@ class ThemeManager(context: Context) {
     }
     
     /**
+     * Get theme configuration for current theme
+     */
+    fun getCurrentThemeConfig(): ThemeConfig {
+        return getThemeConfig(getCurrentTheme())
+    }
+    
+    /**
      * Save the selected theme
      */
     fun setTheme(theme: AppTheme) {

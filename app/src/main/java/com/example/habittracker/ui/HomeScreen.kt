@@ -138,6 +138,9 @@ import it.atraj.habittracker.R
 import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.data.local.HabitAvatar
 import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.ui.theme.LocalThemeConfig
+import it.atraj.habittracker.ui.theme.AppTheme
+import it.atraj.habittracker.ui.theme.rememberThemeManager
 import it.atraj.habittracker.data.local.HabitFrequency
 import it.atraj.habittracker.data.local.NotificationSound
 import it.atraj.habittracker.ui.DeleteHabitConfirmationDialog
@@ -218,6 +221,9 @@ fun HabitHomeRoute(
         mutableStateOf(!prefs.getBoolean("notification_guide_shown", false)) 
     }
 
+    // Get theme configuration for custom icons
+    val themeConfig = LocalThemeConfig.current
+    
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -326,6 +332,9 @@ fun HabitHomeScreen(
     val targetHabitCount = remember { mutableStateOf(state.habits.size) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var isDeletingHabits by remember { mutableStateOf(false) }
+    
+    // Get theme configuration for custom icons
+    val themeConfig = LocalThemeConfig.current
 
     // Handle back button to exit selection mode
     androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
@@ -532,7 +541,7 @@ fun HabitHomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Diamond,
+                            imageVector = themeConfig.icons.diamond,
                             contentDescription = "Diamonds",
                             tint = Color(0xFFFFD700),
                             modifier = Modifier.size(18.dp)
@@ -692,6 +701,61 @@ fun HabitHomeScreen(
             // Performance optimizations
             userScrollEnabled = true
         ) {
+            // Theme Indicator Banner (VISIBLE CUSTOMIZATION)
+            item {
+                val currentTheme = rememberThemeManager().getCurrentTheme()
+                if (currentTheme != AppTheme.DEFAULT) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = themeConfig.cardElevation.dp
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = currentTheme.emoji,
+                                    style = MaterialTheme.typography.headlineMedium
+                                )
+                                Column {
+                                    Text(
+                                        text = "${currentTheme.displayName} Theme Active",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "Shape: ${themeConfig.buttonStyle.name} • Animation: ${themeConfig.animationStyle.name}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = themeConfig.icons.sparkle,
+                                contentDescription = "Theme active",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            
             item {
                 AnimatedVisibility(visible = notificationPermissionVisible, enter = fadeIn(), exit = fadeOut()) {
                     NotificationPermissionCard(
@@ -1070,6 +1134,9 @@ private fun HabitCard(
     var isTitleTruncated by remember { mutableStateOf(false) }
     var isDescriptionTruncated by remember { mutableStateOf(false) }
     
+    // Get theme configuration for custom icons
+    val themeConfig = LocalThemeConfig.current
+    
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -1126,7 +1193,7 @@ private fun HabitCard(
                 ) {
                     if (habit.isSelected) {
                         Icon(
-                            imageVector = Icons.Default.CheckCircle,
+                            imageVector = themeConfig.icons.check,
                             contentDescription = "Selected",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)

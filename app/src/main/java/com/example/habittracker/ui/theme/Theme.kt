@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -511,12 +512,18 @@ fun HabitTrackerTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    
+    // Get theme configuration (shapes, icons, etc.)
+    val themeConfig = getThemeConfig(customTheme)
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalThemeConfig provides themeConfig) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = themeConfig.shapes,
+            content = content
+        )
+    }
 }
 
 // Theme enum for selection
