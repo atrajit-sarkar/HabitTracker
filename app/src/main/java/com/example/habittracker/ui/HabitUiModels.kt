@@ -1,11 +1,13 @@
 package it.atraj.habittracker.ui
 
+import androidx.compose.runtime.Stable
 import it.atraj.habittracker.data.local.Habit
 import it.atraj.habittracker.data.local.HabitAvatar
 import it.atraj.habittracker.data.local.HabitFrequency
 import it.atraj.habittracker.data.local.NotificationSound
 import java.time.LocalTime
 
+@Stable
 data class HabitCardUi(
     val id: Long,
     val title: String,
