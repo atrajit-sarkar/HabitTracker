@@ -44,6 +44,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -354,13 +356,20 @@ fun HabitHomeScreen(
     val themeConfig = LocalThemeConfig.current
     val themeManager = rememberThemeManager()
     val currentTheme by themeManager.currentThemeFlow.collectAsState()
+    
+    // OPTIMIZATION: Single MediaPlayer for all cards (hoisted to screen level)
+    val context = LocalContext.current
+    val soundPlayer = remember { android.media.MediaPlayer() }
+    DisposableEffect(Unit) {
+        onDispose {
+            soundPlayer.release()
+        }
+    }
 
     // Handle back button to exit selection mode
     androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
         onExitSelectionMode()
     }
-    
-    val context = LocalContext.current
 
     // Debug: Log unread news count
     LaunchedEffect(unreadNewsCount) {
@@ -423,6 +432,9 @@ fun HabitHomeScreen(
         },
         modifier = Modifier.fillMaxSize()
     ) {
+        // OPTIMIZATION: Pinned scroll behavior to prevent TopBar recomposition during scroll
+        val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+        
         Scaffold(
         topBar = {
             if (state.isSelectionMode) {
@@ -473,82 +485,25 @@ fun HabitHomeScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
             } else {
                 // Normal top bar
             TopAppBar(
                 title = {
-                    // App launcher icon with news badge - clickable to navigate to news
-                    // Get current app icon dynamically
-                    val context = LocalContext.current
-                    val appIconManager = remember { AppIconManager(context) }
-                    
-                    // State to hold current icon resource
-                    var currentIconRes by remember { 
-                        mutableStateOf(
+                    // OPTIMIZATION: Memoize entire title to prevent recomposition during scroll
+                    TopBarTitle(
+                        currentIconRes = remember(context) {
+                            val appIconManager = AppIconManager(context)
                             getIconResourceFromId(
                                 appIconManager.getCurrentIconId(),
                                 appIconManager.getUserSelectedIconId()
                             )
-                        ) 
-                    }
-                    
-                    // Refresh icon periodically to catch changes
-                    LaunchedEffect(Unit) {
-                        while (true) {
-                            delay(500) // Check every 500ms
-                            val currentIconId = appIconManager.getCurrentIconId()
-                            val userSelectedIconId = appIconManager.getUserSelectedIconId()
-                            val newIconRes = getIconResourceFromId(currentIconId, userSelectedIconId)
-                            if (currentIconRes != newIconRes) {
-                                currentIconRes = newIconRes
-                            }
-                        }
-                    }
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.clickableOnce { onNewsClick() }
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                // Always show badge for testing - will show "0" if no unread news
-                                Badge(
-                                    containerColor = if (unreadNewsCount > 0) 
-                                        MaterialTheme.colorScheme.error 
-                                    else 
-                                        MaterialTheme.colorScheme.secondary
-                                ) {
-                                    Text(
-                                        text = unreadNewsCount.toString(),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        ) {
-                            // Use the app's current launcher icon dynamically
-                            Image(
-                                painter = painterResource(id = currentIconRes),
-                                contentDescription = "App Icon",
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                            )
-                        }
-                        
-                        Text(
-                            text = "HT",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 2.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                        },
+                        unreadNewsCount = unreadNewsCount,
+                        onNewsClick = onNewsClick
+                    )
                 },
                 navigationIcon = {
                     IconButton(
@@ -563,143 +518,17 @@ fun HabitHomeScreen(
                     }
                 },
                 actions = {
-                    // Diamond Counter
-                    Row(
-                        modifier = Modifier
-                            .background(
-                                Color(0xFFFFD700).copy(alpha = 0.15f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Show custom icon based on theme
-                        when (currentTheme) {
-                            AppTheme.ITACHI -> {
-                                // Use Sharingan eye image with circular clip
-                                Image(
-                                    painter = painterResource(id = R.drawable.sharingan_eye),
-                                    contentDescription = "Sharingan Eye",
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            else -> {
-                                Icon(
-                                    imageVector = themeConfig.icons.diamond,
-                                    contentDescription = "Diamonds",
-                                    tint = Color(0xFFFFD700),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = userRewards.diamonds.toString(),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    // Freeze Days Counter
-                    Row(
-                        modifier = Modifier
-                            .background(
-                                Color(0xFF87CEEB).copy(alpha = 0.15f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .clickableOnce { onFreezeStoreClick() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AcUnit,
-                            contentDescription = "Freeze Days",
-                            tint = Color(0xFF87CEEB),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = userRewards.freezeDays.toString(),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    // Profile Picture that navigates to profile screen
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(
-                                2.dp,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                CircleShape
-                            )
-                            .clickableOnce { onProfileClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Determine if we should show profile photo or custom avatar
-                        val showProfilePhoto = user?.photoUrl != null && user.customAvatar == null
-                        val currentAvatar = user?.customAvatar ?: "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_1_professional.png"
-                        val context = LocalContext.current
-                        
-                        if (showProfilePhoto && user?.photoUrl != null) {
-                            // Load Google profile photo in high quality
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(user.photoUrl)
-                                    .size(Size.ORIGINAL) // Load original high-quality image
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Profile picture",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else if (currentAvatar.startsWith("https://")) {
-                            // Custom avatar from GitHub (image URL)
-                            // Add GitHub token for private repo authentication
-                            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
-                            val requestBuilder = ImageRequest.Builder(context)
-                                .data(currentAvatar)
-                                .size(Size.ORIGINAL)
-                                .crossfade(true)
-                            
-                            // Add Authorization header if token is available (for private repos)
-                            if (token != null && currentAvatar.contains("githubusercontent.com")) {
-                                requestBuilder.addHeader("Authorization", "token $token")
-                            }
-                            
-                            AsyncImage(
-                                model = requestBuilder.build(),
-                                contentDescription = "Custom avatar",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            // Fallback
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Default avatar",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                    // OPTIMIZATION: Memoize actions to prevent recomposition during scroll
+                    TopBarActions(
+                        currentTheme = currentTheme,
+                        themeConfig = themeConfig,
+                        userRewards = userRewards,
+                        user = user,
+                        onFreezeStoreClick = onFreezeStoreClick,
+                        onProfileClick = onProfileClick
+                    )
+                },
+                scrollBehavior = scrollBehavior
             )
             }
         },
@@ -729,30 +558,36 @@ fun HabitHomeScreen(
             }
         }
     ) { padding ->
-        val surfaceColor = MaterialTheme.colorScheme.surface
-        val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
-        val gradientBrush = remember(surfaceColor, surfaceVariantColor) {
-            Brush.verticalGradient(
-                colors = listOf(
-                    surfaceColor,
-                    surfaceVariantColor.copy(alpha = 0.6f)
-                )
-            )
-        }
-        
-        LazyColumn(
+        // OPTIMIZATION: Remove expensive gradient background - use solid color
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradientBrush)
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            // Performance optimizations
-            userScrollEnabled = true
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(padding)
         ) {
+            // HYBRID OPTIMIZATION: Choose rendering strategy based on item count
+            // ≤50 items: verticalScroll for buttery smooth scrolling (compose once, scroll pixels)
+            // >50 items: LazyColumn to prevent memory/performance issues
+            val habitCount = state.habits.size
+            val useLazyColumn = habitCount > 50
+            
+            if (useLazyColumn) {
+                // LazyColumn for large lists (>50 items)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            // CRITICAL OPTIMIZATION: Hardware-accelerated scrolling
+                            // This creates a separate compositing layer that can be rendered independently
+                        }
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    userScrollEnabled = true
+                ) {
             // Theme Indicator Banner (VISIBLE CUSTOMIZATION)
-            item {
-                val currentTheme = rememberThemeManager().getCurrentTheme()
+            // OPTIMIZATION: Use theme from parent instead of creating new manager
+            item(key = "theme_banner") {
                 if (currentTheme != AppTheme.DEFAULT) {
                     Card(
                         modifier = Modifier
@@ -805,7 +640,7 @@ fun HabitHomeScreen(
                 }
             }
             
-            item {
+            item(key = "notification_permission") {
                 AnimatedVisibility(visible = notificationPermissionVisible, enter = fadeIn(), exit = fadeOut()) {
                     NotificationPermissionCard(
                         onAllow = onRequestNotificationPermission,
@@ -815,7 +650,7 @@ fun HabitHomeScreen(
             }
 
             if (state.habits.isEmpty() && !state.isLoading) {
-                item {
+                item(key = "empty_state") {
                     EmptyState()
                 }
             }
@@ -825,32 +660,143 @@ fun HabitHomeScreen(
                 key = { it.id },
                 contentType = { "habit_card" }
             ) { habit ->
-                // Use key to prevent unnecessary recompositions
-                androidx.compose.runtime.key(habit.id) {
-                    HabitCard(
-                        habit = habit,
-                        isSelectionMode = state.isSelectionMode,
-                        onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
-                        onMarkCompleted = { onMarkHabitCompleted(habit.id) },
-                        onDelete = {
-                            habitCountBeforeDelete.value = state.habits.size
-                            targetHabitCount.value = state.habits.size - 1
-                            isDeletingHabits = true
-                            onDeleteHabit(habit.id)
-                        },
-                        onSeeDetails = { onHabitDetailsClick(habit.id) },
-                        onLongPress = { onStartSelectionMode(habit.id) },
-                        onClick = {
-                            if (state.isSelectionMode) {
-                                onToggleHabitSelection(habit.id)
-                            }
+                HabitCard(
+                    habit = habit,
+                    isSelectionMode = state.isSelectionMode,
+                    currentTheme = currentTheme,
+                    themeConfig = themeConfig,
+                    soundPlayer = soundPlayer,
+                    onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
+                    onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                    onDelete = {
+                        habitCountBeforeDelete.value = state.habits.size
+                        targetHabitCount.value = state.habits.size - 1
+                        isDeletingHabits = true
+                        onDeleteHabit(habit.id)
+                    },
+                    onSeeDetails = { onHabitDetailsClick(habit.id) },
+                    onLongPress = { onStartSelectionMode(habit.id) },
+                    onClick = {
+                        if (state.isSelectionMode) {
+                            onToggleHabitSelection(habit.id)
                         }
-                    )
-                }
+                    }
+                )
             }
 
-            item {
+            item(key = "fab_spacer") {
                 Spacer(modifier = Modifier.height(80.dp)) // For FAB overlap
+            }
+        }
+            } else {
+                // Column with verticalScroll for small lists (≤50 items) - SMOOTH!
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            // Hardware-accelerated scrolling
+                        }
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Theme banner
+                    if (currentTheme != AppTheme.DEFAULT) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = themeConfig.cardElevation.dp
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = currentTheme.emoji,
+                                        style = MaterialTheme.typography.headlineMedium
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "${currentTheme.displayName} Theme Active",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = "Shape: ${themeConfig.buttonStyle.name} • Animation: ${themeConfig.animationStyle.name}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = themeConfig.icons.sparkle,
+                                    contentDescription = "Theme active",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Notification permission card
+                    AnimatedVisibility(visible = notificationPermissionVisible, enter = fadeIn(), exit = fadeOut()) {
+                        NotificationPermissionCard(
+                            onAllow = onRequestNotificationPermission,
+                            onDismiss = onDismissPermissionCard
+                        )
+                    }
+                    
+                    // Empty state
+                    if (state.habits.isEmpty() && !state.isLoading) {
+                        EmptyState()
+                    }
+                    
+                    // All habit cards (composed once, no lazy composition!)
+                    state.habits.forEach { habit ->
+                        androidx.compose.runtime.key(habit.id) {
+                            HabitCard(
+                                habit = habit,
+                                isSelectionMode = state.isSelectionMode,
+                                currentTheme = currentTheme,
+                                themeConfig = themeConfig,
+                                soundPlayer = soundPlayer,
+                                onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
+                                onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                                onDelete = {
+                                    habitCountBeforeDelete.value = state.habits.size
+                                    targetHabitCount.value = state.habits.size - 1
+                                    isDeletingHabits = true
+                                    onDeleteHabit(habit.id)
+                                },
+                                onSeeDetails = { onHabitDetailsClick(habit.id) },
+                                onLongPress = { onStartSelectionMode(habit.id) },
+                                onClick = {
+                                    if (state.isSelectionMode) {
+                                        onToggleHabitSelection(habit.id)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    
+                    // FAB spacer
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
         }
     }
@@ -1301,6 +1247,9 @@ private fun DrawerContent(
 private fun HabitCard(
     habit: HabitCardUi,
     isSelectionMode: Boolean = false,
+    currentTheme: AppTheme, // OPTIMIZATION: Pass as parameter instead of collecting per-card
+    themeConfig: it.atraj.habittracker.ui.theme.ThemeConfig, // OPTIMIZATION: Pass as parameter
+    soundPlayer: android.media.MediaPlayer, // OPTIMIZATION: Shared MediaPlayer instance
     onToggleReminder: (Boolean) -> Unit,
     onMarkCompleted: () -> Unit,
     onDelete: () -> Unit,
@@ -1309,7 +1258,7 @@ private fun HabitCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Memoize expensive calculations
+    // OPTIMIZATION: Memoize expensive calculations and strings
     val palette = remember(habit.id) { cardPaletteFor(habit.id) }
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
     val reminderText = remember(habit.isReminderEnabled, habit.reminderTime) {
@@ -1319,27 +1268,24 @@ private fun HabitCard(
             "Reminder off"
         }
     }
+    
+    // OPTIMIZATION: Cache string resources to avoid lookup on every scroll
+    val doneText = stringResource(R.string.done)
+    val detailsText = stringResource(R.string.details)
+    val seeDetailsText = stringResource(R.string.see_details)
+    val completedTodayText = stringResource(id = R.string.habit_completed_today)
+    
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showTitleDialog by remember { mutableStateOf(false) }
     var showDescriptionDialog by remember { mutableStateOf(false) }
-    var isTitleTruncated by remember { mutableStateOf(false) }
-    var isDescriptionTruncated by remember { mutableStateOf(false) }
     
-    // Get theme configuration for custom icons
-    val themeConfig = LocalThemeConfig.current
-    val themeManager = rememberThemeManager()
-    val currentTheme by themeManager.currentThemeFlow.collectAsState()
+    // OPTIMIZATION: Remove expensive onTextLayout callbacks - use simpler truncation check
+    // We'll just show info icon always if text is long
+    val isTitleLong = remember(habit.title) { habit.title.length > 25 }
+    val isDescriptionLong = remember(habit.description) { habit.description.length > 40 }
     
-    // Sound player for theme-specific completion sounds
+    // Context for sound playback
     val context = LocalContext.current
-    val soundPlayer = remember { android.media.MediaPlayer() }
-    
-    // Cleanup sound player when composable is disposed
-    DisposableEffect(Unit) {
-        onDispose {
-            soundPlayer.release()
-        }
-    }
     
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
@@ -1347,6 +1293,10 @@ private fun HabitCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                // CRITICAL OPTIMIZATION: Isolate drawing layer to prevent parent recomposition
+                // This creates a separate layer that can be hardware-accelerated
+            }
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode) {
@@ -1355,79 +1305,48 @@ private fun HabitCard(
                 },
                 onLongClick = {
                     if (!isSelectionMode) {
-                        // Perform haptic feedback explicitly
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         onLongPress()
                     }
                 },
-                onLongClickLabel = "Select habit" // Accessibility label
+                onLongClickLabel = "Select habit"
             ),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Reduce overdraw
+        colors = CardDefaults.cardColors(containerColor = palette.accent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
+        // OPTIMIZATION: Use Box to overlay selection checkbox without increasing height
         Box(
-            modifier = Modifier
-                .background(
-                    palette.brush, // Restore gradient
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .then(
-                    if (habit.isSelected) {
-                        Modifier.border(
-                            width = 3.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                    } else Modifier
-                )
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Selection checkbox overlay
-            if (isSelectionMode) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(32.dp)
-                        .background(
-                            Color.White.copy(alpha = 0.9f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (habit.isSelected) {
-                        Icon(
-                            imageVector = themeConfig.icons.check,
-                            contentDescription = "Selected",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .border(
-                                    width = 2.dp,
-                                    color = Color.Gray,
-                                    shape = CircleShape
-                                )
-                        )
+            Column(
+                modifier = Modifier
+                    .graphicsLayer {
+                        // Isolate column drawing layer for better performance
                     }
-                }
-            }
-            
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    .then(
+                        if (habit.isSelected) {
+                            Modifier.border(
+                                width = 3.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        } else Modifier
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Avatar display - memoized to prevent recomposition
                     androidx.compose.runtime.key(habit.avatar) {
-                    AvatarDisplay(
-                        avatar = habit.avatar,
-                        size = 40.dp,
-                        habitId = habit.id // Use stable cache key
-                    )
+                        AvatarDisplay(
+                            avatar = habit.avatar,
+                            size = 40.dp,
+                            habitId = habit.id // Use stable cache key
+                        )
                     }
                     
                     Column(modifier = Modifier.weight(1f)) {
@@ -1441,12 +1360,9 @@ private fun HabitCard(
                                 color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                onTextLayout = { textLayoutResult ->
-                                    isTitleTruncated = textLayoutResult.hasVisualOverflow
-                                },
                                 modifier = Modifier.weight(1f, fill = false)
                             )
-                            if (isTitleTruncated && !isSelectionMode) {
+                            if (isTitleLong && !isSelectionMode) {
                                 IconButton(
                                     onClick = { showTitleDialog = true },
                                     modifier = Modifier.size(28.dp)
@@ -1472,12 +1388,9 @@ private fun HabitCard(
                                     color = Color.White.copy(alpha = 0.82f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    onTextLayout = { textLayoutResult ->
-                                        isDescriptionTruncated = textLayoutResult.hasVisualOverflow
-                                    },
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                if (isDescriptionTruncated && !isSelectionMode) {
+                                if (isDescriptionLong && !isSelectionMode) {
                                     IconButton(
                                         onClick = { showDescriptionDialog = true },
                                         modifier = Modifier.size(24.dp)
@@ -1560,7 +1473,7 @@ private fun HabitCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = stringResource(id = R.string.habit_completed_today),
+                            text = completedTodayText,
                             color = Color.White,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium
@@ -1597,7 +1510,7 @@ private fun HabitCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = stringResource(R.string.done),
+                                text = doneText,
                                 fontWeight = FontWeight.Medium,
                                 style = MaterialTheme.typography.labelMedium
                             )
@@ -1622,7 +1535,7 @@ private fun HabitCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = stringResource(R.string.details),
+                                text = detailsText,
                                 fontWeight = FontWeight.Medium,
                                 style = MaterialTheme.typography.labelMedium
                             )
@@ -1652,15 +1565,46 @@ private fun HabitCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = stringResource(R.string.see_details),
+                            text = seeDetailsText,
                             fontWeight = FontWeight.Medium,
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
                 }
             }
-        }
-    }
+            
+            // Selection checkbox overlay - positioned at top-right without adding height
+            if (isSelectionMode) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(Color.White.copy(alpha = 0.9f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (habit.isSelected) {
+                            Icon(
+                                imageVector = themeConfig.icons.check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .border(2.dp, Color.Gray, CircleShape)
+                            )
+                        }
+                    }
+                }
+            }
+        } // Close outer Box
+    } // Close Card
     
     // Title dialog
     if (showTitleDialog) {
@@ -2573,23 +2517,32 @@ private fun checkNotificationPermission(context: android.content.Context): Boole
     ) == PackageManager.PERMISSION_GRANTED
 }
 
-internal data class CardPalette(val brush: Brush, val accent: Color)
+internal data class CardPalette(val accent: Color)
+
+// OPTIMIZATION: Use solid colors instead of expensive gradients for better scroll performance
+private val paletteCache = mutableMapOf<Long, CardPalette>()
 
 internal fun cardPaletteFor(habitId: Long): CardPalette {
-    val palettes = listOf(
-        listOf(Color(0xFF6650A4), Color(0xFF9575CD)),
-        listOf(Color(0xFF006C62), Color(0xFF00BFA6)),
-        listOf(Color(0xFF7B1FA2), Color(0xFFE040FB)),
-        listOf(Color(0xFF3949AB), Color(0xFF5C6BC0)),
-        listOf(Color(0xFF00838F), Color(0xFF00ACC1))
+    // Return cached palette if available
+    paletteCache[habitId]?.let { return it }
+    
+    // Use solid colors instead of gradients
+    val colors = listOf(
+        Color(0xFF6650A4),
+        Color(0xFF006C62),
+        Color(0xFF7B1FA2),
+        Color(0xFF3949AB),
+        Color(0xFF00838F)
     )
-    val paletteCount = palettes.size.toLong()
+    val paletteCount = colors.size.toLong()
     val index = ((habitId % paletteCount) + paletteCount) % paletteCount
-    val colors = palettes[index.toInt()]
-    return CardPalette(
-        brush = Brush.linearGradient(colors),
-        accent = colors.last()
+    val palette = CardPalette(
+        accent = colors[index.toInt()]
     )
+    
+    // Cache for future use
+    paletteCache[habitId] = palette
+    return palette
 }
 
 // Ensure your AddHabitState data class in the ViewModel (or wherever it's defined) includes:
@@ -2702,6 +2655,201 @@ private fun ThemeCheckIcon(
                 contentDescription = null,
                 tint = if (tint != Color.Unspecified) tint else LocalContentColor.current,
                 modifier = Modifier.size(size)
+            )
+        }
+    }
+}
+
+/**
+ * OPTIMIZATION: Isolated TopBar title to prevent recomposition during scroll
+ */
+@Composable
+private fun TopBarTitle(
+    currentIconRes: Int,
+    unreadNewsCount: Int,
+    onNewsClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.clickableOnce { onNewsClick() }
+    ) {
+        BadgedBox(
+            badge = {
+                Badge(
+                    containerColor = if (unreadNewsCount > 0) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.secondary
+                ) {
+                    Text(
+                        text = unreadNewsCount.toString(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        ) {
+            Image(
+                painter = painterResource(id = currentIconRes),
+                contentDescription = "App Icon",
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+            )
+        }
+        
+        Text(
+            text = "HT",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 2.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * OPTIMIZATION: Isolated TopBar actions to prevent recomposition during scroll
+ */
+@Composable
+private fun TopBarActions(
+    currentTheme: AppTheme,
+    themeConfig: it.atraj.habittracker.ui.theme.ThemeConfig,
+    userRewards: it.atraj.habittracker.data.local.UserRewards,
+    user: User?,
+    onFreezeStoreClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
+    // Diamond Counter
+    Row(
+        modifier = Modifier
+            .background(
+                Color(0xFFFFD700).copy(alpha = 0.15f),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when (currentTheme) {
+            AppTheme.ITACHI -> {
+                Image(
+                    painter = painterResource(id = R.drawable.sharingan_eye),
+                    contentDescription = "Sharingan Eye",
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            else -> {
+                Icon(
+                    imageVector = themeConfig.icons.diamond,
+                    contentDescription = "Diamonds",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = userRewards.diamonds.toString(),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+    
+    Spacer(modifier = Modifier.width(8.dp))
+    
+    // Freeze Days Counter
+    Row(
+        modifier = Modifier
+            .background(
+                Color(0xFF87CEEB).copy(alpha = 0.15f),
+                RoundedCornerShape(12.dp)
+            )
+            .clickableOnce { onFreezeStoreClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.AcUnit,
+            contentDescription = "Freeze Days",
+            tint = Color(0xFF87CEEB),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = userRewards.freezeDays.toString(),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+
+    Spacer(modifier = Modifier.width(12.dp))
+    
+    // Profile Picture - OPTIMIZED: Disable crossfade, use fixed size
+    val context = LocalContext.current
+    Box(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                2.dp,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                CircleShape
+            )
+            .clickableOnce { onProfileClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        val showProfilePhoto = user?.photoUrl != null && user.customAvatar == null
+        val currentAvatar = user?.customAvatar ?: "https://raw.githubusercontent.com/atrajit-sarkar/HabitTracker/main/Avatars/avatar_1_professional.png"
+        
+        if (showProfilePhoto && user?.photoUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(user.photoUrl)
+                    .size(80) // Fixed size instead of ORIGINAL
+                    .crossfade(false) // Disable crossfade for performance
+                    .memoryCacheKey("profile_${user.email}")
+                    .build(),
+                contentDescription = "Profile picture",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else if (currentAvatar.startsWith("https://")) {
+            val token = it.atraj.habittracker.avatar.SecureTokenStorage.getToken(context)
+            val requestBuilder = ImageRequest.Builder(context)
+                .data(currentAvatar)
+                .size(80) // Fixed size
+                .crossfade(false) // Disable crossfade
+                .memoryCacheKey("avatar_${user?.email}")
+            
+            if (token != null && currentAvatar.contains("githubusercontent.com")) {
+                requestBuilder.addHeader("Authorization", "token $token")
+            }
+            
+            AsyncImage(
+                model = requestBuilder.build(),
+                contentDescription = "Custom avatar",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Default avatar",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

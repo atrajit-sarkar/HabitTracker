@@ -298,11 +298,10 @@ private fun DeletedHabitCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = palette.accent)
     ) {
         Box(
             modifier = Modifier
-                .background(palette.brush, shape = RoundedCornerShape(28.dp))
                 .background(
                     Color.Black.copy(alpha = 0.3f), // Overlay for deleted state
                     shape = RoundedCornerShape(28.dp)
