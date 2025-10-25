@@ -61,7 +61,7 @@ android {
             applicationIdSuffix = ".github"
             buildConfigField("Boolean", "IS_GITHUB_VERSION", "true")
             buildConfigField("Boolean", "ENABLE_IN_APP_UPDATE", "true")
-            versionNameSuffix = "-github"
+            // No version suffix to match GitHub release versions exactly
         }
         
         create("playstore") {
