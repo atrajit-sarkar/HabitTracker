@@ -1381,12 +1381,12 @@ private fun HabitCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        // Custom check icon based on theme
-                        ThemeCheckIcon(
-                            currentTheme = currentTheme,
-                            themeConfig = themeConfig,
-                            size = 16.dp,
-                            tint = Color.White
+                        // Use default checkmark for completed habits
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
