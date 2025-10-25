@@ -10,6 +10,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import it.atraj.habittracker.R
+import it.atraj.habittracker.ui.theme.AppTheme
+import it.atraj.habittracker.ui.theme.ThemeManager
+import android.media.MediaPlayer
 
 @AndroidEntryPoint
 class NotificationActionReceiver : BroadcastReceiver() {
@@ -23,6 +27,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             "COMPLETE_HABIT" -> {
+                // Play theme-specific sound immediately (on main thread)
+                playThemeCompletionSound(context)
+                
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         habitRepository.markCompletedToday(habitId)
@@ -38,6 +45,42 @@ class NotificationActionReceiver : BroadcastReceiver() {
             "DISMISS_HABIT" -> {
                 HabitReminderService.dismissNotification(context, habitId)
             }
+        }
+    }
+    
+    /**
+     * Play theme-specific completion sound for notification actions
+     */
+    private fun playThemeCompletionSound(context: Context) {
+        try {
+            // Get current theme
+            val themeManager = ThemeManager(context)
+            val currentTheme = themeManager.getCurrentTheme()
+            
+            // Get sound resource based on theme
+            val soundRes = when (currentTheme) {
+                AppTheme.ITACHI -> R.raw.sharingan_sound
+                AppTheme.HALLOWEEN -> R.raw.creepy_sound
+                AppTheme.EASTER -> R.raw.goodbye_sound
+                AppTheme.COD_MW -> R.raw.ak47_sound
+                else -> null // No sound for other themes
+            }
+            
+            // Play sound if available for this theme
+            soundRes?.let { resId ->
+                val mediaPlayer = MediaPlayer()
+                mediaPlayer.setDataSource(
+                    context,
+                    android.net.Uri.parse("android.resource://${context.packageName}/$resId")
+                )
+                mediaPlayer.prepare()
+                mediaPlayer.setOnCompletionListener { mp ->
+                    mp.release() // Release MediaPlayer after sound finishes
+                }
+                mediaPlayer.start()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NotificationSound", "Error playing theme sound: ${e.message}")
         }
     }
 }
