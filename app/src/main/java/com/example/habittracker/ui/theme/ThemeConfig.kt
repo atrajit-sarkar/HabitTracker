@@ -151,7 +151,8 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 trophy = Icons.Default.Security,
                 shield = Icons.Default.Security,
                 sword = Icons.Default.Hardware,
-                lightning = Icons.Default.ElectricBolt
+                lightning = Icons.Default.ElectricBolt,
+                diamond = Icons.Default.Visibility // Sharingan eye!
             ),
             fontFamily = FontFamily.Monospace,
             animationStyle = AnimationStyle.QUICK,
@@ -172,7 +173,8 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 trophy = Icons.Default.EmojiEvents,
                 shield = Icons.Default.Security,
                 lightning = Icons.Default.ElectricBolt,
-                sparkle = Icons.Default.AutoAwesome
+                sparkle = Icons.Default.AutoAwesome,
+                diamond = Icons.Default.FitnessCenter // Bicep/muscle icon!
             ),
             fontFamily = FontFamily.SansSerif,
             animationStyle = AnimationStyle.BOUNCY,

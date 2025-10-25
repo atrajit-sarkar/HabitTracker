@@ -112,6 +112,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -335,6 +336,8 @@ fun HabitHomeScreen(
     
     // Get theme configuration for custom icons
     val themeConfig = LocalThemeConfig.current
+    val themeManager = rememberThemeManager()
+    val currentTheme by themeManager.currentThemeFlow.collectAsState()
 
     // Handle back button to exit selection mode
     androidx.activity.compose.BackHandler(enabled = state.isSelectionMode) {
@@ -540,12 +543,28 @@ fun HabitHomeScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = themeConfig.icons.diamond,
-                            contentDescription = "Diamonds",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        // Show custom icon based on theme
+                        when (currentTheme) {
+                            AppTheme.ITACHI -> {
+                                // Use Sharingan eye image with circular clip
+                                Image(
+                                    painter = painterResource(id = R.drawable.sharingan_eye),
+                                    contentDescription = "Sharingan Eye",
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            else -> {
+                                Icon(
+                                    imageVector = themeConfig.icons.diamond,
+                                    contentDescription = "Diamonds",
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = userRewards.diamonds.toString(),
