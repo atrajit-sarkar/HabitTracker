@@ -50,6 +50,9 @@ import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 import it.atraj.habittracker.data.local.HabitCompletion
 import it.atraj.habittracker.data.StreakCalculator
+import androidx.compose.ui.platform.LocalContext
+import it.atraj.habittracker.ui.theme.AppTheme
+import it.atraj.habittracker.ui.theme.rememberThemeManager
 
 data class HabitProgress(
     val currentStreak: Int,
@@ -167,6 +170,19 @@ private fun HeroSection(
     var isTitleTruncated by remember { mutableStateOf(false) }
     var isDescriptionTruncated by remember { mutableStateOf(false) }
     var showFanfareAnimation by remember { mutableStateOf(false) }
+    
+    // Theme-specific sound support
+    val themeManager = rememberThemeManager()
+    val currentTheme by themeManager.currentThemeFlow.collectAsState()
+    val context = LocalContext.current
+    val soundPlayer = remember { android.media.MediaPlayer() }
+    
+    // Cleanup sound player when composable is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            soundPlayer.release()
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -383,6 +399,7 @@ private fun HeroSection(
                     FilledTonalButton(
                         onClick = {
                             showFanfareAnimation = true
+                            playThemeCompletionSound(context, currentTheme, soundPlayer)
                             onMarkCompleted()
                         },
                         modifier = Modifier
@@ -1767,5 +1784,40 @@ private fun HabitAvatarDisplay(
                 )
             }
         }
+    }
+}
+
+/**
+ * Play theme-specific completion sound
+ */
+private fun playThemeCompletionSound(
+    context: android.content.Context,
+    theme: AppTheme,
+    mediaPlayer: android.media.MediaPlayer
+) {
+    try {
+        // Reset media player
+        mediaPlayer.reset()
+        
+        // Get sound resource based on theme
+        val soundRes = when (theme) {
+            AppTheme.ITACHI -> R.raw.sharingan_sound
+            AppTheme.HALLOWEEN -> R.raw.creepy_sound
+            AppTheme.EASTER -> R.raw.goodbye_sound
+            AppTheme.COD_MW -> R.raw.ak47_sound
+            else -> null // No sound for other themes
+        }
+        
+        // Play sound if available for this theme
+        soundRes?.let { resId ->
+            mediaPlayer.setDataSource(
+                context,
+                android.net.Uri.parse("android.resource://${context.packageName}/$resId")
+            )
+            mediaPlayer.prepare()
+            mediaPlayer.start()
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("ThemeSound", "Error playing completion sound: ${e.message}")
     }
 }
