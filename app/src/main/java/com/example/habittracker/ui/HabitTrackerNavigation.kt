@@ -55,6 +55,9 @@ import it.atraj.habittracker.ui.profile.AppIconSelectionScreen
 import it.atraj.habittracker.music.ui.*
 import it.atraj.habittracker.data.model.UserFolder
 import it.atraj.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.social.ui.screen.SocialProfileScreen
+import it.atraj.habittracker.social.ui.screen.BrowsePostsScreen
+import it.atraj.habittracker.social.ui.screen.CreatePostScreen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -288,7 +291,9 @@ fun HabitTrackerNavigation(
                 onExitSelectionMode = viewModel::exitSelectionMode,
                 onDeleteSelectedHabits = viewModel::deleteSelectedHabits,
                 onFreezeStoreClick = { safeNavigate("freeze_store") },
-                onNewsClick = onNewsClick
+                onNewsClick = onNewsClick,
+                onSocialProfileClick = { safeNavigate("social_profile") },
+                onBrowsePostsClick = { safeNavigate("browse_posts") }
             )
         }
         
@@ -897,6 +902,54 @@ fun HabitTrackerNavigation(
             
             YouTubeDownloaderScreen(
                 onBackClick = onBackClick
+            )
+        }
+        
+        // Social Profile Screen
+        composable("social_profile") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onCreatePostClick = rememberNavigationHandler {
+                safeNavigate("create_post")
+            }
+            
+            val onPostClick: (String) -> Unit = { postId ->
+                // Could navigate to post details if needed
+            }
+            
+            SocialProfileScreen(
+                onBackClick = onBackClick,
+                onCreatePostClick = onCreatePostClick,
+                onPostClick = onPostClick
+            )
+        }
+        
+        // Browse Posts Screen
+        composable("browse_posts") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            BrowsePostsScreen(
+                onBackClick = onBackClick
+            )
+        }
+        
+        // Create Post Screen
+        composable("create_post") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onPostCreated = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            CreatePostScreen(
+                onBackClick = onBackClick,
+                onPostCreated = onPostCreated
             )
         }
     }

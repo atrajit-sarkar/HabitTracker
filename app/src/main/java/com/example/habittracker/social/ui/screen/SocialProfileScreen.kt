@@ -1,521 +1,344 @@
-package it.atraj.habittracker.ui.social
+package it.atraj.habittracker.social.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.size.Size
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.HorizontalPagerIndicator
 import com.google.accompanist.pager.rememberPagerState
-import it.atraj.habittracker.data.firestore.FriendRepository
-import it.atraj.habittracker.data.firestore.UserPublicProfile
 import it.atraj.habittracker.social.data.model.Comment
 import it.atraj.habittracker.social.data.model.Post
 import it.atraj.habittracker.social.ui.components.MarkdownText
 import it.atraj.habittracker.social.ui.viewmodel.PostsViewModel
+import it.atraj.habittracker.social.ui.viewmodel.SocialProfileUiState
 import it.atraj.habittracker.social.ui.viewmodel.SocialProfileViewModel
-import it.atraj.habittracker.ui.HabitViewModel
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FriendProfileScreen(
-    friendId: String,
-    friendRepository: FriendRepository,
-    habitViewModel: HabitViewModel = hiltViewModel(),
-    socialViewModel: SocialProfileViewModel = hiltViewModel(),
-    postsViewModel: PostsViewModel = hiltViewModel(),
+fun SocialProfileScreen(
     onBackClick: () -> Unit,
-    onMessageClick: (String, String, String?, String?) -> Unit = { _, _, _, _ -> } // Third param is nullable customAvatar
+    onCreatePostClick: () -> Unit,
+    onPostClick: (String) -> Unit,
+    viewModel: SocialProfileViewModel = hiltViewModel(),
+    postsViewModel: PostsViewModel = hiltViewModel()
 ) {
-    var friendProfile by remember { mutableStateOf<UserPublicProfile?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    val socialUiState by socialViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showBioDialog by remember { mutableStateOf(false) }
     var selectedPost by remember { mutableStateOf<Post?>(null) }
     var showImageDialog by remember { mutableStateOf<String?>(null) }
     var showComments by remember { mutableStateOf(false) }
-
-    // Real-time friend profile updates
-    LaunchedEffect(friendId) {
-        friendRepository.observeFriendProfile(friendId).collect { profile ->
-            friendProfile = profile
-            isLoading = false
-        }
-    }
     
-    // Load friend's posts
-    LaunchedEffect(friendId) {
-        socialViewModel.loadProfile(friendId)
-        socialViewModel.observeUserPosts(friendId)
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Text(
-                        "Friend's Profile",
-                        fontWeight = FontWeight.Bold
-                    ) 
-                },
+                title = { Text("My Profile") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreatePostClick,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, "Create Post")
+            }
         }
-    ) { paddingValues ->
-        if (isLoading) {
+    ) { padding ->
+        if (uiState.isLoading && !uiState.isRefreshing) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
-        } else if (friendProfile == null) {
-            Box(
+        } else {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(padding)
+                    .background(MaterialTheme.colorScheme.background)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Error,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.error
+                    // Profile Header
+                    ProfileHeader(
+                        uiState = uiState,
+                        onEditBioClick = { showBioDialog = true }
                     )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                        // Posts Grid
                     Text(
-                        text = "Profile not found",
+                        text = "My Posts",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                }
-            }
-        } else {
-            FriendProfileContent(
-                profile = friendProfile!!,
-                posts = socialUiState.posts,
-                paddingValues = paddingValues,
-                onMessageClick = onMessageClick,
-                onPostClick = { post -> selectedPost = post }
-            )
-        }
-        
-        // Show full post dialog
-        selectedPost?.let { post ->
-            PostDetailsDialog(
-                post = post,
-                onDismiss = { 
-                    selectedPost = null
-                    showComments = false
-                },
-                onImageClick = { imageUrl -> 
-                    selectedPost = null
-                    showImageDialog = imageUrl
-                },
-                onCommentsClick = {
-                    showComments = true
-                },
-                showComments = showComments,
-                postsViewModel = postsViewModel
-            )
-        }
-        
-        // Full screen image dialog
-        showImageDialog?.let { imageUrl ->
-            FullScreenImageDialog(
-                imageUrl = imageUrl,
-                onDismiss = { showImageDialog = null }
-            )
-        }
-    }
-}
-
-@Composable
-fun FriendProfileContent(
-    profile: UserPublicProfile,
-    posts: List<Post>,
-    paddingValues: PaddingValues,
-    onMessageClick: (String, String, String?, String?) -> Unit = { _, _, _, _ -> }, // Third param is nullable customAvatar
-    onPostClick: (Post) -> Unit = {}
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Hero Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                
-                // Avatar - show photo if available, otherwise custom avatar
-                if (profile.photoUrl != null && profile.customAvatar == null) {
-                    // Google profile picture in high quality
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(profile.photoUrl)
-                            .size(Size.ORIGINAL) // Load original high-quality image
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Profile picture",
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                } else if (profile.customAvatar?.startsWith("https://") == true) {
-                    // Custom avatar from GitHub (image URL)
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(profile.customAvatar)
-                            .size(Size.ORIGINAL) // Load original high-quality image
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Custom avatar",
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                } else {
-                    // Fallback
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Default avatar",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-
-                // Name
-                Text(
-                    text = profile.displayName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                // Email
-                Text(
-                    text = profile.email,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                // Message Button
-                Button(
-                    onClick = { 
-                        onMessageClick(
-                            profile.userId,
-                            profile.displayName,
-                            profile.customAvatar,
-                            profile.photoUrl
-                        )
-                    },
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Chat,
-                        contentDescription = "Message",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Message", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // Stats Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // Quick Stats
-            Text(
-                text = "Statistics",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FriendStatCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.TrendingUp,
-                    title = "Success",
-                    value = "${profile.successRate}%",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                FriendStatCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.LocalFireDepartment,
-                    title = "Streak",
-                    value = "${profile.currentStreak}d",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FriendStatCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.CheckCircle,
-                    title = "Total",
-                    value = profile.totalHabits.toString(),
-                    subtitle = "Habits",
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-                FriendStatCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Star,
-                    title = "Done",
-                    value = profile.totalCompletions.toString(),
-                    subtitle = "Times",
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-
-            // Info card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = "This is a friend's profile. You can view their stats but cannot modify their habits or settings.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Posts Section
-            Divider(
-                modifier = Modifier.padding(vertical = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-            
-            Text(
-                text = "${profile.displayName}'s Posts",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            if (posts.isEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    
+                    if (uiState.posts.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Image,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
-                            Text(
-                                "No posts yet",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    "No posts yet",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Tap + to create your first post",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(uiState.posts) { post ->
+                                PostGridItem(
+                                    post = post,
+                                    onClick = { 
+                                        selectedPost = post
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                // Posts Grid
-                val rows = (posts.size + 2) / 3 // Calculate number of rows needed
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier.height((rows * 130).dp), // Approximate height
-                    contentPadding = PaddingValues(0.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    userScrollEnabled = false // Disable internal scroll since parent scrolls
+            }
+        }
+    
+    // Show full post dialog
+    selectedPost?.let { post ->
+        PostDetailsDialog(
+            post = post,
+            onDismiss = { 
+                selectedPost = null
+                showComments = false
+            },
+            onImageClick = { imageUrl -> 
+                selectedPost = null
+                showImageDialog = imageUrl
+            },
+            onCommentsClick = {
+                showComments = true
+            },
+            showComments = showComments,
+            postsViewModel = postsViewModel
+        )
+    }
+    
+    // Full screen image dialog
+    showImageDialog?.let { imageUrl ->
+        FullScreenImageDialog(
+            imageUrl = imageUrl,
+            onDismiss = { showImageDialog = null }
+        )
+    }
+    
+    if (showBioDialog) {
+        EditBioDialog(
+            currentBio = uiState.profile?.bio ?: "",
+            onDismiss = { showBioDialog = false },
+            onSave = { newBio ->
+                viewModel.updateBio(newBio)
+                showBioDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProfileHeader(
+    uiState: SocialProfileUiState,
+    onEditBioClick: () -> Unit
+) {
+    val profile = uiState.profile
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Profile Picture - prioritize custom avatar
+            val hasCustomEmojiAvatar = profile?.avatar?.isNotEmpty() == true && 
+                                       !profile.avatar.startsWith("http")
+            
+            if (hasCustomEmojiAvatar) {
+                // Show custom avatar (emoji)
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
                 ) {
-                    items(posts) { post ->
-                        PostGridItem(
-                            post = post,
-                            onClick = { onPostClick(post) }
-                        )
-                    }
+                    Text(
+                        text = profile.avatar,
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                }
+            } else if (profile?.photoUrl?.isNotEmpty() == true) {
+                // Fall back to photo URL if no custom avatar
+                AsyncImage(
+                    model = profile.photoUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Default avatar
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "👤",
+                        style = MaterialTheme.typography.displayMedium
+                    )
                 }
             }
-
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // User Name
+            Text(
+                text = profile?.userName ?: "User",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Bio
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = profile?.bio?.ifEmpty { "Add a bio..." } ?: "Add a bio...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (profile?.bio?.isEmpty() != false) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onEditBioClick) {
+                    Icon(
+                        Icons.Default.Edit,
+                        "Edit Bio",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Stats Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    count = profile?.postCount ?: 0,
+                    label = "Posts"
+                )
+                StatItem(
+                    count = profile?.friendCount ?: 0,
+                    label = "Friends"
+                )
+                StatItem(
+                    count = profile?.totalLikes ?: 0,
+                    label = "Likes"
+                )
+            }
         }
     }
 }
 
 @Composable
-fun FriendStatCard(
-    modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    value: String,
-    subtitle: String? = null,
-    color: Color
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+private fun StatItem(count: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -528,14 +351,10 @@ private fun PostGridItem(
         modifier = Modifier
             .aspectRatio(1f)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        shape = RoundedCornerShape(8.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (post.imageUrls.isNotEmpty()) {
-                // Show first image
                 AsyncImage(
                     model = post.imageUrls.first(),
                     contentDescription = null,
@@ -543,32 +362,42 @@ private fun PostGridItem(
                     contentScale = ContentScale.Crop
                 )
                 
-                // Show indicator if multiple images
+                // Overlay for multiple images
                 if (post.imageUrls.size > 1) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f)),
-                        contentAlignment = Alignment.Center
+                            .padding(8.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = "Multiple images",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = post.imageUrls.size.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             } else {
-                // Show text preview
+                // Text-only post
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(8.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -576,64 +405,85 @@ private fun PostGridItem(
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(8.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             
-            // Bottom overlay with stats
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+            // Like count overlay
+            if (post.likeCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                            RoundedCornerShape(12.dp)
                         )
-                    )
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (post.likeCount > 0) {
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Favorite,
+                            Icons.Default.Favorite,
                             contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = Color.White
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.error
                         )
                         Text(
                             text = post.likeCount.toString(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
-                        )
-                    }
-                }
-                if (post.commentCount > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Comment,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = Color.White
-                        )
-                        Text(
-                            text = post.commentCount.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditBioDialog(
+    currentBio: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var bioText by remember { mutableStateOf(currentBio) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Bio") },
+        text = {
+            OutlinedTextField(
+                value = bioText,
+                onValueChange = { bioText = it },
+                label = { Text("Bio") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(bioText) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurface
+    )
 }
 
 @OptIn(ExperimentalPagerApi::class)
@@ -649,7 +499,7 @@ private fun PostDetailsDialog(
     val postDetailsState by postsViewModel.postDetails.collectAsStateWithLifecycle()
     var commentText by remember { mutableStateOf("") }
     
-    // Always observe the post for comment count updates
+    // Always observe the post for comment count updates and comments
     LaunchedEffect(post.id) {
         postsViewModel.observePostForComments(post.id)
         // Also start observing comments immediately

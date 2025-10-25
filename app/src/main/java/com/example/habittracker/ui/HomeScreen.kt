@@ -213,8 +213,14 @@ fun HabitHomeRoute(
     onExitSelectionMode: () -> Unit = {},
     onDeleteSelectedHabits: () -> Unit = {},
     onFreezeStoreClick: () -> Unit = {},
-    onNewsClick: () -> Unit = {}
+    onNewsClick: () -> Unit = {},
+    onSocialProfileClick: () -> Unit = {},
+    onBrowsePostsClick: () -> Unit = {}
 ) {
+    // Capture navigation callbacks to avoid shadowing
+    val socialProfileClick = onSocialProfileClick
+    val browsePostsClick = onBrowsePostsClick
+    
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
     var notificationCardDismissed by rememberSaveable { mutableStateOf(false) }
@@ -301,7 +307,9 @@ fun HabitHomeRoute(
         onStartSelectionMode = onStartSelectionMode,
         onExitSelectionMode = onExitSelectionMode,
         onDeleteSelectedHabits = onDeleteSelectedHabits,
-        onFreezeStoreClick = onFreezeStoreClick
+        onFreezeStoreClick = onFreezeStoreClick,
+        onSocialProfileClick = socialProfileClick,
+        onBrowsePostsClick = browsePostsClick
     )
 }
 
@@ -329,8 +337,14 @@ fun HabitHomeScreen(
     onStartSelectionMode: (Long) -> Unit = {},
     onExitSelectionMode: () -> Unit = {},
     onDeleteSelectedHabits: () -> Unit = {},
-    onFreezeStoreClick: () -> Unit = {}
+    onFreezeStoreClick: () -> Unit = {},
+    onSocialProfileClick: () -> Unit = {},
+    onBrowsePostsClick: () -> Unit = {}
 ) {
+    // Capture navigation callbacks to avoid shadowing in lambdas
+    val socialProfileNavigation = onSocialProfileClick
+    val browsePostsNavigation = onBrowsePostsClick
+    
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val habitCountBeforeDelete = remember { mutableStateOf(state.habits.size) }
@@ -395,6 +409,20 @@ fun HabitHomeScreen(
                         drawerState.close()
                         kotlinx.coroutines.delay(250) // Wait for drawer close animation
                         onProfileClick()
+                    }
+                },
+                onSocialProfileClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250)
+                        socialProfileNavigation()
+                    }
+                },
+                onBrowsePostsClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250)
+                        browsePostsNavigation()
                     }
                 },
                 onCloseDrawer = { 
@@ -846,7 +874,9 @@ fun HabitHomeScreen(
 private fun DrawerContent(
     onTrashClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onCloseDrawer: () -> Unit
+    onCloseDrawer: () -> Unit,
+    onSocialProfileClick: () -> Unit = {},
+    onBrowsePostsClick: () -> Unit = {}
 ) {
     // Responsive drawer width: max 280dp or 75% of screen width (whichever is smaller)
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
@@ -1064,6 +1094,146 @@ private fun DrawerContent(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(18.dp) // Reduced from 20dp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = "SOCIAL",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.2.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+                
+                // Social Profile Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableOnce {
+                            onSocialProfileClick()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "My Social Profile",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "View your posts & profile",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                // Browse Posts Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableOnce {
+                            onBrowsePostsClick()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Browse Posts",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "See friends' posts",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
