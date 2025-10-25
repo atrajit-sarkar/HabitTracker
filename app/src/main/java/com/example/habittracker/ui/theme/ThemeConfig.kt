@@ -98,7 +98,7 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 large = RoundedCornerShape(12.dp)
             ),
             icons = ThemeIcons(
-                check = Icons.Default.CheckCircle,
+                check = Icons.Default.Nightlight, // Ghost/moon icon for Halloween
                 fire = Icons.Default.Whatshot,
                 star = Icons.Default.Star,
                 trophy = Icons.Default.Nightlight, // Moon for spooky feel
@@ -122,7 +122,7 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 large = RoundedCornerShape(24.dp)
             ),
             icons = ThemeIcons(
-                check = Icons.Default.CheckCircle,
+                check = Icons.Default.Egg, // Egg icon for Easter done button!
                 fire = Icons.Default.LocalFlorist, // Flower instead of fire!
                 star = Icons.Default.Star,
                 trophy = Icons.Default.Spa,
@@ -189,7 +189,7 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 large = RoundedCornerShape(20.dp)
             ),
             icons = ThemeIcons(
-                check = Icons.Default.CheckCircle,
+                check = Icons.Default.LocalFlorist, // Pink flower for Sakura done button!
                 fire = Icons.Default.LocalFlorist, // Flower instead of fire
                 star = Icons.Default.Star,
                 trophy = Icons.Default.LocalFlorist,
@@ -211,7 +211,7 @@ fun getThemeConfig(theme: AppTheme): ThemeConfig {
                 large = RoundedCornerShape(4.dp)
             ),
             icons = ThemeIcons(
-                check = Icons.Default.CheckCircle,
+                check = Icons.Default.AutoFixHigh, // Firing gun/weapon icon for COD!
                 fire = Icons.Default.Whatshot,
                 star = Icons.Default.Star,
                 trophy = Icons.Default.MilitaryTech,

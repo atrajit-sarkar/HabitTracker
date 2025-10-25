@@ -118,8 +118,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -1155,6 +1157,8 @@ private fun HabitCard(
     
     // Get theme configuration for custom icons
     val themeConfig = LocalThemeConfig.current
+    val themeManager = rememberThemeManager()
+    val currentTheme by themeManager.currentThemeFlow.collectAsState()
     
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
@@ -1366,11 +1370,12 @@ private fun HabitCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                        // Custom check icon based on theme
+                        ThemeCheckIcon(
+                            currentTheme = currentTheme,
+                            themeConfig = themeConfig,
+                            size = 16.dp,
+                            tint = Color.White
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -1397,10 +1402,12 @@ private fun HabitCard(
                                 contentColor = palette.accent
                             )
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                            // Custom check icon based on theme
+                            ThemeCheckIcon(
+                                currentTheme = currentTheme,
+                                themeConfig = themeConfig,
+                                size = 18.dp,
+                                tint = palette.accent
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
@@ -2051,6 +2058,7 @@ private fun NotificationSoundSelector(
     onSoundChange: (NotificationSound) -> Unit
 ) {
     val context = LocalContext.current
+    val themeConfig = LocalThemeConfig.current
     var soundExpanded by remember { mutableStateOf(false) }
     var soundPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     
@@ -2152,7 +2160,7 @@ private fun NotificationSoundSelector(
                                     Text(sound.displayName)
                                     if (sound.id == selectedSound.id) {
                                         Icon(
-                                            imageVector = Icons.Default.Check,
+                                            imageVector = themeConfig.icons.check,
                                             contentDescription = "Selected",
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -2223,6 +2231,7 @@ private fun AvatarDisplay(
     habitId: Long? = null // Stable cache key for custom images
 ) {
     val context = LocalContext.current
+    val themeConfig = LocalThemeConfig.current
     
     val bgColor = remember(avatar.backgroundColor) {
         Color(android.graphics.Color.parseColor(avatar.backgroundColor))
@@ -2246,7 +2255,7 @@ private fun AvatarDisplay(
             }
             HabitAvatarType.DEFAULT_ICON -> {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = themeConfig.icons.check,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size((size.value * 0.6f).dp)
@@ -2321,6 +2330,8 @@ private fun ColorItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val themeConfig = LocalThemeConfig.current
+    
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -2338,7 +2349,7 @@ private fun ColorItem(
     ) {
         if (isSelected) {
             Icon(
-                imageVector = Icons.Default.Check,
+                imageVector = themeConfig.icons.check,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
@@ -2441,5 +2452,71 @@ private fun LoadingSandClockOverlay() {
             progress = { progress },
             modifier = Modifier.size(120.dp) // Professional size
         )
+    }
+}
+
+/**
+ * Theme-specific check/done icon that handles special cases:
+ * - Itachi: Sharingan eye image
+ * - All Might: Bicep emoji 💪
+ * - Genshin Impact: Prolova image
+ * - Others: Standard Material Icon
+ */
+@Composable
+private fun ThemeCheckIcon(
+    currentTheme: AppTheme,
+    themeConfig: it.atraj.habittracker.ui.theme.ThemeConfig,
+    size: Dp,
+    tint: Color = Color.Unspecified
+) {
+    when (currentTheme) {
+        AppTheme.ITACHI -> {
+            // Sharingan eye image
+            Image(
+                painter = painterResource(id = R.drawable.sharingan_eye),
+                contentDescription = "Sharingan Check",
+                modifier = Modifier
+                    .size(size)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+        AppTheme.ALL_MIGHT -> {
+            // Bicep emoji
+            Text(
+                text = "💪",
+                fontSize = (size.value * 0.8f).sp,
+                modifier = Modifier.size(size)
+            )
+        }
+        AppTheme.COD_MW -> {
+            // AK-47 weapon image - much bigger size for visibility
+            Image(
+                painter = painterResource(id = R.drawable.ak47),
+                contentDescription = "AK-47 Check",
+                modifier = Modifier.size(size * 2.5f), // 2.5x bigger!
+                contentScale = ContentScale.Fit
+            )
+        }
+        AppTheme.GENSHIN -> {
+            // Prolova image
+            Image(
+                painter = painterResource(id = R.drawable.prolova),
+                contentDescription = "Prolova Check",
+                modifier = Modifier
+                    .size(size)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+        else -> {
+            // Standard Material Icon for all other themes
+            Icon(
+                imageVector = themeConfig.icons.check,
+                contentDescription = null,
+                tint = if (tint != Color.Unspecified) tint else LocalContentColor.current,
+                modifier = Modifier.size(size)
+            )
+        }
     }
 }
