@@ -1160,6 +1160,17 @@ private fun HabitCard(
     val themeManager = rememberThemeManager()
     val currentTheme by themeManager.currentThemeFlow.collectAsState()
     
+    // Sound player for theme-specific completion sounds
+    val context = LocalContext.current
+    val soundPlayer = remember { android.media.MediaPlayer() }
+    
+    // Cleanup sound player when composable is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            soundPlayer.release()
+        }
+    }
+    
     // Get haptic feedback for long press vibration
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -1391,7 +1402,12 @@ private fun HabitCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilledTonalButton(
-                            onClick = onMarkCompleted,
+                            onClick = {
+                                // Play theme-specific sound
+                                playThemeCompletionSound(context, currentTheme, soundPlayer)
+                                // Mark habit as completed
+                                onMarkCompleted()
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(36.dp),
@@ -2518,5 +2534,40 @@ private fun ThemeCheckIcon(
                 modifier = Modifier.size(size)
             )
         }
+    }
+}
+
+/**
+ * Play theme-specific completion sound effect
+ */
+private fun playThemeCompletionSound(
+    context: android.content.Context,
+    theme: AppTheme,
+    mediaPlayer: android.media.MediaPlayer
+) {
+    try {
+        // Reset media player
+        mediaPlayer.reset()
+        
+        // Get sound resource based on theme
+        val soundRes = when (theme) {
+            AppTheme.ITACHI -> R.raw.sharingan_sound
+            AppTheme.HALLOWEEN -> R.raw.creepy_sound
+            AppTheme.EASTER -> R.raw.goodbye_sound
+            AppTheme.COD_MW -> R.raw.ak47_sound
+            else -> null // No sound for other themes
+        }
+        
+        // Play sound if available for this theme
+        soundRes?.let { resId ->
+            mediaPlayer.setDataSource(
+                context,
+                android.net.Uri.parse("android.resource://${context.packageName}/$resId")
+            )
+            mediaPlayer.prepare()
+            mediaPlayer.start()
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("ThemeSound", "Error playing completion sound: ${e.message}")
     }
 }
