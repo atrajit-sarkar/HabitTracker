@@ -38,6 +38,8 @@ data class AppIconOption(
     val id: String,
     val name: String,
     val iconRes: Int,
+    val warningIconRes: Int? = null,
+    val angryIconRes: Int? = null,
     val alias: String
 )
 
@@ -52,38 +54,47 @@ fun AppIconSelectionScreen(
     val isChangingIcon by viewModel.isChangingIcon.collectAsState()
     val isInOverdueMode by viewModel.isInOverdueMode.collectAsState()
     
-    // Define available icon options (user's custom icons only)
+    // Define available icon options with their warning and angry versions
     val iconOptions = remember {
         listOf(
             AppIconOption(
                 id = "default",
                 name = "Default",
                 iconRes = R.mipmap.ic_launcher_default,
+                warningIconRes = R.mipmap.ic_launcher_warning_default,
+                angryIconRes = R.mipmap.ic_launcher_angry_default,
                 alias = "it.atraj.habittracker.MainActivity.Default"
             ),
             AppIconOption(
                 id = "anime",
                 name = "Anime",
                 iconRes = R.mipmap.ic_launcher_anime,
+                warningIconRes = R.mipmap.ic_launcher_warning_anime,
+                angryIconRes = R.mipmap.ic_launcher_angry_anime,
                 alias = "it.atraj.habittracker.MainActivity.Anime"
             ),
             AppIconOption(
                 id = "bird",
                 name = "Bird",
                 iconRes = R.mipmap.ic_launcher_bird,
+                warningIconRes = R.mipmap.ic_launcher_warning_bird,
+                angryIconRes = R.mipmap.ic_launcher_angry_bird,
                 alias = "it.atraj.habittracker.MainActivity.Bird"
             ),
             AppIconOption(
                 id = "sitama",
                 name = "Sitama",
                 iconRes = R.mipmap.ic_launcher_sitama,
+                warningIconRes = R.mipmap.ic_launcher_warning_sitama,
+                angryIconRes = R.mipmap.ic_launcher_angry_sitama,
                 alias = "it.atraj.habittracker.MainActivity.Sitama"
-            )
-            ,
+            ),
             AppIconOption(
                 id = "atrajit",
                 name = "Atrajit",
                 iconRes = R.mipmap.ic_launcher_atrajit,
+                warningIconRes = R.mipmap.ic_launcher_warning_atrajit,
+                angryIconRes = R.mipmap.ic_launcher_angry_atrajit,
                 alias = "it.atraj.habittracker.MainActivity.Atrajit"
             )
         )
@@ -317,30 +328,120 @@ private fun AppIconCard(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icon preview
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .border(
-                        if (isSelected) 3.dp else 1.dp,
-                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                        RoundedCornerShape(16.dp)
-                    )
-                    .clip(RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                val context = LocalContext.current
-                val drawable = remember(option.iconRes) {
-                    ContextCompat.getDrawable(context, option.iconRes)
-                }
-                drawable?.let {
-                    Image(
-                        bitmap = it.toBitmap().asImageBitmap(),
-                        contentDescription = null,
+            // Icon preview with 3 versions (default, warning, angry)
+            if (option.warningIconRes != null && option.angryIconRes != null) {
+                // Show 3-version layout
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Default version (larger)
+                    val context = LocalContext.current
+                    val defaultDrawable = remember(option.iconRes) {
+                        ContextCompat.getDrawable(context, option.iconRes)
+                    }
+                    Box(
                         modifier = Modifier
-                            .size(64.dp),
-                        alpha = if (isDisabled) 0.4f else 1f
-                    )
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(
+                                2.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary 
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        defaultDrawable?.let {
+                            Image(
+                                bitmap = it.toBitmap().asImageBitmap(),
+                                contentDescription = "Default",
+                                modifier = Modifier.fillMaxSize(),
+                                alpha = if (isDisabled) 0.4f else 1f
+                            )
+                        }
+                    }
+                    
+                    // Warning & Angry versions (smaller)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Warning version
+                        val warningDrawable = remember(option.warningIconRes) {
+                            ContextCompat.getDrawable(context, option.warningIconRes!!)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .border(
+                                    1.dp,
+                                    Color(0xFFFF9800).copy(alpha = 0.6f),
+                                    RoundedCornerShape(6.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            warningDrawable?.let {
+                                Image(
+                                    bitmap = it.toBitmap().asImageBitmap(),
+                                    contentDescription = "Warning",
+                                    modifier = Modifier.fillMaxSize(),
+                                    alpha = if (isDisabled) 0.4f else 1f
+                                )
+                            }
+                        }
+                        
+                        // Angry version
+                        val angryDrawable = remember(option.angryIconRes) {
+                            ContextCompat.getDrawable(context, option.angryIconRes!!)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                                    RoundedCornerShape(6.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            angryDrawable?.let {
+                                Image(
+                                    bitmap = it.toBitmap().asImageBitmap(),
+                                    contentDescription = "Angry",
+                                    modifier = Modifier.fillMaxSize(),
+                                    alpha = if (isDisabled) 0.4f else 1f
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Show single icon (old layout for backwards compatibility)
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .border(
+                            if (isSelected) 3.dp else 1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val context = LocalContext.current
+                    val drawable = remember(option.iconRes) {
+                        ContextCompat.getDrawable(context, option.iconRes)
+                    }
+                    drawable?.let {
+                        Image(
+                            bitmap = it.toBitmap().asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            alpha = if (isDisabled) 0.4f else 1f
+                        )
+                    }
                 }
             }
             
