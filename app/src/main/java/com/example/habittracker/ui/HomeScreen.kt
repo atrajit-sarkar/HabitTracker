@@ -338,6 +338,9 @@ fun HabitHomeScreen(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var isDeletingHabits by remember { mutableStateOf(false) }
     
+    // Sharingan animation state (for Itachi theme completion effect)
+    var showSharinganAnimation by remember { mutableStateOf(false) }
+    
     // Get theme configuration for custom icons
     val themeConfig = LocalThemeConfig.current
     val themeManager = rememberThemeManager()
@@ -639,7 +642,13 @@ fun HabitHomeScreen(
                     themeConfig = themeConfig,
                     soundPlayer = soundPlayer,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
-                    onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                    onMarkCompleted = { 
+                        // Show Sharingan animation only for Itachi theme
+                        if (currentTheme == AppTheme.ITACHI) {
+                            showSharinganAnimation = true
+                        }
+                        onMarkHabitCompleted(habit.id) 
+                    },
                     onDelete = {
                         habitCountBeforeDelete.value = state.habits.size
                         targetHabitCount.value = state.habits.size - 1
@@ -748,7 +757,13 @@ fun HabitHomeScreen(
                                 themeConfig = themeConfig,
                                 soundPlayer = soundPlayer,
                                 onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
-                                onMarkCompleted = { onMarkHabitCompleted(habit.id) },
+                                onMarkCompleted = { 
+                                    // Show Sharingan animation only for Itachi theme
+                                    if (currentTheme == AppTheme.ITACHI) {
+                                        showSharinganAnimation = true
+                                    }
+                                    onMarkHabitCompleted(habit.id) 
+                                },
                                 onDelete = {
                                     habitCountBeforeDelete.value = state.habits.size
                                     targetHabitCount.value = state.habits.size - 1
@@ -777,6 +792,13 @@ fun HabitHomeScreen(
     // Loading overlay for delete operations - exactly like TrashScreen
     if (isDeletingHabits) {
         LoadingSandClockOverlay()
+    }
+    
+    // Sharingan animation overlay (Itachi theme completion effect)
+    if (showSharinganAnimation) {
+        SharinganAnimationOverlay(
+            onAnimationComplete = { showSharinganAnimation = false }
+        )
     }
     
     // Auto-dismiss logic - wait for ALL deletions to complete
@@ -2717,5 +2739,129 @@ private fun playThemeCompletionSound(
         }
     } catch (e: Exception) {
         android.util.Log.e("ThemeSound", "Error playing completion sound: ${e.message}")
+    }
+}
+
+/**
+ * Sharingan Animation Overlay - Mangekyo Sharingan effect for Itachi theme
+ * Shows a professional rotating Sharingan with smooth zoom in/out animation
+ */
+@Composable
+private fun SharinganAnimationOverlay(
+    onAnimationComplete: () -> Unit
+) {
+    // Animation states
+    var animationPhase by remember { mutableStateOf(0) } // 0=zoom in, 1=hold, 2=zoom out
+    
+    // Scale animation for zoom in/out effect
+    val scale by animateFloatAsState(
+        targetValue = when (animationPhase) {
+            0 -> 1.2f  // Zoom in to 1.2x
+            1 -> 1.0f  // Hold at normal size
+            2 -> 0.0f  // Zoom out to invisible
+            else -> 0.0f
+        },
+        animationSpec = when (animationPhase) {
+            0 -> spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+            1 -> tween(durationMillis = 200)
+            2 -> tween(
+                durationMillis = 400,
+                easing = FastOutSlowInEasing
+            )
+            else -> tween(durationMillis = 300)
+        },
+        label = "sharingan_scale"
+    )
+    
+    // Alpha animation for fade effects
+    val alpha by animateFloatAsState(
+        targetValue = when (animationPhase) {
+            0 -> 1.0f
+            1 -> 1.0f
+            2 -> 0.0f
+            else -> 0.0f
+        },
+        animationSpec = when (animationPhase) {
+            0 -> tween(durationMillis = 300)
+            1 -> tween(durationMillis = 100)
+            2 -> tween(durationMillis = 400)
+            else -> tween(durationMillis = 300)
+        },
+        label = "sharingan_alpha"
+    )
+    
+    // Lottie composition
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("animations/mangekyo_itachi.json")
+    )
+    
+    // Lottie animation progress with 1.5x speed
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        speed = 1.5f // 1.5x speed as requested
+    )
+    
+    // Animation timing control
+    LaunchedEffect(Unit) {
+        // Phase 0: Zoom in (300ms)
+        animationPhase = 0
+        delay(300)
+        
+        // Phase 1: Hold (1500ms - total animation time ~1.8 seconds)
+        animationPhase = 1
+        delay(1500)
+        
+        // Phase 2: Zoom out (400ms)
+        animationPhase = 2
+        delay(400)
+        
+        // Complete
+        onAnimationComplete()
+    }
+    
+    // Overlay
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = alpha * 0.4f)) // Semi-transparent dark overlay
+            .clickable(enabled = false) { }, // Block clicks
+        contentAlignment = Alignment.Center
+    ) {
+        // Sharingan animation
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier
+                .size(300.dp)
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    alpha = alpha
+                )
+        )
+        
+        // Optional: Add glow effect
+        Box(
+            modifier = Modifier
+                .size(320.dp)
+                .graphicsLayer(
+                    scaleX = scale * 1.05f,
+                    scaleY = scale * 1.05f,
+                    alpha = alpha * 0.3f
+                )
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFC41E3A).copy(alpha = 0.6f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = CircleShape
+                )
+        )
     }
 }
