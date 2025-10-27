@@ -2750,26 +2750,28 @@ private fun playThemeCompletionSound(
 private fun SharinganAnimationOverlay(
     onAnimationComplete: () -> Unit
 ) {
-    // Animation states
-    var animationPhase by remember { mutableStateOf(0) } // 0=zoom in, 1=hold, 2=zoom out
+    // Animation states: -1=initial (invisible), 0=zoom in, 1=hold, 2=zoom out
+    var animationPhase by remember { mutableStateOf(-1) }
     
-    // Scale animation for zoom in/out effect
+    // Scale animation for smooth zoom in/out effect
     val scale by animateFloatAsState(
         targetValue = when (animationPhase) {
-            0 -> 1.2f  // Zoom in to 1.2x
-            1 -> 1.0f  // Hold at normal size
-            2 -> 0.0f  // Zoom out to invisible
+            -1 -> 0.0f  // Start invisible
+            0 -> 1.0f   // Zoom in to normal size
+            1 -> 1.0f   // Hold at normal size
+            2 -> 0.0f   // Zoom out to invisible
             else -> 0.0f
         },
         animationSpec = when (animationPhase) {
-            0 -> spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
+            -1 -> tween(durationMillis = 0)  // Instant
+            0 -> tween(
+                durationMillis = 500,
+                easing = FastOutSlowInEasing  // Smooth zoom in
             )
-            1 -> tween(durationMillis = 200)
+            1 -> tween(durationMillis = 100)
             2 -> tween(
-                durationMillis = 400,
-                easing = FastOutSlowInEasing
+                durationMillis = 500,
+                easing = FastOutSlowInEasing  // Smooth zoom out
             )
             else -> tween(durationMillis = 300)
         },
@@ -2779,15 +2781,23 @@ private fun SharinganAnimationOverlay(
     // Alpha animation for fade effects
     val alpha by animateFloatAsState(
         targetValue = when (animationPhase) {
-            0 -> 1.0f
-            1 -> 1.0f
-            2 -> 0.0f
+            -1 -> 0.0f  // Start invisible
+            0 -> 1.0f   // Fade in
+            1 -> 1.0f   // Hold
+            2 -> 0.0f   // Fade out
             else -> 0.0f
         },
         animationSpec = when (animationPhase) {
-            0 -> tween(durationMillis = 300)
+            -1 -> tween(durationMillis = 0)  // Instant
+            0 -> tween(
+                durationMillis = 500,
+                easing = FastOutSlowInEasing  // Smooth fade in
+            )
             1 -> tween(durationMillis = 100)
-            2 -> tween(durationMillis = 400)
+            2 -> tween(
+                durationMillis = 500,
+                easing = FastOutSlowInEasing  // Smooth fade out
+            )
             else -> tween(durationMillis = 300)
         },
         label = "sharingan_alpha"
@@ -2807,17 +2817,20 @@ private fun SharinganAnimationOverlay(
     
     // Animation timing control
     LaunchedEffect(Unit) {
-        // Phase 0: Zoom in (300ms)
-        animationPhase = 0
-        delay(300)
+        // Start from invisible state
+        delay(50)  // Small delay to ensure initial state is set
         
-        // Phase 1: Hold (1500ms - total animation time ~1.8 seconds)
+        // Phase 0: Smooth zoom in (500ms)
+        animationPhase = 0
+        delay(500)
+        
+        // Phase 1: Hold (1500ms - total animation time ~2.5 seconds)
         animationPhase = 1
         delay(1500)
         
-        // Phase 2: Zoom out (400ms)
+        // Phase 2: Smooth zoom out (500ms)
         animationPhase = 2
-        delay(400)
+        delay(500)
         
         // Complete
         onAnimationComplete()
