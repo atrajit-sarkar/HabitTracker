@@ -41,11 +41,29 @@ def load_and_process_image(image_path):
     # Create clean image
     clean_img = Image.fromarray(data, 'RGBA')
     
-    # Resize to 512x512 if needed
+    # Resize to 512x512 maintaining aspect ratio with padding
     target_size = 512
     if clean_img.size != (target_size, target_size):
-        print(f"Resizing to {target_size}x{target_size}...")
-        clean_img = clean_img.resize((target_size, target_size), Image.LANCZOS)
+        print(f"Resizing to {target_size}x{target_size} (maintaining aspect ratio)...")
+        
+        # Calculate scaling to fit inside target size while maintaining aspect ratio
+        width, height = clean_img.size
+        scale = min(target_size / width, target_size / height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        
+        # Resize maintaining aspect ratio
+        clean_img = clean_img.resize((new_width, new_height), Image.LANCZOS)
+        
+        # Create a new square image with transparent background
+        square_img = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+        
+        # Paste the resized image in the center
+        paste_x = (target_size - new_width) // 2
+        paste_y = (target_size - new_height) // 2
+        square_img.paste(clean_img, (paste_x, paste_y), clean_img)
+        
+        clean_img = square_img
     
     print(f"✓ Image processed - Background removed")
     return clean_img

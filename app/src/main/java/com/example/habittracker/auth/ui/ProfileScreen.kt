@@ -6,6 +6,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -978,6 +980,157 @@ fun ProfileScreen(
                         modifier = Modifier.padding(horizontal = 20.dp),
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
+                    
+                    // Sharingan Variant Selector (Only show for Itachi theme)
+                    val themeManager = it.atraj.habittracker.ui.theme.rememberThemeManager()
+                    val currentTheme = themeManager.getCurrentTheme()
+                    if (currentTheme == it.atraj.habittracker.ui.theme.AppTheme.ITACHI) {
+                        val appPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+                        var selectedSharingan by remember { 
+                            mutableStateOf(
+                                appPrefs.getString("sharingan_variant", it.atraj.habittracker.data.SharinganVariant.KAKASHI.name) 
+                                    ?: it.atraj.habittracker.data.SharinganVariant.KAKASHI.name
+                            )
+                        }
+                        var showSharinganPicker by remember { mutableStateOf(false) }
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickableOnce { showSharinganPicker = true }
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFC41E3A).copy(alpha = 0.15f),
+                                            Color(0xFF8B0000).copy(alpha = 0.15f)
+                                        )
+                                    )
+                                )
+                                .padding(20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFC41E3A).copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "👁️",
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Sharingan Style",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = it.atraj.habittracker.data.SharinganVariant.fromString(selectedSharingan).displayName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Sharingan Style",
+                                tint = Color(0xFFC41E3A),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        
+                        // Sharingan variant picker dialog
+                        if (showSharinganPicker) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showSharinganPicker = false },
+                                title = { Text("Choose Sharingan Style") },
+                                text = {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        it.atraj.habittracker.data.SharinganVariant.values().forEach { variant ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickableOnce {
+                                                        selectedSharingan = variant.name
+                                                        appPrefs.edit()
+                                                            .putString("sharingan_variant", variant.name)
+                                                            .apply()
+                                                        showSharinganPicker = false
+                                                    }
+                                                    .padding(12.dp)
+                                                    .background(
+                                                        if (selectedSharingan == variant.name)
+                                                            MaterialTheme.colorScheme.primaryContainer
+                                                        else
+                                                            Color.Transparent,
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    )
+                                                    .padding(12.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // Preview image
+                                                Image(
+                                                    painter = painterResource(id = variant.previewImage),
+                                                    contentDescription = "${variant.displayName} preview",
+                                                    modifier = Modifier
+                                                        .size(56.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.1f))
+                                                        .padding(4.dp),
+                                                    contentScale = ContentScale.Fit
+                                                )
+                                                
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = variant.displayName,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = variant.description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                if (selectedSharingan == variant.name) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Selected",
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = { showSharinganPicker = false }) {
+                                        Text("Close")
+                                    }
+                                }
+                            )
+                        }
+                        
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                    }
                     
                     // Email Notifications
                     Row(

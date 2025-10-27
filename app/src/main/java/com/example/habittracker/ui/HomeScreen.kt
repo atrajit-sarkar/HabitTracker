@@ -143,6 +143,7 @@ import it.atraj.habittracker.R
 import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.data.local.HabitAvatar
 import it.atraj.habittracker.data.local.HabitAvatarType
+import it.atraj.habittracker.data.SharinganVariant
 import it.atraj.habittracker.ui.theme.LocalThemeConfig
 import it.atraj.habittracker.ui.theme.AppTheme
 import it.atraj.habittracker.ui.theme.rememberThemeManager
@@ -341,13 +342,22 @@ fun HabitHomeScreen(
     // Sharingan animation state (for Itachi theme completion effect)
     var showSharinganAnimation by remember { mutableStateOf(false) }
     
+    // Get context early for preferences
+    val context = LocalContext.current
+    
+    // Sharingan variant selection (for Itachi theme)
+    val prefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    val selectedSharinganVariant = remember {
+        val variantName = prefs.getString("sharingan_variant", SharinganVariant.KAKASHI.name) ?: SharinganVariant.KAKASHI.name
+        mutableStateOf(SharinganVariant.fromString(variantName))
+    }
+    
     // Get theme configuration for custom icons
     val themeConfig = LocalThemeConfig.current
     val themeManager = rememberThemeManager()
     val currentTheme by themeManager.currentThemeFlow.collectAsState()
     
     // OPTIMIZATION: Single MediaPlayer for all cards (hoisted to screen level)
-    val context = LocalContext.current
     val soundPlayer = remember { android.media.MediaPlayer() }
     DisposableEffect(Unit) {
         onDispose {
@@ -797,6 +807,7 @@ fun HabitHomeScreen(
     // Sharingan animation overlay (Itachi theme completion effect)
     if (showSharinganAnimation) {
         SharinganAnimationOverlay(
+            sharinganVariant = selectedSharinganVariant.value,
             onAnimationComplete = { showSharinganAnimation = false }
         )
     }
@@ -2748,6 +2759,7 @@ private fun playThemeCompletionSound(
  */
 @Composable
 private fun SharinganAnimationOverlay(
+    sharinganVariant: SharinganVariant = SharinganVariant.KAKASHI,
     onAnimationComplete: () -> Unit
 ) {
     // Animation states: -1=initial (invisible), 0=zoom in, 1=hold, 2=zoom out
@@ -2803,9 +2815,9 @@ private fun SharinganAnimationOverlay(
         label = "sharingan_alpha"
     )
     
-    // Lottie composition
+    // Lottie composition - Use selected variant
     val composition by rememberLottieComposition(
-        LottieCompositionSpec.Asset("animations/mangekyo_itachi.json")
+        LottieCompositionSpec.Asset(sharinganVariant.animationFile)
     )
     
     // Lottie animation progress with 1.5x speed
