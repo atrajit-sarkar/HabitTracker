@@ -1,0 +1,272 @@
+rules_version = '2';
+
+// ============================================================================
+// FIREBASE STORAGE SECURITY RULES
+// Production-ready rules for HabitTracker app
+// ============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Validate image file types
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Validate audio file types
+    function isAudio() {
+      return request.resource.contentType.matches('audio/.*');
+    }
+    
+    // Validate video file types
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+    
+    // Check file size (in bytes)
+    function isValidImageSize() {
+      return request.resource.size <= 10 * 1024 * 1024; // 10 MB for images
+    }
+    
+    function isValidAudioSize() {
+      return request.resource.size <= 50 * 1024 * 1024; // 50 MB for audio
+    }
+    
+    function isValidVideoSize() {
+      return request.resource.size <= 100 * 1024 * 1024; // 100 MB for videos
+    }
+    
+    
+    // ============================================================================
+    // USER AVATARS
+    // Custom user avatar images
+    // Path: avatars/{userId}/{fileName}
+    // ============================================================================
+    
+    match /avatars/{userId}/{fileName} {
+      // Anyone can read avatars (public for display in social features)
+      allow read: if true;
+      
+      // Users can upload their own avatars
+      allow create: if isOwner(userId) 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users can update their own avatars
+      allow update: if isOwner(userId) 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users can delete their own avatars
+      allow delete: if isOwner(userId);
+    }
+    
+    
+    // ============================================================================
+    // HABIT IMAGES
+    // Custom images for habits (if implemented)
+    // Path: habits/{userId}/{habitId}/{fileName}
+    // ============================================================================
+    
+    match /habits/{userId}/{habitId}/{fileName} {
+      // Users can read their own habit images
+      // Friends can also read if shared (implement additional logic if needed)
+      allow read: if isAuthenticated();
+      
+      // Users can upload images for their own habits
+      allow create: if isOwner(userId) 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users can update their own habit images
+      allow update: if isOwner(userId) 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users can delete their own habit images
+      allow delete: if isOwner(userId);
+    }
+    
+    
+    // ============================================================================
+    // CHAT IMAGES
+    // Images shared in chat messages
+    // Path: chats/{chatId}/images/{messageId}_{fileName}
+    // ============================================================================
+    
+    match /chats/{chatId}/images/{imageFile} {
+      // Authenticated users can read chat images
+      // Additional validation: Check if user is participant in Firestore
+      allow read: if isAuthenticated();
+      
+      // Authenticated users can upload images to chats
+      allow create: if isAuthenticated() 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users cannot update chat images (immutable once sent)
+      allow update: if false;
+      
+      // Users can delete their own chat images
+      allow delete: if isAuthenticated();
+    }
+    
+    
+    // ============================================================================
+    // NOTIFICATION SOUNDS
+    // Custom notification sounds (if users upload their own)
+    // Path: sounds/{userId}/{fileName}
+    // ============================================================================
+    
+    match /sounds/{userId}/{fileName} {
+      // Anyone can read sounds (for playback)
+      allow read: if true;
+      
+      // Users can upload their own custom sounds
+      allow create: if isOwner(userId) 
+        && isAudio() 
+        && isValidAudioSize();
+      
+      // Users can update their own sounds
+      allow update: if isOwner(userId) 
+        && isAudio() 
+        && isValidAudioSize();
+      
+      // Users can delete their own sounds
+      allow delete: if isOwner(userId);
+    }
+    
+    
+    // ============================================================================
+    // BACKGROUND MUSIC
+    // Background music files (if stored in Firebase Storage)
+    // Path: music/{fileName}
+    // Note: Your app uses GitHub for music hosting, so this may not be used
+    // ============================================================================
+    
+    match /music/{fileName} {
+      // Anyone can read music files
+      allow read: if true;
+      
+      // Only admins/backend can upload music (prevent user uploads)
+      allow create: if false;
+      
+      // Only admins/backend can update music
+      allow update: if false;
+      
+      // Only admins/backend can delete music
+      allow delete: if false;
+    }
+    
+    
+    // ============================================================================
+    // THEME ASSETS
+    // Theme-related images and assets
+    // Path: themes/{themeId}/{fileName}
+    // ============================================================================
+    
+    match /themes/{themeId}/{fileName} {
+      // Anyone can read theme assets
+      allow read: if true;
+      
+      // Only admins/backend can upload themes
+      allow create: if false;
+      
+      // Only admins/backend can update themes
+      allow update: if false;
+      
+      // Only admins/backend can delete themes
+      allow delete: if false;
+    }
+    
+    
+    // ============================================================================
+    // HERO BACKGROUNDS
+    // Hero background images for home screen
+    // Path: hero_backgrounds/{heroId}/{fileName}
+    // ============================================================================
+    
+    match /hero_backgrounds/{heroId}/{fileName} {
+      // Anyone can read hero backgrounds
+      allow read: if true;
+      
+      // Only admins/backend can upload hero backgrounds
+      allow create: if false;
+      
+      // Only admins/backend can update hero backgrounds
+      allow update: if false;
+      
+      // Only admins/backend can delete hero backgrounds
+      allow delete: if false;
+    }
+    
+    
+    // ============================================================================
+    // POST IMAGES (if social feed is implemented)
+    // Images attached to social posts
+    // Path: posts/{postId}/{fileName}
+    // ============================================================================
+    
+    match /posts/{postId}/{fileName} {
+      // Authenticated users can read post images
+      allow read: if isAuthenticated();
+      
+      // Authenticated users can upload images for posts
+      allow create: if isAuthenticated() 
+        && isImage() 
+        && isValidImageSize();
+      
+      // Users cannot update post images (immutable)
+      allow update: if false;
+      
+      // Users can delete images from their own posts
+      allow delete: if isAuthenticated();
+    }
+    
+    
+    // ============================================================================
+    // TEMPORARY UPLOADS
+    // Temporary storage for processing (auto-delete recommended)
+    // Path: temp/{userId}/{fileName}
+    // ============================================================================
+    
+    match /temp/{userId}/{fileName} {
+      // Users can read their own temp files
+      allow read: if isOwner(userId);
+      
+      // Users can upload temp files
+      allow create: if isOwner(userId) 
+        && isValidImageSize();
+      
+      // Users can update their temp files
+      allow update: if isOwner(userId);
+      
+      // Users can delete their temp files
+      allow delete: if isOwner(userId);
+    }
+    
+    
+    // ============================================================================
+    // DEFAULT DENY RULE
+    // Deny all access to any other paths not explicitly defined
+    // ============================================================================
+    
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
