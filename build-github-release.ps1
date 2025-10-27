@@ -2,17 +2,17 @@
 # Build GitHub Release Version
 # ========================================
 # This script builds the GitHub flavor with in-app update enabled
-# Output: HabitTracker-v7.0.0-github.apk
+# Output: HabitTracker-v7.0.7-github.apk
 # Location: app/build/outputs/apk/github/release/
 # ========================================
 
 Write-Host ""
 Write-Host "=================================" -ForegroundColor Cyan
-Write-Host "  Building GitHub Release v7.0.0" -ForegroundColor Cyan
+Write-Host "  Building GitHub Release v7.0.7" -ForegroundColor Cyan
 Write-Host "=================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "✓ Flavor: github" -ForegroundColor Green
-Write-Host "✓ Version: 7.0.0-github" -ForegroundColor Green
+Write-Host "✓ Version: 7.0.7-github" -ForegroundColor Green
 Write-Host "✓ In-app updates: ENABLED" -ForegroundColor Green
 Write-Host "✓ Update source: GitHub Releases" -ForegroundColor Green
 Write-Host ""
