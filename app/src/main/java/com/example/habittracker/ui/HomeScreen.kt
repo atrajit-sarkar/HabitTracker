@@ -387,14 +387,52 @@ fun HabitHomeScreen(
     var showGeminiLoading by remember { mutableStateOf(false) }
     var showConfigureGemini by remember { mutableStateOf(false) }
     
-    val hasOverdueHabit = remember(state.habits) { state.habits.any { it.isOverdue } }
+    // Check if any habit is overdue (past scheduled time, not completed today)
+    val hasOverdueHabit = remember(state.habits) { 
+        state.habits.any { habit ->
+            if (!habit.isReminderEnabled || habit.isCompletedToday) {
+                false
+            } else {
+                val now = java.time.LocalDateTime.now()
+                val todayReminderTime = java.time.LocalDateTime.of(
+                    LocalDate.now(), 
+                    habit.reminderTime
+                )
+                // Overdue if current time is past the scheduled reminder time
+                now.isAfter(todayReminderTime)
+            }
+        }
+    }
     val context = LocalContext.current
+    
+    android.util.Log.d("GeminiAnimation", "HomeScreen composable entered. Habits count: ${state.habits.size}")
     
     // Gemini preferences
     val geminiPrefs = remember { it.atraj.habittracker.gemini.GeminiPreferences(context) }
     
-    // Animation logic: Show Gemini-powered welcome or overdue message (once per day)
-    LaunchedEffect(hasOverdueHabit, state.habits.size) {
+    // Track if animation has been shown this session to prevent re-triggering
+    val animationShownThisSession = remember { mutableStateOf(false) }
+    
+    // Animation logic: WAIT for screen to render, THEN check overdue, THEN show animation
+    LaunchedEffect(state.habits.size) {
+        android.util.Log.d("GeminiAnimation", "LaunchedEffect triggered. Habits count: ${state.habits.size}, Already shown: ${animationShownThisSession.value}")
+        
+        // Skip if already shown this session or habits not loaded yet
+        if (animationShownThisSession.value || state.habits.isEmpty()) {
+            if (state.habits.isEmpty()) {
+                android.util.Log.d("GeminiAnimation", "Habits not loaded yet, waiting...")
+            }
+            return@LaunchedEffect
+        }
+        
+        // Mark as shown for this session BEFORE any animation
+        animationShownThisSession.value = true
+        
+        // IMPORTANT: Wait for screen to fully render first
+        kotlinx.coroutines.delay(1000)
+        
+        android.util.Log.d("GeminiAnimation", "Screen rendered. Now checking overdue status...")
+        
         showDoAHabitAnimation = false
         showWelcomeAnimation = false
         showGeminiMessage = false
@@ -403,9 +441,12 @@ fun HabitHomeScreen(
         val isGeminiConfigured = geminiPrefs.isApiKeyConfigured()
         val isGeminiEnabled = geminiPrefs.isGeminiEnabled()
         
+        android.util.Log.d("GeminiAnimation", "Gemini configured: $isGeminiConfigured, enabled: $isGeminiEnabled")
+        
         if (!isGeminiEnabled || !isGeminiConfigured) {
             // Show configure prompt only once per day if not configured
             if (!HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
+                android.util.Log.d("GeminiAnimation", "Showing configure prompt")
                 showConfigureGemini = true
                 HomeScreenAnimationTracker.markWelcomeShown(context)
                 kotlinx.coroutines.delay(5000)
@@ -415,10 +456,45 @@ fun HabitHomeScreen(
         }
         
         val userName = user?.effectiveDisplayName ?: "there"
-        val overdueCount = state.habits.count { it.isOverdue }
         
-        if (hasOverdueHabit && !HomeScreenAnimationTracker.hasShownDoAHabitToday(context)) {
+        // NOW calculate overdue status AFTER screen is rendered
+        android.util.Log.d("GeminiAnimation", "Calculating overdue status NOW...")
+        val hasOverdue = state.habits.any { habit ->
+            if (!habit.isReminderEnabled || habit.isCompletedToday) {
+                false
+            } else {
+                val now = java.time.LocalDateTime.now()
+                val todayReminderTime = java.time.LocalDateTime.of(
+                    LocalDate.now(), 
+                    habit.reminderTime
+                )
+                val isOverdue = now.isAfter(todayReminderTime)
+                android.util.Log.d("GeminiAnimation", "Habit '${habit.title}': reminderEnabled=${habit.isReminderEnabled}, completedToday=${habit.isCompletedToday}, isOverdue=$isOverdue")
+                isOverdue
+            }
+        }
+        val overdueCount = state.habits.count { habit ->
+            if (!habit.isReminderEnabled || habit.isCompletedToday) {
+                false
+            } else {
+                val now = java.time.LocalDateTime.now()
+                val todayReminderTime = java.time.LocalDateTime.of(
+                    LocalDate.now(), 
+                    habit.reminderTime
+                )
+                now.isAfter(todayReminderTime)
+            }
+        }
+        
+        android.util.Log.d("GeminiAnimation", "✅ DECISION: hasOverdue=$hasOverdue, overdueCount=$overdueCount")
+        android.util.Log.d("GeminiAnimation", "DEBUG MODE: ${BuildConfig.DEBUG}, Has Shown DoAHabit: ${HomeScreenAnimationTracker.hasShownDoAHabitToday(context)}, Has Shown Welcome: ${HomeScreenAnimationTracker.hasShownWelcomeToday(context)}")
+        
+        if (hasOverdue && !HomeScreenAnimationTracker.hasShownDoAHabitToday(context)) {
+            android.util.Log.d("GeminiAnimation", "🔥 Showing OVERDUE animation for $overdueCount habits")
             HomeScreenAnimationTracker.markDoAHabitShown(context)
+            
+            // SET ANIMATION TYPE FIRST before showing anything!
+            isGeminiOverdue = true
             showGeminiLoading = true
             
             try {
@@ -429,16 +505,38 @@ fun HabitHomeScreen(
                 showGeminiLoading = false
                 
                 result.onSuccess { message ->
+                    android.util.Log.d("GeminiAnimation", "Overdue message generated: $message")
                     geminiMessage = message
-                    isGeminiOverdue = true
+                    showGeminiMessage = true
+                }.onFailure { error ->
+                    android.util.Log.e("GeminiAnimation", "API failed, using fallback message", error)
+                    // Show fallback message when API fails
+                    val fallbackMessage = if (overdueCount == 1) {
+                        "Hey $userName! You have an overdue habit waiting. Let's get it done! 💪"
+                    } else {
+                        "Hey $userName! You have $overdueCount overdue habits. Time to catch up! 🔥"
+                    }
+                    geminiMessage = fallbackMessage
                     showGeminiMessage = true
                 }
             } catch (e: Exception) {
                 android.util.Log.e("HomeScreen", "Error generating overdue message", e)
                 showGeminiLoading = false
+                // Show fallback message on exception
+                val fallbackMessage = if (overdueCount == 1) {
+                    "Hey $userName! You have an overdue habit waiting. Let's get it done! 💪"
+                } else {
+                    "Hey $userName! You have $overdueCount overdue habits. Time to catch up! 🔥"
+                }
+                geminiMessage = fallbackMessage
+                showGeminiMessage = true
             }
-        } else if (!hasOverdueHabit && state.habits.isNotEmpty() && !HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
+        } else if (!hasOverdue && state.habits.isNotEmpty() && !HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
+            android.util.Log.d("GeminiAnimation", "✨ Showing WELCOME animation")
             HomeScreenAnimationTracker.markWelcomeShown(context)
+            
+            // SET ANIMATION TYPE FIRST before showing anything!
+            isGeminiOverdue = false
             showGeminiLoading = true
             
             try {
@@ -449,13 +547,23 @@ fun HabitHomeScreen(
                 showGeminiLoading = false
                 
                 result.onSuccess { message ->
+                    android.util.Log.d("GeminiAnimation", "Welcome message generated: $message")
                     geminiMessage = message
-                    isGeminiOverdue = false
+                    showGeminiMessage = true
+                }.onFailure { error ->
+                    android.util.Log.e("GeminiAnimation", "API failed, using fallback message", error)
+                    // Show fallback message when API fails
+                    val fallbackMessage = "Welcome back, $userName! Ready to build some great habits today? ✨"
+                    geminiMessage = fallbackMessage
                     showGeminiMessage = true
                 }
             } catch (e: Exception) {
                 android.util.Log.e("HomeScreen", "Error generating welcome message", e)
                 showGeminiLoading = false
+                // Show fallback message on exception
+                val fallbackMessage = "Welcome back, $userName! Ready to build some great habits today? ✨"
+                geminiMessage = fallbackMessage
+                showGeminiMessage = true
             }
         }
     }
