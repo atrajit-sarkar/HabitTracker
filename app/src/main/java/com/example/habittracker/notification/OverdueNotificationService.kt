@@ -53,10 +53,16 @@ object OverdueNotificationService {
             // Ensure channel exists
             val channelId = ensureOverdueChannel(context, habit)
             
-            // Get or generate personalized message
-            val message = generateOverdueMessage(context, habit.title, overdueHours, userName)
+            // Get or generate personalized message (pass description for aggressive 6+ hour messages)
+            val message = generateOverdueMessage(
+                context = context,
+                habitTitle = habit.title,
+                overdueHours = overdueHours,
+                userName = userName,
+                habitDescription = habit.description
+            )
             
-            // Get the appropriate image for overdue duration
+            // Get the appropriate image for overdue duration (always use 6hour image for 6+)
             val imageResId = getOverdueImageResource(overdueHours)
             val bigPicture = BitmapFactory.decodeResource(context.resources, imageResId)
             
@@ -86,12 +92,14 @@ object OverdueNotificationService {
     
     /**
      * Generate personalized overdue message using Gemini API or fallback
+     * Uses aggressive messaging for 6+ hours overdue
      */
     private suspend fun generateOverdueMessage(
         context: Context,
         habitTitle: String,
         overdueHours: Int,
-        userName: String?
+        userName: String?,
+        habitDescription: String = ""
     ): String = withContext(Dispatchers.IO) {
         try {
             val geminiPrefs = GeminiPreferences(context)
@@ -100,25 +108,37 @@ object OverdueNotificationService {
             if (!apiKey.isNullOrBlank() && !userName.isNullOrBlank()) {
                 // Generate personalized message with Gemini
                 val geminiService = GeminiApiService(apiKey)
-                val prompt = """
-                    Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
-                    This habit is now $overdueHours hour(s) overdue.
-                    
-                    Requirements:
-                    - Address $userName by name
-                    - Mention the specific habit: "$habitTitle"
-                    - Be encouraging but firm - remind them it's $overdueHours hours late
-                    - Keep it short (1-2 sentences maximum)
-                    - Be supportive and motivating, not harsh
-                    - Don't use emojis
-                    - Generate ONLY the message text, nothing else
-                """.trimIndent()
                 
-                val result = geminiService.generateCustomMessage(prompt)
+                // Use aggressive messaging for 6+ hours overdue
+                val result = if (overdueHours >= 6) {
+                    geminiService.generateAggressiveMotivationalMessage(
+                        userName = userName,
+                        habitTitle = habitTitle,
+                        habitDescription = habitDescription,
+                        hoursOverdue = overdueHours
+                    )
+                } else {
+                    // Regular encouraging message for 2-5 hours
+                    val prompt = """
+                        Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
+                        This habit is now $overdueHours hour(s) overdue.
+                        
+                        Requirements:
+                        - Address $userName by name
+                        - Mention the specific habit: "$habitTitle"
+                        - Be encouraging but firm - remind them it's $overdueHours hours late
+                        - Keep it short (1-2 sentences maximum)
+                        - Be supportive and motivating, not harsh
+                        - Don't use emojis
+                        - Generate ONLY the message text, nothing else
+                    """.trimIndent()
+                    geminiService.generateCustomMessage(prompt)
+                }
+                
                 if (result.isSuccess) {
                     val generatedMessage = result.getOrNull()
                     if (!generatedMessage.isNullOrBlank()) {
-                        Log.d(TAG, "Generated personalized message with Gemini")
+                        Log.d(TAG, "Generated personalized message with Gemini (aggressive: ${overdueHours >= 6})")
                         return@withContext generatedMessage
                     }
                 }
@@ -127,9 +147,13 @@ object OverdueNotificationService {
             Log.e(TAG, "Error generating Gemini message, using fallback", e)
         }
         
-        // Fallback message
+        // Fallback message (also more aggressive for 6+ hours)
         val userPrefix = if (!userName.isNullOrBlank()) "$userName, " else ""
-        return@withContext "${userPrefix}Your habit \"${habitTitle}\" is $overdueHours hour(s) overdue. Complete it now to stay on track!"
+        return@withContext if (overdueHours >= 6) {
+            "${userPrefix}URGENT: \"${habitTitle}\" is $overdueHours hour(s) overdue! Stop procrastinating and take action NOW!"
+        } else {
+            "${userPrefix}Your habit \"${habitTitle}\" is $overdueHours hour(s) overdue. Complete it now to stay on track!"
+        }
     }
     
     /**
@@ -217,9 +241,14 @@ object OverdueNotificationService {
     
     /**
      * Get the appropriate drawable resource for overdue duration
+     * For 6+ hours, use the 6hourplus image for more aggressive visual
      */
     private fun getOverdueImageResource(overdueHours: Int): Int {
-        return overdueImageMap[overdueHours] ?: R.drawable.overdue_6hour // Default to 6hour if not found
+        return if (overdueHours >= 6) {
+            R.drawable.overdue_6hourplus
+        } else {
+            overdueImageMap[overdueHours] ?: R.drawable.overdue_6hour
+        }
     }
     
     /**
@@ -285,15 +314,24 @@ object OverdueNotificationService {
     }
     
     /**
-     * Dismiss all overdue notifications for a habit
+     * Dismiss all overdue notifications for a habit (including recurring ones)
      */
     fun dismissAllOverdueNotifications(context: Context, habitId: Long) {
         val notificationManager = NotificationManagerCompat.from(context)
+        
+        // Dismiss initial notifications (2-6 hours)
         for (hours in 2..6) {
             val notificationId = getNotificationId(habitId, hours)
             notificationManager.cancel(notificationId)
         }
-        Log.d(TAG, "Dismissed all overdue notifications for habit: $habitId")
+        
+        // Dismiss recurring notifications (8-48 hours, every 2 hours)
+        for (hours in 8..48 step 2) {
+            val notificationId = getNotificationId(habitId, hours)
+            notificationManager.cancel(notificationId)
+        }
+        
+        Log.d(TAG, "Dismissed all overdue notifications (including recurring) for habit: $habitId")
     }
     
     /**

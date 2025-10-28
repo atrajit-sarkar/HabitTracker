@@ -105,6 +105,39 @@ class GeminiApiService(private val apiKey: String) {
     }
     
     /**
+     * Generate an aggressive motivational message for severely overdue habits (6+ hours)
+     */
+    suspend fun generateAggressiveMotivationalMessage(
+        userName: String,
+        habitTitle: String,
+        habitDescription: String,
+        hoursOverdue: Int
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val prompt = """
+            Generate a VERY firm, aggressive, and motivational message for $userName who has NOT completed their habit "$habitTitle" for $hoursOverdue hours.
+            
+            Habit description: "$habitDescription"
+            
+            Requirements:
+            - Use an AGGRESSIVE and URGENT tone (this is serious!)
+            - Be VERY direct and firm - no more gentle reminders
+            - Include a powerful motivational quote or statement related to the habit's purpose
+            - Reference the specific habit ("$habitTitle") and its description to make it personal
+            - Emphasize the consequences of continued delay
+            - Push them to take immediate action NOW
+            - Use commanding language (but not insulting)
+            - Keep it 2-3 sentences maximum
+            - Don't use emojis
+            - Address them by name
+            - Make them feel the urgency and importance
+            
+            Generate ONLY the message text, nothing else.
+        """.trimIndent()
+        
+        generateContent(prompt)
+    }
+    
+    /**
      * Generate a custom message with a specific prompt
      * Public method for custom use cases like overdue notifications
      */

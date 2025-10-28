@@ -120,6 +120,7 @@ class HabitViewModel @Inject constructor(
         
         // Reschedule all reminders on app startup
         // This ensures reminders work after app reinstall
+        // NOTE: We do NOT reschedule overdue checks here to avoid cancelling active recurring notifications
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val habits = habitRepository.getAllHabits()
@@ -127,13 +128,17 @@ class HabitViewModel @Inject constructor(
                 habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
                     try {
                         reminderScheduler.schedule(habit)
-                        overdueScheduler.scheduleOverdueChecks(habit)
+                        // Don't reschedule overdue checks - they're managed by HabitReminderReceiver after each reminder fires
                         rescheduled++
                     } catch (e: Exception) {
                         android.util.Log.e("HabitViewModel", "Failed to reschedule ${habit.title}: ${e.message}")
                     }
                 }
                 android.util.Log.d("HabitViewModel", "Rescheduled $rescheduled reminders on app startup")
+                
+                // Reschedule overdue notifications based on current overdue status
+                // This fixes any alarms that were scheduled incorrectly
+                rescheduleOverdueNotificationsForAllHabits()
                 
                 // Schedule daily completion check at 11:50 PM
                 dailyCompletionScheduler.scheduleDailyCheck()
@@ -518,12 +523,58 @@ class HabitViewModel @Inject constructor(
             // Calculate and update streak
             updateHabitStreak(habitId)
             
+            // Cancel overdue notification alarms since habit is now completed
+            overdueScheduler.cancelOverdueChecks(habitId)
+            
+            // Dismiss any visible overdue notifications
+            it.atraj.habittracker.notification.OverdueNotificationService.dismissAllOverdueNotifications(context, habitId)
+            
             // Notify icon manager to check for overdue habits
             it.atraj.habittracker.receiver.HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {
             updateUserStatsAsync()
+        }
+    }
+    
+    /**
+     * Reschedule overdue notifications for all habits based on current overdue status
+     * This ensures alarms are correctly scheduled for habits that are currently overdue
+     */
+    private suspend fun rescheduleOverdueNotificationsForAllHabits() {
+        try {
+            val habits = habitRepository.getAllHabits()
+            val now = java.time.LocalDateTime.now()
+            
+            var rescheduled = 0
+            habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
+                try {
+                    // Get completions for this habit
+                    val habitCompletions = habitRepository.getHabitCompletions(habit.id)
+                    
+                    // Check if habit is currently overdue
+                    val overdueStatus = it.atraj.habittracker.util.OverdueHabitChecker.checkHabitOverdueStatus(
+                        habit,
+                        habitCompletions,
+                        now
+                    )
+                    
+                    if (overdueStatus.isOverdue) {
+                        // Reschedule based on today's due time
+                        overdueScheduler.rescheduleOverdueChecksFromToday(habit)
+                        rescheduled++
+                        android.util.Log.d("HabitViewModel", 
+                            "Rescheduled overdue alarms for ${habit.title} (${overdueStatus.overdueHours}h overdue)")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("HabitViewModel", "Failed to reschedule overdue for ${habit.title}: ${e.message}")
+                }
+            }
+            
+            android.util.Log.d("HabitViewModel", "Rescheduled overdue notifications for $rescheduled habits")
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error rescheduling overdue notifications: ${e.message}")
         }
     }
 

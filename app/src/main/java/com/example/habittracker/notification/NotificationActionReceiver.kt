@@ -20,6 +20,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     @Inject
     lateinit var habitRepository: HabitRepository
+    
+    @Inject
+    lateinit var overdueScheduler: OverdueNotificationScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         val habitId = intent.getLongExtra("habitId", -1L)
@@ -33,7 +36,14 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         habitRepository.markCompletedToday(habitId)
+                        
+                        // Cancel overdue notification alarms since habit is now completed
+                        overdueScheduler.cancelOverdueChecks(habitId)
+                        
                         HabitReminderService.dismissNotification(context, habitId)
+                        
+                        // Dismiss any overdue notifications too
+                        OverdueNotificationService.dismissAllOverdueNotifications(context, habitId)
                         
                         // Trigger icon check after habit completion
                         HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
@@ -51,6 +61,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         habitRepository.markCompletedToday(habitId)
+                        
+                        // Cancel all overdue notification alarms since habit is now completed
+                        overdueScheduler.cancelOverdueChecks(habitId)
                         
                         // Dismiss the specific overdue notification
                         if (overdueHours != -1) {

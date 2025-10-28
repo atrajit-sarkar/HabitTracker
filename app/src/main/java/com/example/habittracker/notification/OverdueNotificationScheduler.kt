@@ -32,6 +32,9 @@ class OverdueNotificationScheduler @Inject constructor(
         // Overdue check intervals in hours
         private val OVERDUE_CHECK_HOURS = listOf(2, 3, 4, 5, 6)
         
+        // Recurring interval after 6 hours (every 2 hours)
+        private const val RECURRING_INTERVAL_HOURS = 2
+        
         // Request code offset to avoid conflicts with regular reminders
         private const val REQUEST_CODE_OFFSET = 10000
     }
@@ -39,6 +42,7 @@ class OverdueNotificationScheduler @Inject constructor(
     /**
      * Schedule overdue notifications for a habit
      * Will create alarms at 2, 3, 4, 5, and 6 hours after the habit's due time
+     * This is used when creating/updating habits (schedules for NEXT due time)
      */
     fun scheduleOverdueChecks(habit: Habit) {
         if (habit.id == 0L || !habit.reminderEnabled || habit.isDeleted) {
@@ -62,15 +66,92 @@ class OverdueNotificationScheduler @Inject constructor(
     }
     
     /**
+     * Reschedule overdue notifications based on TODAY'S due time
+     * Used to fix alarms that may have been scheduled incorrectly
+     * Calculates from today's already-passed due time, not next occurrence
+     */
+    fun rescheduleOverdueChecksFromToday(habit: Habit) {
+        if (habit.id == 0L || !habit.reminderEnabled || habit.isDeleted) {
+            Log.d(TAG, "Skipping overdue rescheduling for habit ${habit.id}: disabled or deleted")
+            return
+        }
+        
+        // Cancel any existing overdue alarms first
+        cancelOverdueChecks(habit.id)
+        
+        val now = LocalDateTime.now()
+        
+        // Calculate TODAY'S due time (not next occurrence)
+        val todayDueTime = now.withHour(habit.reminderHour)
+            .withMinute(habit.reminderMinute)
+            .withSecond(0)
+            .withNano(0)
+        
+        // Only schedule if today's due time has already passed (habit is potentially overdue)
+        if (todayDueTime.isAfter(now)) {
+            Log.d(TAG, "Habit ${habit.title} not yet due today, skipping overdue reschedule")
+            return
+        }
+        
+        // Calculate how many hours overdue from today's due time
+        val hoursOverdue = java.time.Duration.between(todayDueTime, now).toHours().toInt()
+        
+        Log.d(TAG, "Rescheduling overdue checks for habit: ${habit.title}, currently ${hoursOverdue}h overdue")
+        
+        // Schedule remaining future notifications
+        if (hoursOverdue < 6) {
+            // Schedule initial checks (2-6 hours) that haven't passed yet
+            OVERDUE_CHECK_HOURS.filter { it > hoursOverdue }.forEach { hours ->
+                val overdueCheckTime = todayDueTime.plusHours(hours.toLong())
+                scheduleOverdueAlarm(habit.id, hours, overdueCheckTime)
+            }
+        } else {
+            // Already past 6 hours - schedule next recurring check
+            val nextRecurringHours = ((hoursOverdue / RECURRING_INTERVAL_HOURS) + 1) * RECURRING_INTERVAL_HOURS
+            val nextCheckTime = todayDueTime.plusHours(nextRecurringHours.toLong())
+            scheduleOverdueAlarm(habit.id, nextRecurringHours, nextCheckTime)
+        }
+    }
+    
+    /**
      * Cancel all overdue check alarms for a habit
      */
     fun cancelOverdueChecks(habitId: Long) {
+        // Cancel initial checks (2-6 hours)
         OVERDUE_CHECK_HOURS.forEach { hours ->
             val pendingIntent = createOverduePendingIntent(habitId, hours)
             alarmManager?.cancel(pendingIntent)
             pendingIntent.cancel()
         }
-        Log.d(TAG, "Cancelled overdue checks for habit: $habitId")
+        
+        // Cancel potential recurring checks (8, 10, 12, 14, 16, 18, 20, 22, 24+ hours)
+        // Cancel up to 48 hours worth of recurring notifications
+        for (hours in 8..48 step RECURRING_INTERVAL_HOURS) {
+            val pendingIntent = createOverduePendingIntent(habitId, hours)
+            alarmManager?.cancel(pendingIntent)
+            pendingIntent.cancel()
+        }
+        
+        Log.d(TAG, "Cancelled all overdue checks for habit: $habitId")
+    }
+    
+    /**
+     * Schedule a recurring overdue notification (for 6+ hours)
+     * Called by OverdueNotificationReceiver after showing a 6+ hour notification
+     */
+    fun scheduleRecurringOverdueCheck(habit: Habit, totalOverdueHours: Int) {
+        if (habit.id == 0L || !habit.reminderEnabled || habit.isDeleted) {
+            Log.d(TAG, "Skipping recurring overdue scheduling: habit disabled or deleted")
+            return
+        }
+        
+        // Calculate next trigger time (current time + 2 hours)
+        val nextTriggerTime = LocalDateTime.now().plusHours(RECURRING_INTERVAL_HOURS.toLong())
+        
+        // Schedule the alarm
+        scheduleOverdueAlarm(habit.id, totalOverdueHours, nextTriggerTime)
+        
+        Log.d(TAG, "Scheduled recurring overdue check for habit: ${habit.title}, total overdue: ${totalOverdueHours}h")
     }
     
     /**

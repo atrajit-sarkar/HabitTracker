@@ -18,6 +18,7 @@ import javax.inject.Inject
 /**
  * BroadcastReceiver for handling overdue notification alarms
  * Triggered by AlarmManager at 2, 3, 4, 5, and 6 hours after habit due time
+ * After 6 hours, schedules recurring notifications every 2 hours
  */
 @AndroidEntryPoint
 class OverdueNotificationReceiver : BroadcastReceiver() {
@@ -27,6 +28,9 @@ class OverdueNotificationReceiver : BroadcastReceiver() {
     
     @Inject
     lateinit var authRepository: AuthRepository
+    
+    @Inject
+    lateinit var overdueScheduler: OverdueNotificationScheduler
     
     companion object {
         private const val TAG = "OverdueNotificationReceiver"
@@ -100,6 +104,13 @@ class OverdueNotificationReceiver : BroadcastReceiver() {
                 overdueHours,
                 userName
             )
+            
+            // After 6 hours, schedule recurring notifications every 2 hours
+            if (overdueHours >= 6) {
+                val nextRecurringHours = overdueHours + 2
+                Log.d(TAG, "Scheduling next recurring notification in 2 hours (total: ${nextRecurringHours}h)")
+                overdueScheduler.scheduleRecurringOverdueCheck(habit, nextRecurringHours)
+            }
         } else {
             Log.d(TAG, "Habit no longer overdue or completed, skipping notification")
         }
