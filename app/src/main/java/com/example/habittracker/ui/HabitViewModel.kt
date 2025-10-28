@@ -559,6 +559,7 @@ class HabitViewModel @Inject constructor(
         try {
             val habits = habitRepository.getAllHabits()
             val nonDeletedHabits = habits.filter { !it.isDeleted }
+            val currentDate = LocalDate.now()
             
             android.util.Log.d("HabitViewModel", "Recalculating streaks for ${nonDeletedHabits.size} habits")
             
@@ -567,8 +568,15 @@ class HabitViewModel @Inject constructor(
             
             nonDeletedHabits.forEach { habit ->
                 try {
+                    // CRITICAL FIX: Skip if streak was already calculated today
+                    // This prevents duplicate freeze day deductions when opening habit details
+                    if (habit.lastStreakUpdate == currentDate) {
+                        android.util.Log.d("HabitViewModel", 
+                            "Skipping ${habit.title}: already calculated today")
+                        return@forEach
+                    }
+                    
                     val completions = habitRepository.getHabitCompletions(habit.id)
-                    val currentDate = LocalDate.now()
                     val availableFreezeDays = _userRewards.value.freezeDays
                     
                     // Calculate streak
@@ -599,6 +607,12 @@ class HabitViewModel @Inject constructor(
                         android.util.Log.d("HabitViewModel", 
                             "Updated ${habit.title}: streak=${result.newStreak}, " +
                             "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}")
+                    } else {
+                        // Even if no changes, update lastStreakUpdate to prevent recalculation
+                        val updatedHabit = habit.copy(lastStreakUpdate = currentDate)
+                        habitRepository.updateHabit(updatedHabit)
+                        android.util.Log.d("HabitViewModel", 
+                            "No changes for ${habit.title}, but marked as calculated today")
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("HabitViewModel", 
@@ -629,15 +643,26 @@ class HabitViewModel @Inject constructor(
     
     /**
      * Calculate and update streak for a habit
+     * Called when marking a habit as completed
      */
     private suspend fun updateHabitStreak(habitId: Long) {
         try {
             val habit = habitRepository.getHabitById(habitId)
             val completions = habitRepository.getHabitCompletions(habitId)
             val currentDate = LocalDate.now()
-            val availableFreezeDays = _userRewards.value.freezeDays
             
             android.util.Log.d("HabitViewModel", "Calculating streak for ${habit.title}")
+            
+            // SAFETY CHECK: If already calculated today AND no new completion, skip
+            // This prevents duplicate freeze deductions when habit is already up-to-date
+            val hasNewCompletion = completions.any { it.completedDate == currentDate }
+            if (habit.lastStreakUpdate == currentDate && !hasNewCompletion) {
+                android.util.Log.d("HabitViewModel", 
+                    "Skipping ${habit.title}: already calculated today with no new completion")
+                return
+            }
+            
+            val availableFreezeDays = _userRewards.value.freezeDays
             
             // Calculate streak
             val result = StreakCalculator.calculateStreak(
