@@ -271,6 +271,7 @@ fun ProfileScreen(
     var showAnimationPicker by remember { mutableStateOf(false) }
     var showEnlargedPhotoDialog by remember { mutableStateOf(false) }
     var showHeroBackgroundPicker by remember { mutableStateOf(false) }
+    var showGeminiSettingsDialog by remember { mutableStateOf(false) }
     
     // Profile card animation preference (stored in SharedPreferences)
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1195,6 +1196,69 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                     
+                    // Gemini AI Settings
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableOnce { showGeminiSettingsDialog = true }
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                    )
+                                )
+                            )
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Gemini AI Settings",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "Configure personalized messages",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Gemini AI Settings",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
                     // Check for Updates - Only show for GitHub flavor
                     if (BuildConfig.ENABLE_IN_APP_UPDATE) {
                         Row(
@@ -1735,6 +1799,13 @@ Card(
                     .apply()
                 showHeroBackgroundPicker = false
             }
+        )
+    }
+    
+    // Gemini AI Settings Dialog
+    if (showGeminiSettingsDialog) {
+        GeminiSettingsDialog(
+            onDismiss = { showGeminiSettingsDialog = false }
         )
     }
     
@@ -3127,6 +3198,208 @@ private fun MusicSettingsDialog(
                 )
             ) {
                 Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun GeminiSettingsDialog(
+    onDismiss: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val geminiPrefs = remember { it.atraj.habittracker.gemini.GeminiPreferences(context) }
+    
+    var apiKey by remember { mutableStateOf(geminiPrefs.getApiKey() ?: "") }
+    var isEnabled by remember { mutableStateOf(geminiPrefs.isGeminiEnabled()) }
+    var showPassword by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Text(
+                    "Gemini AI Settings",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Description
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "ℹ️ What is this?",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "Get personalized welcome messages and friendly reminders powered by Google's Gemini AI. Configure your own API key to enable this feature.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+                
+                // Enable/Disable Switch
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Enable Gemini AI",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Show personalized messages",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isEnabled,
+                        onCheckedChange = { isEnabled = it }
+                    )
+                }
+                
+                // API Key Input
+                AnimatedVisibility(visible = isEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Gemini API Key",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        OutlinedTextField(
+                            value = apiKey,
+                            onValueChange = { apiKey = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Enter your API key") },
+                            placeholder = { Text("AIza...") },
+                            visualTransformation = if (showPassword) 
+                                androidx.compose.ui.text.input.VisualTransformation.None 
+                            else 
+                                androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showPassword = !showPassword }) {
+                                    Icon(
+                                        imageVector = if (showPassword) 
+                                            Icons.Default.VisibilityOff 
+                                        else 
+                                            Icons.Default.Visibility,
+                                        contentDescription = if (showPassword) 
+                                            "Hide API key" 
+                                        else 
+                                            "Show API key"
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        
+                        // Help text
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "🔑 How to get your API key:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "1. Visit: ai.google.dev",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = "2. Sign in with Google",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = "3. Click 'Get API Key'",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = "4. Create a new key and copy it",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    isSaving = true
+                    geminiPrefs.setGeminiEnabled(isEnabled)
+                    if (isEnabled && apiKey.isNotBlank()) {
+                        geminiPrefs.saveApiKey(apiKey.trim())
+                    }
+                    isSaving = false
+                    onDismiss()
+                },
+                enabled = !isSaving && (!isEnabled || apiKey.isNotBlank()),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Save")
+                }
             }
         },
         dismissButton = {

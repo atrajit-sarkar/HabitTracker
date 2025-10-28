@@ -381,29 +381,81 @@ fun HabitHomeScreen(
     // Animation overlay states
     var showDoAHabitAnimation by remember { mutableStateOf(false) }
     var showWelcomeAnimation by remember { mutableStateOf(false) }
+    var showGeminiMessage by remember { mutableStateOf(false) }
+    var geminiMessage by remember { mutableStateOf("") }
+    var isGeminiOverdue by remember { mutableStateOf(false) }
+    var showGeminiLoading by remember { mutableStateOf(false) }
+    var showConfigureGemini by remember { mutableStateOf(false) }
+    
     val hasOverdueHabit = remember(state.habits) { state.habits.any { it.isOverdue } }
     val context = LocalContext.current
     
-    // Animation logic: Show welcome or do-a-habit (once per day, persisted via SharedPreferences)
+    // Gemini preferences
+    val geminiPrefs = remember { it.atraj.habittracker.gemini.GeminiPreferences(context) }
+    
+    // Animation logic: Show Gemini-powered welcome or overdue message (once per day)
     LaunchedEffect(hasOverdueHabit, state.habits.size) {
         showDoAHabitAnimation = false
         showWelcomeAnimation = false
+        showGeminiMessage = false
+        
+        // Check if Gemini is configured
+        val isGeminiConfigured = geminiPrefs.isApiKeyConfigured()
+        val isGeminiEnabled = geminiPrefs.isGeminiEnabled()
+        
+        if (!isGeminiEnabled || !isGeminiConfigured) {
+            // Show configure prompt only once per day if not configured
+            if (!HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
+                showConfigureGemini = true
+                HomeScreenAnimationTracker.markWelcomeShown(context)
+                kotlinx.coroutines.delay(5000)
+                showConfigureGemini = false
+            }
+            return@LaunchedEffect
+        }
+        
+        val userName = user?.effectiveDisplayName ?: "there"
+        val overdueCount = state.habits.count { it.isOverdue }
         
         if (hasOverdueHabit && !HomeScreenAnimationTracker.hasShownDoAHabitToday(context)) {
-            showDoAHabitAnimation = true
             HomeScreenAnimationTracker.markDoAHabitShown(context)
+            showGeminiLoading = true
+            
             try {
-                kotlinx.coroutines.delay(5000) // 5 seconds
-            } finally {
-                showDoAHabitAnimation = false
+                val apiKey = geminiPrefs.getApiKey() ?: return@LaunchedEffect
+                val geminiService = it.atraj.habittracker.gemini.GeminiApiService(apiKey)
+                val result = geminiService.generateOverdueMessage(userName, overdueCount)
+                
+                showGeminiLoading = false
+                
+                result.onSuccess { message ->
+                    geminiMessage = message
+                    isGeminiOverdue = true
+                    showGeminiMessage = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeScreen", "Error generating overdue message", e)
+                showGeminiLoading = false
             }
         } else if (!hasOverdueHabit && state.habits.isNotEmpty() && !HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
-            showWelcomeAnimation = true
             HomeScreenAnimationTracker.markWelcomeShown(context)
+            showGeminiLoading = true
+            
             try {
-                kotlinx.coroutines.delay(5000) // 5 seconds
-            } finally {
-                showWelcomeAnimation = false
+                val apiKey = geminiPrefs.getApiKey() ?: return@LaunchedEffect
+                val geminiService = it.atraj.habittracker.gemini.GeminiApiService(apiKey)
+                val result = geminiService.generateWelcomeMessage(userName)
+                
+                showGeminiLoading = false
+                
+                result.onSuccess { message ->
+                    geminiMessage = message
+                    isGeminiOverdue = false
+                    showGeminiMessage = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeScreen", "Error generating welcome message", e)
+                showGeminiLoading = false
             }
         }
     }
@@ -875,14 +927,35 @@ fun HabitHomeScreen(
         )
     }
     
-    // Do-a-habit animation overlay (appears when 2+ hour overdue habits exist)
-    if (showDoAHabitAnimation) {
-        DoAHabitAnimationOverlay()
+    // Gemini loading overlay
+    if (showGeminiLoading) {
+        it.atraj.habittracker.gemini.GeminiLoadingOverlay(
+            onDismiss = { showGeminiLoading = false }
+        )
     }
     
-    // Welcome animation overlay (appears when no overdue habits, once per day)
-    if (showWelcomeAnimation) {
-        WelcomeAnimationOverlay()
+    // Gemini message overlay
+    if (showGeminiMessage) {
+        it.atraj.habittracker.gemini.PersonalizedMessageOverlay(
+            message = geminiMessage,
+            isOverdue = isGeminiOverdue,
+            onDismiss = { showGeminiMessage = false }
+        )
+    }
+    
+    // Configure Gemini prompt overlay
+    if (showConfigureGemini) {
+        it.atraj.habittracker.gemini.ConfigureGeminiOverlay(
+            onDismiss = { showConfigureGemini = false },
+            onConfigureClick = {
+                // Navigate to profile screen
+                scope.launch {
+                    drawerState.close()
+                    kotlinx.coroutines.delay(250)
+                    onProfileClick()
+                }
+            }
+        )
     }
     
     // Auto-dismiss logic - wait for ALL deletions to complete
