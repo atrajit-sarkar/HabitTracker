@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -17,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -26,45 +29,66 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.airbnb.lottie.compose.*
+import kotlinx.coroutines.delay
 
 /**
- * Personalized message overlay with animation
- * Shows welcome or overdue messages powered by Gemini AI
+ * Personalized message overlay with character and comic-style speech bubble
+ * Shows character animation while generating, then displays message character by character
  */
 @Composable
 fun PersonalizedMessageOverlay(
     message: String,
     isOverdue: Boolean = false,
+    isGenerating: Boolean = false,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var visible by remember { mutableStateOf(false) }
+    var displayedText by remember { mutableStateOf("") }
+    var showTypingIndicator by remember { mutableStateOf(isGenerating) }
+    var isAnimationComplete by remember { mutableStateOf(false) }
+    var showCloseButton by remember { mutableStateOf(false) }
     
-    // Trigger animation on composition
+    // Trigger entrance animation
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(300)
+        delay(300)
         visible = true
     }
     
-    // Auto-dismiss after 5 seconds
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(5000)
-        onDismiss()
+    // Handle message typing animation
+    LaunchedEffect(message, isGenerating) {
+        if (!isGenerating && message.isNotEmpty()) {
+            showTypingIndicator = false
+            displayedText = ""
+            
+            // Type out message character by character
+            message.forEachIndexed { index, char ->
+                displayedText += char
+                delay(30) // 30ms per character for smooth typing
+            }
+            
+            isAnimationComplete = true
+            
+            // Show close button after typing completes
+            delay(500) // Small delay before showing close button
+            showCloseButton = true
+        }
     }
     
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             dismissOnBackPress = true,
-            dismissOnClickOutside = true,
+            dismissOnClickOutside = !isGenerating, // Only allow dismiss if not generating
             usePlatformDefaultWidth = false
         )
     ) {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.7f))
-                .clickable(onClick = onDismiss),
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(enabled = !isGenerating, onClick = onDismiss),
             contentAlignment = Alignment.Center
         ) {
             AnimatedVisibility(
@@ -74,100 +98,57 @@ fun PersonalizedMessageOverlay(
                 exit = fadeOut(animationSpec = tween(300)) + 
                       scaleOut(targetScale = 0.8f, animationSpec = tween(300))
             ) {
-                Card(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
                         .wrapContentHeight()
-                        .clickable(enabled = false) { /* Prevent dismiss on card click */ },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                        .clickable(enabled = false) { },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                if (isOverdue) {
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                                            MaterialTheme.colorScheme.surface
-                                        )
-                                    )
-                                } else {
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                            MaterialTheme.colorScheme.surface
-                                        )
-                                    )
-                                }
-                            )
+                    // Close button (top right)
+                    AnimatedVisibility(
+                        visible = showCloseButton,
+                        enter = fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f),
+                        modifier = Modifier.align(Alignment.End)
                     ) {
-                        Column(
+                        IconButton(
+                            onClick = onDismiss,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                                .padding(end = 16.dp, bottom = 8.dp)
+                                .size(48.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = CircleShape
+                                )
+                                .clip(CircleShape)
                         ) {
-                            // Close button
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                IconButton(
-                                    onClick = onDismiss,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Close",
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-                            }
-                            
-                            // Animation
-                            LottieAnimationView(isOverdue = isOverdue)
-                            
-                            // Message text
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = if (isOverdue) 
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = if (isOverdue) 
                                     MaterialTheme.colorScheme.error 
                                 else 
                                     MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                modifier = Modifier.size(28.dp)
                             )
-                            
-                            // Dismiss button
-                            Button(
-                                onClick = onDismiss,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isOverdue) 
-                                        MaterialTheme.colorScheme.error 
-                                    else 
-                                        MaterialTheme.colorScheme.primary
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    text = if (isOverdue) "Got It!" else "Thanks!",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
                         }
                     }
+                    
+                    // Speech bubble with message
+                    if (showTypingIndicator || displayedText.isNotEmpty()) {
+                        ComicSpeechBubble(
+                            text = displayedText,
+                            showTypingIndicator = showTypingIndicator,
+                            isOverdue = isOverdue
+                        )
+                    }
+                    
+                    // Character animation
+                    CharacterWithAnimation(
+                        isOverdue = isOverdue,
+                        isAnimating = !isAnimationComplete
+                    )
                 }
             }
         }
@@ -175,57 +156,167 @@ fun PersonalizedMessageOverlay(
 }
 
 /**
- * Lottie animation for welcome/overdue messages
+ * Comic-style speech bubble with typing indicator
  */
 @Composable
-private fun LottieAnimationView(isOverdue: Boolean) {
-    // Use animated icons instead of Lottie animations
-    val infiniteTransition = rememberInfiniteTransition(label = "icon_animation")
-    
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
+private fun ComicSpeechBubble(
+    text: String,
+    showTypingIndicator: Boolean,
+    isOverdue: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth(0.85f)
+            .wrapContentHeight()
+    ) {
+        // Main bubble
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (isOverdue) {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        } else {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        }
+                    )
+                    .padding(20.dp)
+            ) {
+                if (showTypingIndicator) {
+                    // Show typing indicator (three dots)
+                    TypingIndicator(isOverdue = isOverdue)
+                } else if (text.isNotEmpty()) {
+                    // Show text
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Start,
+                        color = if (isOverdue) 
+                            MaterialTheme.colorScheme.error 
+                        else 
+                            MaterialTheme.colorScheme.primary,
+                        lineHeight = 24.sp
+                    )
+                }
+            }
+        }
+        
+        // Speech bubble tail (triangle pointing down)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = 8.dp)
+                .size(20.dp)
+                .rotate(45f)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(4.dp)
+                )
+        )
+    }
+}
+
+/**
+ * Typing indicator with animated dots
+ */
+@Composable
+private fun TypingIndicator(
+    isOverdue: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(3) { index ->
+            val infiniteTransition = rememberInfiniteTransition(label = "dot_$index")
+            
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, delayMillis = index * 200, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "alpha_$index"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(12.dp)
+                    .alpha(alpha)
+                    .background(
+                        color = if (isOverdue) 
+                            MaterialTheme.colorScheme.error 
+                        else 
+                            MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
+
+/**
+ * Character animation component using Lottie animations
+ */
+@Composable
+private fun CharacterWithAnimation(
+    isOverdue: Boolean,
+    isAnimating: Boolean,
+    modifier: Modifier = Modifier
+) {
+    // Load the appropriate Lottie animation
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset(
+            if (isOverdue) "do_a_habit.json" else "welcome_anim.json"
+        )
     )
     
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = -10f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "rotation"
+    // Control animation playback
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = if (isAnimating) LottieConstants.IterateForever else 1,
+        isPlaying = isAnimating,
+        speed = 1f,
+        restartOnPlay = true
     )
     
     Box(
-        modifier = Modifier
-            .size(if (isOverdue) 120.dp else 150.dp)
-            .clip(RoundedCornerShape(16.dp)),
+        modifier = modifier
+            .size(if (isOverdue) 280.dp else 350.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = if (isOverdue) {
-                Icons.Default.Warning
-            } else {
-                Icons.Default.EmojiEmotions
-            },
-            contentDescription = null,
-            modifier = Modifier
-                .size(if (isOverdue) 80.dp else 100.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    rotationZ = if (isOverdue) rotation else 0f
-                },
-            tint = if (isOverdue) 
-                MaterialTheme.colorScheme.error 
-            else 
-                MaterialTheme.colorScheme.primary
+        LottieAnimation(
+            composition = composition,
+            progress = { if (isAnimating) progress else 0.5f }, // Freeze at mid-frame when not animating
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

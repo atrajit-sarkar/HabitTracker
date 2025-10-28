@@ -927,19 +927,16 @@ fun HabitHomeScreen(
         )
     }
     
-    // Gemini loading overlay
-    if (showGeminiLoading) {
-        it.atraj.habittracker.gemini.GeminiLoadingOverlay(
-            onDismiss = { showGeminiLoading = false }
-        )
-    }
-    
-    // Gemini message overlay
-    if (showGeminiMessage) {
+    // Gemini message overlay with character and speech bubble
+    if (showGeminiLoading || showGeminiMessage) {
         it.atraj.habittracker.gemini.PersonalizedMessageOverlay(
             message = geminiMessage,
             isOverdue = isGeminiOverdue,
-            onDismiss = { showGeminiMessage = false }
+            isGenerating = showGeminiLoading,
+            onDismiss = { 
+                showGeminiLoading = false
+                showGeminiMessage = false 
+            }
         )
     }
     
