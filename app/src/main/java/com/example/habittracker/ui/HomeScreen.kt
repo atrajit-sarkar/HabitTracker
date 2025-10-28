@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -132,6 +133,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.unit.IntOffset
 import androidx.core.content.ContextCompat
 import com.airbnb.lottie.compose.*
 import androidx.lifecycle.Lifecycle
@@ -157,6 +160,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+
+private object HomeScreenAnimationTracker {
+    var hasShownDoAHabitAnimation: Boolean = false
+}
 
 // Helper function to get icon resource from icon ID
 // Handles warning/angry variants based on user's selected theme
@@ -342,13 +349,20 @@ fun HabitHomeScreen(
     // Sharingan animation state (for Itachi theme completion effect)
     var showSharinganAnimation by remember { mutableStateOf(false) }
     
-    // Do-a-habit animation overlay state (appears for 5 seconds on screen load)
-    var showDoAHabitAnimation by remember { mutableStateOf(true) }
+    // Do-a-habit animation overlay state (shows once per app session when overdue habits exist)
+    var showDoAHabitAnimation by remember { mutableStateOf(false) }
+    val hasOverdueHabit = remember(state.habits) { state.habits.any { it.isOverdue } }
     
-    // Auto-hide do-a-habit animation after 5 seconds
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(5000) // 5 seconds
-        showDoAHabitAnimation = false
+    // Show the animation once when at least one habit is 2+ hours overdue
+    LaunchedEffect(hasOverdueHabit) {
+        if (hasOverdueHabit && !HomeScreenAnimationTracker.hasShownDoAHabitAnimation) {
+            showDoAHabitAnimation = true
+            HomeScreenAnimationTracker.hasShownDoAHabitAnimation = true
+            kotlinx.coroutines.delay(5000) // 5 seconds
+            showDoAHabitAnimation = false
+        } else {
+            showDoAHabitAnimation = false
+        }
     }
     
     // Get context early for preferences
@@ -1447,6 +1461,38 @@ private fun HabitCard(
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
+                }
+            }
+            
+            // Overdue animation overlay - positioned absolutely without affecting card height
+            if (habit.isOverdue && !habit.isCompletedToday) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = (0).dp) // Position over the button row - moved down
+                        .size(90.dp)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { /* Allow clicks to pass through */ }
+                ) {
+                    val composition by rememberLottieComposition(
+                        LottieCompositionSpec.Asset("overdue_anim.json")
+                    )
+                    
+                    val progress by animateLottieCompositionAsState(
+                        composition = composition,
+                        iterations = LottieConstants.IterateForever,
+                        isPlaying = true,
+                        speed = 1f,
+                        restartOnPlay = true
+                    )
+                    
+                    LottieAnimation(
+                        composition = composition,
+                        progress = { progress },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
             

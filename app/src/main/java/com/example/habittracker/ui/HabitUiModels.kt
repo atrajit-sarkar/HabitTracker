@@ -18,7 +18,8 @@ data class HabitCardUi(
     val frequency: HabitFrequency,
     val frequencyText: String,
     val avatar: HabitAvatar,
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val isOverdue: Boolean = false
 )
 
 data class AddHabitState(

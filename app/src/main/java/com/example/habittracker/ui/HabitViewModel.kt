@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.temporal.ChronoUnit
 import java.time.ZoneOffset
+import it.atraj.habittracker.util.OverdueHabitChecker
+import java.time.LocalDateTime
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
@@ -895,6 +897,21 @@ class HabitViewModel @Inject constructor(
         // Check if this habit is selected
         val isSelected = _uiState.value.selectedHabitIds.contains(habit.id)
         
+        // Check if habit is overdue (only if more than 2 hours past reminder time)
+        val isOverdue = if (!isCompleted && habit.reminderEnabled) {
+            val now = LocalDateTime.now()
+            val todayReminderTime = LocalDateTime.of(today, reminderTime)
+            // Overdue only if current time is more than 2 hours past reminder time
+            if (now.isAfter(todayReminderTime)) {
+                val hoursPast = java.time.Duration.between(todayReminderTime, now).toHours()
+                hoursPast >= 2
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+        
         return HabitCardUi(
             id = habit.id,
             title = habit.title,
@@ -905,7 +922,8 @@ class HabitViewModel @Inject constructor(
             frequency = habit.frequency,
             frequencyText = frequencyText,
             avatar = habit.avatar,
-            isSelected = isSelected
+            isSelected = isSelected,
+            isOverdue = isOverdue
         )
     }
 
