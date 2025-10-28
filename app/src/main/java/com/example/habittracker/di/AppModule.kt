@@ -60,6 +60,22 @@ object AppModule {
     
     @Provides
     @Singleton
+    fun provideOverdueNotificationScheduler(
+        @ApplicationContext context: Context
+    ): it.atraj.habittracker.notification.OverdueNotificationScheduler {
+        return it.atraj.habittracker.notification.OverdueNotificationScheduler(context)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideDailyCompletionScheduler(
+        @ApplicationContext context: Context
+    ): it.atraj.habittracker.notification.DailyCompletionScheduler {
+        return it.atraj.habittracker.notification.DailyCompletionScheduler(context)
+    }
+    
+    @Provides
+    @Singleton
     fun provideNewsRepository(
         firestore: FirebaseFirestore,
         auth: FirebaseAuth

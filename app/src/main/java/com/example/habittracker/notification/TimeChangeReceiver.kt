@@ -23,6 +23,7 @@ class TimeChangeReceiver : BroadcastReceiver() {
 
     @Inject lateinit var habitRepository: HabitRepository
     @Inject lateinit var reminderScheduler: HabitReminderScheduler
+    @Inject lateinit var overdueScheduler: OverdueNotificationScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
@@ -35,6 +36,7 @@ class TimeChangeReceiver : BroadcastReceiver() {
                 habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
                     try {
                         reminderScheduler.schedule(habit)
+                        overdueScheduler.scheduleOverdueChecks(habit)
                         count++
                     } catch (e: Exception) {
                         Log.e("TimeChangeReceiver", "Failed to reschedule ${habit.title}: ${e.message}")

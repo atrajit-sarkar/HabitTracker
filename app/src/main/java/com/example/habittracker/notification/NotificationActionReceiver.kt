@@ -42,6 +42,34 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     }
                 }
             }
+            "COMPLETE_OVERDUE_HABIT" -> {
+                // Play theme-specific sound immediately (on main thread)
+                playThemeCompletionSound(context)
+                
+                val overdueHours = intent.getIntExtra("overdueHours", -1)
+                
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        habitRepository.markCompletedToday(habitId)
+                        
+                        // Dismiss the specific overdue notification
+                        if (overdueHours != -1) {
+                            OverdueNotificationService.dismissOverdueNotification(context, habitId, overdueHours)
+                        }
+                        
+                        // Also dismiss regular reminder notification
+                        HabitReminderService.dismissNotification(context, habitId)
+                        
+                        // Dismiss all other overdue notifications for this habit
+                        OverdueNotificationService.dismissAllOverdueNotifications(context, habitId)
+                        
+                        // Trigger icon check after habit completion
+                        HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
             "DISMISS_HABIT" -> {
                 HabitReminderService.dismissNotification(context, habitId)
             }

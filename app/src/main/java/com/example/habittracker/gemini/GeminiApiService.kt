@@ -80,6 +80,39 @@ class GeminiApiService(private val apiKey: String) {
     }
     
     /**
+     * Generate a congratulatory goodnight message for completing all habits
+     */
+    suspend fun generateCompletionGoodnightMessage(userName: String, completedCount: Int): Result<String> = withContext(Dispatchers.IO) {
+        val prompt = """
+            Generate a warm, congratulatory goodnight message for $userName who has successfully completed ALL $completedCount habit(s) today in their habit tracking app.
+            
+            Requirements:
+            - Congratulate them on their achievement
+            - Express pride and encouragement
+            - Mention they completed all $completedCount habits
+            - Wish them a good night's rest
+            - Encourage them to come back tomorrow and continue their streak
+            - Use a warm, proud, and caring tone (like a supportive friend or mentor)
+            - Keep it short (2-3 sentences maximum)
+            - Don't use emojis
+            - Address them by name
+            - Make it feel special and rewarding
+            
+            Generate ONLY the message text, nothing else.
+        """.trimIndent()
+        
+        generateContent(prompt)
+    }
+    
+    /**
+     * Generate a custom message with a specific prompt
+     * Public method for custom use cases like overdue notifications
+     */
+    suspend fun generateCustomMessage(prompt: String): Result<String> = withContext(Dispatchers.IO) {
+        generateContent(prompt)
+    }
+    
+    /**
      * Generate content using Gemini API
      */
     private suspend fun generateContent(prompt: String): Result<String> = withContext(Dispatchers.IO) {

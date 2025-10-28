@@ -356,6 +356,14 @@
             android:exported="false" />
         
         <receiver
+            android:name=".notification.OverdueNotificationReceiver"
+            android:exported="false" />
+        
+        <receiver
+            android:name=".notification.DailyCompletionReceiver"
+            android:exported="false" />
+        
+        <receiver
             android:name=".notification.BootReceiver"
             android:enabled="true"
             android:exported="false">

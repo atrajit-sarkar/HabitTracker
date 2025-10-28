@@ -25,6 +25,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
 
     @Inject lateinit var habitRepository: HabitRepository
     @Inject lateinit var reminderScheduler: HabitReminderScheduler
+    @Inject lateinit var overdueScheduler: OverdueNotificationScheduler
     @Inject lateinit var emailStorage: SecureEmailStorage
     @Inject lateinit var authRepository: AuthRepository
 
@@ -43,6 +44,10 @@ class HabitReminderReceiver : BroadcastReceiver() {
 
     private suspend fun handleReminder(context: Context, habit: Habit) {
         reminderScheduler.schedule(habit)
+        
+        // Schedule overdue notifications for 2, 3, 4, 5, 6 hours after due time
+        overdueScheduler.scheduleOverdueChecks(habit)
+        
         val shouldNotify = !habit.isCompletedToday()
         if (shouldNotify) {
             // Show in-app notification

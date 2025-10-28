@@ -23,6 +23,12 @@ class BootReceiver : BroadcastReceiver() {
 
     @Inject
     lateinit var reminderScheduler: HabitReminderScheduler
+    
+    @Inject
+    lateinit var overdueScheduler: OverdueNotificationScheduler
+    
+    @Inject
+    lateinit var dailyCompletionScheduler: DailyCompletionScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
@@ -53,12 +59,17 @@ class BootReceiver : BroadcastReceiver() {
             habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
                 try {
                     reminderScheduler.schedule(habit)
+                    overdueScheduler.scheduleOverdueChecks(habit)
                     rescheduled++
                     Log.d("BootReceiver", "Rescheduled reminder for: ${habit.title}")
                 } catch (e: Exception) {
                     Log.e("BootReceiver", "Failed to reschedule ${habit.title}: ${e.message}")
                 }
             }
+            
+            // Reschedule daily completion check at 11:50 PM
+            dailyCompletionScheduler.scheduleDailyCheck()
+            Log.d("BootReceiver", "Rescheduled daily completion check at 11:50 PM")
             
             Log.d("BootReceiver", "Successfully rescheduled $rescheduled reminders out of ${habits.size} total habits")
         } catch (e: Exception) {

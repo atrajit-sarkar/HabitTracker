@@ -43,6 +43,8 @@ class HabitViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val habitRepository: HabitRepository,
     private val reminderScheduler: HabitReminderScheduler,
+    private val overdueScheduler: it.atraj.habittracker.notification.OverdueNotificationScheduler,
+    private val dailyCompletionScheduler: it.atraj.habittracker.notification.DailyCompletionScheduler,
     private val authRepository: AuthRepository,
     private val profileStatsUpdater: ProfileStatsUpdater,
     private val userRewardsRepository: UserRewardsRepository
@@ -125,12 +127,17 @@ class HabitViewModel @Inject constructor(
                 habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
                     try {
                         reminderScheduler.schedule(habit)
+                        overdueScheduler.scheduleOverdueChecks(habit)
                         rescheduled++
                     } catch (e: Exception) {
                         android.util.Log.e("HabitViewModel", "Failed to reschedule ${habit.title}: ${e.message}")
                     }
                 }
                 android.util.Log.d("HabitViewModel", "Rescheduled $rescheduled reminders on app startup")
+                
+                // Schedule daily completion check at 11:50 PM
+                dailyCompletionScheduler.scheduleDailyCheck()
+                android.util.Log.d("HabitViewModel", "Scheduled daily completion check at 11:50 PM")
             } catch (e: Exception) {
                 android.util.Log.e("HabitViewModel", "Error rescheduling reminders on startup: ${e.message}")
             }
@@ -457,8 +464,10 @@ class HabitViewModel @Inject constructor(
         
         if (savedHabit.reminderEnabled) {
             reminderScheduler.schedule(savedHabit)
+            overdueScheduler.scheduleOverdueChecks(savedHabit)
         } else {
             reminderScheduler.cancel(savedHabit.id)
+            overdueScheduler.cancelOverdueChecks(savedHabit.id)
         }
         _uiState.update { state ->
             state.copy(
@@ -493,8 +502,10 @@ class HabitViewModel @Inject constructor(
             
             if (enabled) {
                 reminderScheduler.schedule(updated)
+                overdueScheduler.scheduleOverdueChecks(updated)
             } else {
                 reminderScheduler.cancel(updated.id)
+                overdueScheduler.cancelOverdueChecks(updated.id)
             }
         }
     }
@@ -804,6 +815,7 @@ class HabitViewModel @Inject constructor(
             // Reschedule notifications if reminder is enabled
             if (habit.reminderEnabled) {
                 reminderScheduler.schedule(habit)
+                overdueScheduler.scheduleOverdueChecks(habit)
                 android.util.Log.d("HabitViewModel", "⏰ Alarm rescheduled for '${habit.title}'")
             } else {
                 android.util.Log.d("HabitViewModel", "🔕 Reminder disabled, no alarm scheduled")
