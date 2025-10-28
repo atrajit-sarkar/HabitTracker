@@ -2515,7 +2515,7 @@ private fun DoAHabitAnimationOverlay() {
             composition = composition,
             iterations = LottieConstants.IterateForever,
             isPlaying = true,
-            speed = 0.75f, // Slower speed (0.75x)
+            speed = 1f, // 1x speed to match original video
             restartOnPlay = true
         )
         

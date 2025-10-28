@@ -40,7 +40,9 @@ param(
     
     [int]$TargetFps = 12,
     
-    [double]$Speed = 0.75
+    [double]$Speed = 0.75,
+    
+    [bool]$SkipDuplicates = $true
 )
 
 $RootDir = Split-Path -Parent $PSScriptRoot
@@ -70,6 +72,7 @@ Write-Host "  - Max Size: $MaxSize px"
 Write-Host "  - Target FPS: $TargetFps"
 Write-Host "  - Background Removal: $BackgroundMethod"
 Write-Host "  - Remove BG: $RemoveBackground"
+Write-Host "  - Skip Duplicates: $SkipDuplicates"
 Write-Host "  - Speed (for Kotlin): ${Speed}x"
 Write-Host "=" * 60
 
@@ -78,6 +81,7 @@ $ScriptsDir = "$PSScriptRoot\scripts" -replace '\\', '/'
 $InputPathPy = $InputPath -replace '\\', '/'
 $OutputPathPy = $OutputPath -replace '\\', '/'
 $RemoveBgPy = if ($RemoveBackground) { "True" } else { "False" }
+$DuplicateThreshold = if ($SkipDuplicates) { "0.02" } else { "0" }
 
 $PythonCmd = @"
 import sys
@@ -90,7 +94,7 @@ convert_mp4_to_lottie(
     max_size=$MaxSize, 
     target_fps=$TargetFps, 
     skip_frames=1, 
-    duplicate_threshold=0.02, 
+    duplicate_threshold=$DuplicateThreshold, 
     bg_method='$BackgroundMethod'
 )
 "@
