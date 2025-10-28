@@ -875,11 +875,13 @@ fun HabitHomeScreen(
                     themeConfig = themeConfig,
                     soundPlayer = soundPlayer,
                     onToggleReminder = { enabled -> onToggleReminder(habit.id, enabled) },
-                    onMarkCompleted = { 
+                    onMarkCompleted = {
                         // Show Sharingan animation only for Itachi theme
                         if (currentTheme == AppTheme.ITACHI) {
                             showSharinganAnimation = true
                         }
+                        
+                        // Mark habit as completed - this will trigger recomposition
                         onMarkHabitCompleted(habit.id) 
                     },
                     onDelete = {
@@ -1356,7 +1358,6 @@ private fun DrawerContent(
     }
 }
 
-
 @Composable
 private fun HabitCard(
     habit: HabitCardUi,
@@ -1392,6 +1393,9 @@ private fun HabitCard(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showTitleDialog by remember { mutableStateOf(false) }
     var showDescriptionDialog by remember { mutableStateOf(false) }
+    
+    // Local state for habit done animation on this card
+    var showLocalHabitDoneAnimation by remember { mutableStateOf(false) }
     
     // OPTIMIZATION: Remove expensive onTextLayout callbacks - use simpler truncation check
     // We'll just show info icon always if text is long
@@ -1600,8 +1604,14 @@ private fun HabitCard(
                     ) {
                         FilledTonalButton(
                             onClick = {
+                                android.util.Log.d("HabitDoneAnim", "Done button clicked for habit: ${habit.id}")
+                                
+                                // Show animation on this card
+                                showLocalHabitDoneAnimation = true
+                                
                                 // Play theme-specific sound
                                 playThemeCompletionSound(context, currentTheme, soundPlayer)
+                                
                                 // Mark habit as completed
                                 onMarkCompleted()
                             },
@@ -1748,6 +1758,15 @@ private fun HabitCard(
                         }
                     }
                 }
+            }
+            
+            // Habit done animation overlay - shows on this card when completed
+            if (showLocalHabitDoneAnimation) {
+                HabitDoneCardOverlay(
+                    onAnimationComplete = { 
+                        showLocalHabitDoneAnimation = false 
+                    }
+                )
             }
         } // Close outer Box
     } // Close Card
@@ -3254,6 +3273,201 @@ private fun SharinganAnimationOverlay(
                     ),
                     shape = CircleShape
                 )
+        )
+    }
+}
+
+/**
+ * Habit Done Animation Overlay - Shows celebration animation when habit is completed
+ * Displays for 4 seconds with smooth fade in/out
+ */
+@Composable
+private fun HabitDoneAnimationOverlay(
+    onAnimationComplete: () -> Unit
+) {
+    android.util.Log.d("HabitDoneAnim", "HabitDoneAnimationOverlay composable entered")
+    
+    // Animation states: -1=initial (invisible), 0=fade in, 1=hold, 2=fade out
+    var animationPhase by remember { mutableStateOf(-1) }
+    
+    // Alpha animation for fade effects
+    val alpha by animateFloatAsState(
+        targetValue = when (animationPhase) {
+            -1 -> 0.0f  // Start invisible
+            0 -> 1.0f   // Fade in
+            1 -> 1.0f   // Hold
+            2 -> 0.0f   // Fade out
+            else -> 0.0f
+        },
+        animationSpec = when (animationPhase) {
+            -1 -> tween(durationMillis = 0)  // Instant
+            0 -> tween(
+                durationMillis = 300,
+                easing = FastOutSlowInEasing  // Smooth fade in
+            )
+            1 -> tween(durationMillis = 100)
+            2 -> tween(
+                durationMillis = 300,
+                easing = FastOutSlowInEasing  // Smooth fade out
+            )
+            else -> tween(durationMillis = 300)
+        },
+        label = "habit_done_alpha"
+    )
+    
+    // Lottie composition
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("habit_done_anim.json")
+    )
+    
+    android.util.Log.d("HabitDoneAnim", "Lottie composition loaded: ${composition != null}")
+    
+    // Lottie animation progress with 1x speed
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        speed = 1f
+    )
+    
+    // Animation timing control - 4 seconds total
+    LaunchedEffect(Unit) {
+        android.util.Log.d("HabitDoneAnim", "Animation sequence started")
+        
+        // Start from invisible state
+        delay(50)
+        
+        // Phase 0: Fade in (300ms)
+        animationPhase = 0
+        android.util.Log.d("HabitDoneAnim", "Phase 0: Fade in")
+        delay(300)
+        
+        // Phase 1: Hold (3400ms - for 4 seconds total)
+        animationPhase = 1
+        android.util.Log.d("HabitDoneAnim", "Phase 1: Hold")
+        delay(3400)
+        
+        // Phase 2: Fade out (300ms)
+        animationPhase = 2
+        android.util.Log.d("HabitDoneAnim", "Phase 2: Fade out")
+        delay(300)
+        
+        // Complete
+        android.util.Log.d("HabitDoneAnim", "Animation complete")
+        onAnimationComplete()
+    }
+    
+    // Overlay - Add semi-transparent background for better visibility
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = alpha * 0.3f)) // Semi-transparent dark overlay
+            .clickable(enabled = false) { }, // Block clicks
+        contentAlignment = Alignment.Center
+    ) {
+        // Habit done animation
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier
+                .size(300.dp)
+                .graphicsLayer(alpha = alpha)
+        )
+    }
+}
+
+/**
+ * Habit Done Card Overlay - Shows celebration animation on individual card when completed
+ * Smaller size to fit within the card, displays for 4 seconds
+ */
+@Composable
+private fun HabitDoneCardOverlay(
+    onAnimationComplete: () -> Unit
+) {
+    android.util.Log.d("HabitDoneAnim", "HabitDoneCardOverlay composable entered")
+    
+    // Animation states: -1=initial (invisible), 0=fade in, 1=hold, 2=fade out
+    var animationPhase by remember { mutableStateOf(-1) }
+    
+    // Alpha animation for fade effects
+    val alpha by animateFloatAsState(
+        targetValue = when (animationPhase) {
+            -1 -> 0.0f  // Start invisible
+            0 -> 1.0f   // Fade in
+            1 -> 1.0f   // Hold
+            2 -> 0.0f   // Fade out
+            else -> 0.0f
+        },
+        animationSpec = when (animationPhase) {
+            -1 -> tween(durationMillis = 0)  // Instant
+            0 -> tween(
+                durationMillis = 300,
+                easing = FastOutSlowInEasing  // Smooth fade in
+            )
+            1 -> tween(durationMillis = 100)
+            2 -> tween(
+                durationMillis = 300,
+                easing = FastOutSlowInEasing  // Smooth fade out
+            )
+            else -> tween(durationMillis = 300)
+        },
+        label = "habit_done_card_alpha"
+    )
+    
+    // Lottie composition
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("habit_done_anim.json")
+    )
+    
+    android.util.Log.d("HabitDoneAnim", "Lottie composition loaded: ${composition != null}")
+    
+    // Lottie animation progress with 1x speed
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        speed = 1f
+    )
+    
+    // Animation timing control - 4 seconds total
+    LaunchedEffect(Unit) {
+        android.util.Log.d("HabitDoneAnim", "Card animation sequence started")
+        
+        // Start from invisible state
+        delay(50)
+        
+        // Phase 0: Fade in (300ms)
+        animationPhase = 0
+        android.util.Log.d("HabitDoneAnim", "Phase 0: Fade in")
+        delay(300)
+        
+        // Phase 1: Hold (3400ms - for 4 seconds total)
+        animationPhase = 1
+        android.util.Log.d("HabitDoneAnim", "Phase 1: Hold")
+        delay(3400)
+        
+        // Phase 2: Fade out (300ms)
+        animationPhase = 2
+        android.util.Log.d("HabitDoneAnim", "Phase 2: Fade out")
+        delay(300)
+        
+        // Complete
+        android.util.Log.d("HabitDoneAnim", "Card animation complete")
+        onAnimationComplete()
+    }
+    
+    // Overlay - fills the card with semi-transparent background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = false) { }, // Block clicks on this card
+        contentAlignment = Alignment.Center
+    ) {
+        // Habit done animation - smaller to fit in card
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier
+                .size(150.dp) // Smaller size to fit in card
+                .graphicsLayer(alpha = alpha)
         )
     }
 }
