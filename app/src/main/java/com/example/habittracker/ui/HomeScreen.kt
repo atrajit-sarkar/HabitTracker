@@ -160,9 +160,38 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.LocalDate
+import it.atraj.habittracker.BuildConfig
 
 private object HomeScreenAnimationTracker {
-    var hasShownDoAHabitAnimation: Boolean = false
+    private const val PREFS_NAME = "home_screen_anim_prefs"
+    private const val KEY_WELCOME = "welcome_last_shown"
+    private const val KEY_DO_A_HABIT = "do_a_habit_last_shown"
+    
+    private fun prefs(context: android.content.Context) =
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+    
+    fun hasShownWelcomeToday(context: android.content.Context): Boolean {
+        if (BuildConfig.DEBUG) return false
+        val today = LocalDate.now().toString()
+        return prefs(context).getString(KEY_WELCOME, null) == today
+    }
+    
+    fun markWelcomeShown(context: android.content.Context) {
+        if (BuildConfig.DEBUG) return
+        prefs(context).edit().putString(KEY_WELCOME, LocalDate.now().toString()).apply()
+    }
+    
+    fun hasShownDoAHabitToday(context: android.content.Context): Boolean {
+        if (BuildConfig.DEBUG) return false
+        val today = LocalDate.now().toString()
+        return prefs(context).getString(KEY_DO_A_HABIT, null) == today
+    }
+    
+    fun markDoAHabitShown(context: android.content.Context) {
+        if (BuildConfig.DEBUG) return
+        prefs(context).edit().putString(KEY_DO_A_HABIT, LocalDate.now().toString()).apply()
+    }
 }
 
 // Helper function to get icon resource from icon ID
@@ -349,24 +378,35 @@ fun HabitHomeScreen(
     // Sharingan animation state (for Itachi theme completion effect)
     var showSharinganAnimation by remember { mutableStateOf(false) }
     
-    // Do-a-habit animation overlay state (shows once per app session when overdue habits exist)
+    // Animation overlay states
     var showDoAHabitAnimation by remember { mutableStateOf(false) }
+    var showWelcomeAnimation by remember { mutableStateOf(false) }
     val hasOverdueHabit = remember(state.habits) { state.habits.any { it.isOverdue } }
+    val context = LocalContext.current
     
-    // Show the animation once when at least one habit is 2+ hours overdue
-    LaunchedEffect(hasOverdueHabit) {
-        if (hasOverdueHabit && !HomeScreenAnimationTracker.hasShownDoAHabitAnimation) {
+    // Animation logic: Show welcome or do-a-habit (once per day, persisted via SharedPreferences)
+    LaunchedEffect(hasOverdueHabit, state.habits.size) {
+        showDoAHabitAnimation = false
+        showWelcomeAnimation = false
+        
+        if (hasOverdueHabit && !HomeScreenAnimationTracker.hasShownDoAHabitToday(context)) {
             showDoAHabitAnimation = true
-            HomeScreenAnimationTracker.hasShownDoAHabitAnimation = true
-            kotlinx.coroutines.delay(5000) // 5 seconds
-            showDoAHabitAnimation = false
-        } else {
-            showDoAHabitAnimation = false
+            HomeScreenAnimationTracker.markDoAHabitShown(context)
+            try {
+                kotlinx.coroutines.delay(5000) // 5 seconds
+            } finally {
+                showDoAHabitAnimation = false
+            }
+        } else if (!hasOverdueHabit && state.habits.isNotEmpty() && !HomeScreenAnimationTracker.hasShownWelcomeToday(context)) {
+            showWelcomeAnimation = true
+            HomeScreenAnimationTracker.markWelcomeShown(context)
+            try {
+                kotlinx.coroutines.delay(5000) // 5 seconds
+            } finally {
+                showWelcomeAnimation = false
+            }
         }
     }
-    
-    // Get context early for preferences
-    val context = LocalContext.current
     
     // Sharingan variant selection (for Itachi theme)
     val prefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
@@ -835,9 +875,14 @@ fun HabitHomeScreen(
         )
     }
     
-    // Do-a-habit animation overlay (appears for 5 seconds on screen load)
+    // Do-a-habit animation overlay (appears when 2+ hour overdue habits exist)
     if (showDoAHabitAnimation) {
         DoAHabitAnimationOverlay()
+    }
+    
+    // Welcome animation overlay (appears when no overdue habits, once per day)
+    if (showWelcomeAnimation) {
+        WelcomeAnimationOverlay()
     }
     
     // Auto-dismiss logic - wait for ALL deletions to complete
@@ -2569,6 +2614,34 @@ private fun DoAHabitAnimationOverlay() {
             composition = composition,
             progress = { progress },
             modifier = Modifier.size(250.dp) // Visible size for do-a-habit animation
+        )
+    }
+}
+
+@Composable
+private fun WelcomeAnimationOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent), // Transparent background to overlay on content
+        contentAlignment = Alignment.Center
+    ) {
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("welcome_anim.json")
+        )
+        
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = true,
+            speed = 1f, // 1x speed to match original video
+            restartOnPlay = true
+        )
+        
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(850.dp) // Bigger size for welcome animation
         )
     }
 }
