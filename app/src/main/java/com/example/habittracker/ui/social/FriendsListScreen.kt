@@ -106,7 +106,7 @@ fun FriendsListScreen(
             // Custom Tab Row
             CustomTabRow(
                 selectedPage = pagerState.currentPage,
-                friendsCount = socialState.friends.size,
+                friendsCount = socialState.friendsCount,
                 requestsCount = socialState.pendingRequests.size,
                 onTabClick = { page ->
                     scope.launch {

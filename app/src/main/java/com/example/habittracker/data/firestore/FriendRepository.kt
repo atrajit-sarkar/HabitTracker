@@ -187,22 +187,82 @@ class FriendRepository @Inject constructor(
 
     // Get friends list
     fun getFriends(userId: String): Flow<List<UserPublicProfile>> = callbackFlow {
-        var friendshipsListener: ListenerRegistration? = null
+        var listener1: ListenerRegistration? = null
+        var listener2: ListenerRegistration? = null
         val profileListeners = mutableMapOf<String, ListenerRegistration>()
         
         try {
-            // Listen to friendships collection
-            friendshipsListener = firestore.collection(FRIENDSHIPS_COLLECTION)
+            val allFriendships = mutableSetOf<Friendship>()
+            
+            // Helper function to update profiles
+            fun updateProfiles(friendIds: List<String>, listeners: MutableMap<String, ListenerRegistration>) {
+                // Remove old profile listeners for friends no longer in list
+                val removedFriends = listeners.keys - friendIds.toSet()
+                removedFriends.forEach { friendId ->
+                    listeners[friendId]?.remove()
+                    listeners.remove(friendId)
+                }
+                
+                // Fetch friend profiles with real-time updates
+                if (friendIds.isEmpty()) {
+                    trySend(emptyList())
+                } else {
+                    val profiles = mutableMapOf<String, UserPublicProfile>()
+                    
+                    // Set up real-time listener for each friend's profile
+                    friendIds.forEach { friendId ->
+                        if (!listeners.containsKey(friendId)) {
+                            listeners[friendId] = firestore.collection(USER_PROFILES_COLLECTION)
+                                .document(friendId)
+                                .addSnapshotListener { profileDoc, profileError ->
+                                    if (profileError != null) {
+                                        Log.e(TAG, "Error listening to profile $friendId: ${profileError.message}")
+                                        return@addSnapshotListener
+                                    }
+                                    
+                                    profileDoc?.toUserPublicProfile()?.let { profile ->
+                                        profiles[friendId] = profile
+                                        // Send updated list whenever any profile changes
+                                        trySend(profiles.values.toList())
+                                    }
+                                }
+                        }
+                    }
+                    
+                    // Initial fetch for profiles we don't have yet
+                    friendIds.chunked(10).forEach { chunk ->
+                        firestore.collection(USER_PROFILES_COLLECTION)
+                            .whereIn("__name__", chunk)
+                            .get()
+                            .addOnSuccessListener { profileSnapshot ->
+                                profileSnapshot.documents.forEach { doc ->
+                                    doc.toUserPublicProfile()?.let { profile ->
+                                        profiles[profile.userId] = profile
+                                    }
+                                }
+                                trySend(profiles.values.toList())
+                            }
+                    }
+                }
+            }
+            
+            // Listen to friendships where user is user1Id
+            listener1 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user1Id", userId)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.e(TAG, "Error listening to friendships: ${error.message}", error)
+                        Log.e(TAG, "Error listening to friendships (user1): ${error.message}", error)
                         return@addSnapshotListener
                     }
                     
                     val friendships = snapshot?.documents?.mapNotNull { it.toFriendship() } ?: emptyList()
                     
-                    // Get friend user IDs
-                    val friendIds = friendships.mapNotNull { friendship ->
+                    // Add to set (will update existing)
+                    allFriendships.removeAll { it.user1Id == userId || it.user2Id == userId }
+                    allFriendships.addAll(friendships)
+                    
+                    // Get friend user IDs from combined set
+                    val friendIds = allFriendships.mapNotNull { friendship ->
                         when (userId) {
                             friendship.user1Id -> friendship.user2Id
                             friendship.user2Id -> friendship.user1Id
@@ -210,54 +270,34 @@ class FriendRepository @Inject constructor(
                         }
                     }
                     
-                    // Remove old profile listeners for friends no longer in list
-                    val removedFriends = profileListeners.keys - friendIds.toSet()
-                    removedFriends.forEach { friendId ->
-                        profileListeners[friendId]?.remove()
-                        profileListeners.remove(friendId)
+                    updateProfiles(friendIds, profileListeners)
+                }
+            
+            // Listen to friendships where user is user2Id
+            listener2 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user2Id", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error listening to friendships (user2): ${error.message}", error)
+                        return@addSnapshotListener
                     }
                     
-                    // Fetch friend profiles with real-time updates
-                    if (friendIds.isEmpty()) {
-                        trySend(emptyList())
-                    } else {
-                        val profiles = mutableMapOf<String, UserPublicProfile>()
-                        
-                        // Set up real-time listener for each friend's profile
-                        friendIds.forEach { friendId ->
-                            if (!profileListeners.containsKey(friendId)) {
-                                profileListeners[friendId] = firestore.collection(USER_PROFILES_COLLECTION)
-                                    .document(friendId)
-                                    .addSnapshotListener { profileDoc, profileError ->
-                                        if (profileError != null) {
-                                            Log.e(TAG, "Error listening to profile $friendId: ${profileError.message}")
-                                            return@addSnapshotListener
-                                        }
-                                        
-                                        profileDoc?.toUserPublicProfile()?.let { profile ->
-                                            profiles[friendId] = profile
-                                            // Send updated list whenever any profile changes
-                                            trySend(profiles.values.toList())
-                                        }
-                                    }
-                            }
-                        }
-                        
-                        // Initial fetch for profiles we don't have yet
-                        friendIds.chunked(10).forEach { chunk ->
-                            firestore.collection(USER_PROFILES_COLLECTION)
-                                .whereIn("__name__", chunk)
-                                .get()
-                                .addOnSuccessListener { profileSnapshot ->
-                                    profileSnapshot.documents.forEach { doc ->
-                                        doc.toUserPublicProfile()?.let { profile ->
-                                            profiles[profile.userId] = profile
-                                        }
-                                    }
-                                    trySend(profiles.values.toList())
-                                }
+                    val friendships = snapshot?.documents?.mapNotNull { it.toFriendship() } ?: emptyList()
+                    
+                    // Add to set (will update existing)
+                    allFriendships.removeAll { it.user1Id == userId || it.user2Id == userId }
+                    allFriendships.addAll(friendships)
+                    
+                    // Get friend user IDs from combined set
+                    val friendIds = allFriendships.mapNotNull { friendship ->
+                        when (userId) {
+                            friendship.user1Id -> friendship.user2Id
+                            friendship.user2Id -> friendship.user1Id
+                            else -> null
                         }
                     }
+                    
+                    updateProfiles(friendIds, profileListeners)
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up friendships listener: ${e.message}", e)
@@ -265,7 +305,8 @@ class FriendRepository @Inject constructor(
         }
         
         awaitClose {
-            friendshipsListener?.remove()
+            listener1?.remove()
+            listener2?.remove()
             profileListeners.values.forEach { it.remove() }
             profileListeners.clear()
         }
@@ -523,12 +564,19 @@ class FriendRepository @Inject constructor(
     // Get leaderboard (friends sorted by success rate)
     suspend fun getLeaderboard(userId: String): List<UserPublicProfile> {
         return try {
-            // Get friends
-            val friendshipsSnapshot = firestore.collection(FRIENDSHIPS_COLLECTION)
+            // Get friendships where user is user1Id
+            val snapshot1 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user1Id", userId)
                 .get()
                 .await()
 
-            val friendships = friendshipsSnapshot.documents.mapNotNull { it.toFriendship() }
+            // Get friendships where user is user2Id
+            val snapshot2 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user2Id", userId)
+                .get()
+                .await()
+
+            val friendships = (snapshot1.documents + snapshot2.documents).mapNotNull { it.toFriendship() }
             
             val friendIds = friendships.mapNotNull { friendship ->
                 when (userId) {
@@ -567,82 +615,113 @@ class FriendRepository @Inject constructor(
 
     // Real-time leaderboard with live stats updates
     fun observeLeaderboard(userId: String): Flow<List<UserPublicProfile>> = callbackFlow {
-        var friendshipsListener: ListenerRegistration? = null
+        var listener1: ListenerRegistration? = null
+        var listener2: ListenerRegistration? = null
         val profileListeners = mutableMapOf<String, ListenerRegistration>()
         
         try {
-            // Listen to friendships collection
-            friendshipsListener = firestore.collection(FRIENDSHIPS_COLLECTION)
+            val allFriendships = mutableSetOf<Friendship>()
+            
+            // Helper function to update leaderboard
+            fun updateLeaderboard() {
+                // Get friend user IDs
+                val friendIds = allFriendships.mapNotNull { friendship ->
+                    when (userId) {
+                        friendship.user1Id -> friendship.user2Id
+                        friendship.user2Id -> friendship.user1Id
+                        else -> null
+                    }
+                }.toMutableList()
+                
+                // Add current user to leaderboard
+                friendIds.add(userId)
+                
+                // Remove old profile listeners for users no longer in leaderboard
+                val removedUsers = profileListeners.keys - friendIds.toSet()
+                removedUsers.forEach { removedUserId ->
+                    profileListeners[removedUserId]?.remove()
+                    profileListeners.remove(removedUserId)
+                }
+                
+                // Fetch profiles with real-time updates
+                if (friendIds.isEmpty()) {
+                    trySend(emptyList())
+                } else {
+                    val profiles = mutableMapOf<String, UserPublicProfile>()
+                    
+                    // Set up real-time listener for each user's profile
+                    friendIds.forEach { leaderboardUserId ->
+                        if (!profileListeners.containsKey(leaderboardUserId)) {
+                            profileListeners[leaderboardUserId] = firestore.collection(USER_PROFILES_COLLECTION)
+                                .document(leaderboardUserId)
+                                .addSnapshotListener { profileDoc, profileError ->
+                                    if (profileError != null) {
+                                        Log.e(TAG, "Error listening to profile $leaderboardUserId: ${profileError.message}")
+                                        return@addSnapshotListener
+                                    }
+                                    
+                                    profileDoc?.toUserPublicProfile()?.let { profile ->
+                                        profiles[leaderboardUserId] = profile
+                                        // Send sorted list whenever any profile changes (sorted by leaderboard score)
+                                        val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
+                                        trySend(sortedProfiles)
+                                    }
+                                }
+                        }
+                    }
+                    
+                    // Initial fetch for profiles we don't have yet
+                    friendIds.chunked(10).forEach { chunk ->
+                        firestore.collection(USER_PROFILES_COLLECTION)
+                            .whereIn("__name__", chunk)
+                            .get()
+                            .addOnSuccessListener { profileSnapshot ->
+                                profileSnapshot.documents.forEach { doc ->
+                                    doc.toUserPublicProfile()?.let { profile ->
+                                        profiles[profile.userId] = profile
+                                    }
+                                }
+                                val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
+                                trySend(sortedProfiles)
+                            }
+                    }
+                }
+            }
+            
+            // Listen to friendships where user is user1Id
+            listener1 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user1Id", userId)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.e(TAG, "Error listening to friendships for leaderboard: ${error.message}", error)
+                        Log.e(TAG, "Error listening to friendships (user1) for leaderboard: ${error.message}", error)
                         return@addSnapshotListener
                     }
                     
                     val friendships = snapshot?.documents?.mapNotNull { it.toFriendship() } ?: emptyList()
                     
-                    // Get friend user IDs
-                    val friendIds = friendships.mapNotNull { friendship ->
-                        when (userId) {
-                            friendship.user1Id -> friendship.user2Id
-                            friendship.user2Id -> friendship.user1Id
-                            else -> null
-                        }
-                    }.toMutableList()
+                    // Update set with new friendships
+                    allFriendships.removeAll { it.user1Id == userId }
+                    allFriendships.addAll(friendships)
                     
-                    // Add current user to leaderboard
-                    friendIds.add(userId)
-                    
-                    // Remove old profile listeners for users no longer in leaderboard
-                    val removedUsers = profileListeners.keys - friendIds.toSet()
-                    removedUsers.forEach { removedUserId ->
-                        profileListeners[removedUserId]?.remove()
-                        profileListeners.remove(removedUserId)
+                    updateLeaderboard()
+                }
+            
+            // Listen to friendships where user is user2Id
+            listener2 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user2Id", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error listening to friendships (user2) for leaderboard: ${error.message}", error)
+                        return@addSnapshotListener
                     }
                     
-                    // Fetch profiles with real-time updates
-                    if (friendIds.isEmpty()) {
-                        trySend(emptyList())
-                    } else {
-                        val profiles = mutableMapOf<String, UserPublicProfile>()
-                        
-                        // Set up real-time listener for each user's profile
-                        friendIds.forEach { leaderboardUserId ->
-                            if (!profileListeners.containsKey(leaderboardUserId)) {
-                                profileListeners[leaderboardUserId] = firestore.collection(USER_PROFILES_COLLECTION)
-                                    .document(leaderboardUserId)
-                                    .addSnapshotListener { profileDoc, profileError ->
-                                        if (profileError != null) {
-                                            Log.e(TAG, "Error listening to profile $leaderboardUserId: ${profileError.message}")
-                                            return@addSnapshotListener
-                                        }
-                                        
-                                        profileDoc?.toUserPublicProfile()?.let { profile ->
-                                            profiles[leaderboardUserId] = profile
-                                            // Send sorted list whenever any profile changes (sorted by leaderboard score)
-                                            val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
-                                            trySend(sortedProfiles)
-                                        }
-                                    }
-                            }
-                        }
-                        
-                        // Initial fetch for profiles we don't have yet
-                        friendIds.chunked(10).forEach { chunk ->
-                            firestore.collection(USER_PROFILES_COLLECTION)
-                                .whereIn("__name__", chunk)
-                                .get()
-                                .addOnSuccessListener { profileSnapshot ->
-                                    profileSnapshot.documents.forEach { doc ->
-                                        doc.toUserPublicProfile()?.let { profile ->
-                                            profiles[profile.userId] = profile
-                                        }
-                                    }
-                                    val sortedProfiles = profiles.values.sortedByDescending { it.leaderboardScore }
-                                    trySend(sortedProfiles)
-                                }
-                        }
-                    }
+                    val friendships = snapshot?.documents?.mapNotNull { it.toFriendship() } ?: emptyList()
+                    
+                    // Update set with new friendships
+                    allFriendships.removeAll { it.user2Id == userId }
+                    allFriendships.addAll(friendships)
+                    
+                    updateLeaderboard()
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up leaderboard listener: ${e.message}", e)
@@ -650,7 +729,8 @@ class FriendRepository @Inject constructor(
         }
         
         awaitClose {
-            friendshipsListener?.remove()
+            listener1?.remove()
+            listener2?.remove()
             profileListeners.values.forEach { it.remove() }
             profileListeners.clear()
         }
@@ -678,6 +758,51 @@ class FriendRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Error removing friend: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    // Get friends count (real-time)
+    fun getFriendsCount(userId: String): Flow<Int> = callbackFlow {
+        var listener1: ListenerRegistration? = null
+        var listener2: ListenerRegistration? = null
+        
+        try {
+            var count1 = 0
+            var count2 = 0
+            
+            // Listen to friendships where user is user1Id
+            listener1 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user1Id", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error listening to friendships count (user1): ${error.message}", error)
+                        return@addSnapshotListener
+                    }
+                    
+                    count1 = snapshot?.size() ?: 0
+                    trySend(count1 + count2)
+                }
+            
+            // Listen to friendships where user is user2Id
+            listener2 = firestore.collection(FRIENDSHIPS_COLLECTION)
+                .whereEqualTo("user2Id", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error listening to friendships count (user2): ${error.message}", error)
+                        return@addSnapshotListener
+                    }
+                    
+                    count2 = snapshot?.size() ?: 0
+                    trySend(count1 + count2)
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up friends count listener: ${e.message}", e)
+            trySend(0)
+        }
+        
+        awaitClose {
+            listener1?.remove()
+            listener2?.remove()
         }
     }
 }

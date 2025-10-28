@@ -15,6 +15,7 @@ import javax.inject.Inject
 data class SocialUiState(
     val currentUser: User? = null,
     val friends: List<UserPublicProfile> = emptyList(),
+    val friendsCount: Int = 0,
     val pendingRequests: List<FriendRequest> = emptyList(),
     val searchResult: UserPublicProfile? = null,
     val isSearching: Boolean = false,
@@ -55,6 +56,7 @@ class SocialViewModel @Inject constructor(
         
         // Load friends and pending requests
         loadFriends()
+        loadFriendsCount()
         loadPendingRequests()
     }
 
@@ -122,6 +124,23 @@ class SocialViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading friends: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun loadFriendsCount() {
+        val userId = currentUserId ?: return
+        
+        viewModelScope.launch {
+            try {
+                friendRepository.getFriendsCount(userId).collect { count ->
+                    _uiState.update { it.copy(friendsCount = count) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Expected when ViewModel is cleared
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading friends count: ${e.message}", e)
             }
         }
     }

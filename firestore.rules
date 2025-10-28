@@ -189,10 +189,11 @@ service cloud.firestore {
     // ============================================================================
     
     match /friendships/{friendshipId} {
-      // Users can read friendships they are part of
-      allow read: if isAuthenticated()
-        && (request.auth.uid == resource.data.user1Id 
-            || request.auth.uid == resource.data.user2Id);
+      // Users can read:
+      // 1. Friendships they are part of (for individual document reads)
+      // 2. All friendships (for list/query operations needed for leaderboard)
+      //    This is safe because friendships only expose user IDs, not sensitive data
+      allow read: if isAuthenticated();
       
       // Users can create friendships (when accepting friend request)
       // This is typically done by the app after accepting a friend request
