@@ -1,0 +1,10 @@
+# Keep output directory but ignore generated files
+*.json
+
+# Ignore large input files (optional - comment out if you want to track them)
+# *.mp4
+# *.gif
+
+# Python cache
+__pycache__/
+*.pyc

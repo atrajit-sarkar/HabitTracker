@@ -342,6 +342,15 @@ fun HabitHomeScreen(
     // Sharingan animation state (for Itachi theme completion effect)
     var showSharinganAnimation by remember { mutableStateOf(false) }
     
+    // Do-a-habit animation overlay state (appears for 5 seconds on screen load)
+    var showDoAHabitAnimation by remember { mutableStateOf(true) }
+    
+    // Auto-hide do-a-habit animation after 5 seconds
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(5000) // 5 seconds
+        showDoAHabitAnimation = false
+    }
+    
     // Get context early for preferences
     val context = LocalContext.current
     
@@ -810,6 +819,11 @@ fun HabitHomeScreen(
             sharinganVariant = selectedSharinganVariant.value,
             onAnimationComplete = { showSharinganAnimation = false }
         )
+    }
+    
+    // Do-a-habit animation overlay (appears for 5 seconds on screen load)
+    if (showDoAHabitAnimation) {
+        DoAHabitAnimationOverlay()
     }
     
     // Auto-dismiss logic - wait for ALL deletions to complete
@@ -2453,6 +2467,62 @@ private fun LoadingSandClockOverlay() {
             composition = composition,
             progress = { progress },
             modifier = Modifier.size(120.dp) // Professional size
+        )
+    }
+}
+
+@Composable
+private fun LaughingAnimationOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent), // Transparent background to overlay on content
+        contentAlignment = Alignment.Center
+    ) {
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("laughing.json")
+        )
+        
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = true,
+            speed = 1f,
+            restartOnPlay = true
+        )
+        
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(200.dp) // Visible size for laughing animation
+        )
+    }
+}
+
+@Composable
+private fun DoAHabitAnimationOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent), // Transparent background to overlay on content
+        contentAlignment = Alignment.Center
+    ) {
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.Asset("do_a_habit.json")
+        )
+        
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = true,
+            speed = 0.75f, // Slower speed (0.75x)
+            restartOnPlay = true
+        )
+        
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(250.dp) // Visible size for do-a-habit animation
         )
     }
 }
