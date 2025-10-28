@@ -169,7 +169,7 @@ class OverdueNotificationScheduler @Inject constructor(
         
         val pendingIntent = createOverduePendingIntent(habitId, overdueHours)
         
-        // Use exact alarms for precise timing
+        // Use exact alarms for precise timing - same as HabitReminderScheduler
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager?.canScheduleExactAlarms() == false) {
                 // Fallback to inexact alarm if exact permission not granted

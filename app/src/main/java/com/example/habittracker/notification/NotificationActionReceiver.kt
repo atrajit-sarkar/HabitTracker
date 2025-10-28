@@ -86,6 +86,12 @@ class NotificationActionReceiver : BroadcastReceiver() {
             "DISMISS_HABIT" -> {
                 HabitReminderService.dismissNotification(context, habitId)
             }
+            "DISMISS_OVERDUE_HABIT" -> {
+                val overdueHours = intent.getIntExtra("overdueHours", -1)
+                if (overdueHours != -1) {
+                    OverdueNotificationService.dismissOverdueNotification(context, habitId, overdueHours)
+                }
+            }
         }
     }
     

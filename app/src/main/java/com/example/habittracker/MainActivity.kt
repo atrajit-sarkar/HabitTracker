@@ -17,6 +17,7 @@ import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.data.firestore.UserPresenceManager
 import it.atraj.habittracker.notification.HabitReminderService
 import it.atraj.habittracker.notification.NotificationReliabilityHelper
+import it.atraj.habittracker.notification.OverdueNotificationService
 import it.atraj.habittracker.ui.HabitTrackerNavigation
 import it.atraj.habittracker.ui.theme.HabitTrackerTheme
 import it.atraj.habittracker.update.CheckingUpdatesDialog
@@ -94,6 +95,7 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
         HabitReminderService.ensureDefaultChannel(this)
+        OverdueNotificationService.ensureDefaultOverdueChannel(this)
         
         // Initialize update manager
         updateManager = UpdateManager(this)
