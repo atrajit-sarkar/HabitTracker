@@ -162,7 +162,7 @@ object OverdueNotificationService {
     }
     
     /**
-     * Build overdue notification with large overdue image icon and BigTextStyle for full message
+     * Build overdue notification with large overdue image on the left and text on the right (like image is speaking)
      */
     private fun buildOverdueNotification(
         context: Context,
@@ -173,31 +173,37 @@ object OverdueNotificationService {
         overdueHours: Int
     ): NotificationCompat.Builder {
         
-        // Intent to open habit details - using single top to ensure navigation works
+        // Intent to open habit details - same as regular notifications
         val contentIntent = PendingIntent.getActivity(
             context,
             getNotificationId(habit.id, overdueHours),
             Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("habitId", habit.id)
                 putExtra("openHabitDetails", true)
-                action = Intent.ACTION_VIEW // Ensure intent is treated as new
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        // Build notification with large overdue image and BigTextStyle for expandable message
+        // Create habit avatar for the collapsed state
+        val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)
+        
+        // Create composite image: overdue image on left + message text on right (like image is speaking)
+        val compositeImage = createCompositeNotificationImage(context, bigPicture, message, habit.title, overdueHours)
+        
+        // Build notification with BigPictureStyle showing composite image
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_habit)
-            .setLargeIcon(bigPicture) // Show overdue image as LARGE icon (bigger than avatar)
+            .setLargeIcon(avatarBitmap) // Show habit avatar on right side when collapsed
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
             .setContentText(message)
             .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(message) // Full Gemini message shows when expanded
+                NotificationCompat.BigPictureStyle()
+                    .bigPicture(compositeImage) // Composite image: overdue image on left, text on right
+                    .bigLargeIcon(avatarBitmap) // Keep avatar on right when expanded
                     .setBigContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
+                    .setSummaryText(message) // Full message text appears below the image when expanded
             )
             .setContentIntent(contentIntent)
             .setAutoCancel(true) // Allow swipe to dismiss
@@ -432,6 +438,111 @@ object OverdueNotificationService {
             manager.deleteNotificationChannel(channelId)
             Log.d(TAG, "Deleted overdue channel: $channelId")
         }
+    }
+    
+    /**
+     * Create composite image with overdue picture on left and message text on right
+     * This makes it look like the image is "speaking" the message
+     * Shows as much text as possible, full text available in notification's setSummaryText
+     */
+    private fun createCompositeNotificationImage(
+        context: Context,
+        overdueImage: Bitmap,
+        message: String,
+        habitTitle: String,
+        overdueHours: Int
+    ): Bitmap {
+        // Notification big picture dimensions (wider and taller for more text)
+        val density = context.resources.displayMetrics.density
+        val canvasWidth = (480 * density).toInt() // Increased width
+        val canvasHeight = (280 * density).toInt() // Increased height for more text lines
+        
+        // Create canvas
+        val compositeBitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(compositeBitmap)
+        
+        // Background color
+        canvas.drawColor(Color.parseColor("#1E1E2E")) // Dark background
+        
+        // Scale and draw overdue image on the LEFT side (slightly smaller to give more space for text)
+        val imageSize = (canvasHeight * 0.85f).toInt() // 85% of height
+        val scaledOverdueImage = Bitmap.createScaledBitmap(overdueImage, imageSize, imageSize, true)
+        val imageLeft = (15 * density) // Padding from left
+        val imageTop = (canvasHeight - imageSize) / 2f // Center vertically
+        canvas.drawBitmap(scaledOverdueImage, imageLeft, imageTop, null)
+        
+        // Draw text on the RIGHT side (more space for text)
+        val textStartX = imageLeft + imageSize + (15 * density) // Start after image + padding
+        val textWidth = canvasWidth - textStartX - (15 * density) // Available width for text
+        
+        // Title paint (slightly smaller)
+        val titlePaint = Paint().apply {
+            color = Color.parseColor("#FFD700") // Gold color for warning
+            textSize = 20 * density
+            isAntiAlias = true
+            isFakeBoldText = true
+        }
+        
+        // Message paint (optimized size)
+        val messagePaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 16 * density
+            isAntiAlias = true
+        }
+        
+        // Draw title (compact)
+        val title = "⚠️ $habitTitle"
+        var currentY = canvasHeight * 0.18f
+        canvas.drawText(title, textStartX, currentY, titlePaint)
+        
+        // Draw overdue hours (compact)
+        currentY += 25 * density
+        val overdueText = "$overdueHours hrs overdue"
+        val overdueTextPaint = Paint().apply {
+            color = Color.parseColor("#FF6B6B") // Red color
+            textSize = 14 * density
+            isAntiAlias = true
+        }
+        canvas.drawText(overdueText, textStartX, currentY, overdueTextPaint)
+        
+        // Draw message with word wrap (more lines, tighter spacing)
+        currentY += 28 * density
+        val words = message.split(" ")
+        var line = ""
+        var linesDrawn = 0
+        val maxLines = 8 // Allow up to 8 lines of text
+        val lineHeight = 20 * density
+        
+        for (word in words) {
+            val testLine = if (line.isEmpty()) word else "$line $word"
+            val testWidth = messagePaint.measureText(testLine)
+            
+            if (testWidth > textWidth && line.isNotEmpty()) {
+                // Draw current line and start new one
+                canvas.drawText(line, textStartX, currentY, messagePaint)
+                currentY += lineHeight
+                linesDrawn++
+                line = word
+                
+                // Stop if we've drawn max lines or run out of space
+                if (linesDrawn >= maxLines || currentY > canvasHeight * 0.92f) {
+                    // Add ellipsis if text was truncated
+                    if (words.indexOf(word) < words.size - 1) {
+                        line += "..."
+                    }
+                    break
+                }
+            } else {
+                line = testLine
+            }
+        }
+        
+        // Draw remaining text if we have space
+        if (line.isNotEmpty() && currentY < canvasHeight * 0.92f) {
+            canvas.drawText(line, textStartX, currentY, messagePaint)
+        }
+        
+        return compositeBitmap
     }
     
     /**

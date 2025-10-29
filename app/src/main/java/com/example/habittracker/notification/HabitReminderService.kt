@@ -359,11 +359,9 @@ object HabitReminderService {
             context,
             habit.id.toInt(),
             Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("habitId", habit.id)
                 putExtra("openHabitDetails", true)
-                action = Intent.ACTION_VIEW // Ensure intent is treated as new
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

@@ -86,21 +86,6 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(context)
     }
     
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        // Handle notification clicks when activity is already running
-        val openHabitDetails = intent.getBooleanExtra("openHabitDetails", false)
-        val habitId = intent.getLongExtra("habitId", -1L)
-        
-        if (openHabitDetails && habitId != -1L) {
-            Log.d("MainActivity", "onNewIntent: Opening habit details for ID: $habitId")
-            // Trigger navigation by setting a new intent
-            setIntent(intent)
-            // Force recreation to handle navigation
-            recreate()
-        }
-    }
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
         installSplashScreen()
