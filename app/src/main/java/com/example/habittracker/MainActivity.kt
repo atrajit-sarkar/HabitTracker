@@ -1,3 +1,4 @@
+
 package it.atraj.habittracker
 
 import android.content.Context
@@ -87,6 +88,10 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d("MainActivity", "════════════════════════════════════════")
+        Log.d("MainActivity", "onCreate() CALLED - App is starting!")
+        Log.d("MainActivity", "════════════════════════════════════════")
+        
         // Install splash screen before super.onCreate()
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -134,6 +139,8 @@ class MainActivity : ComponentActivity() {
         val openHabitDetails = intent.getBooleanExtra("openHabitDetails", false)
         var habitId = intent.getLongExtra("habitId", -1L)
         
+        Log.d("MainActivity", "Intent received - openHabitDetails: $openHabitDetails, habitId: $habitId, action: ${intent.action}, flags: ${intent.flags}")
+        
         // Handle deep link from email
         // Supports both: habittracker://habit/{habitId} and https://atraj.it/habittracker/habit/{habitId}
         intent.data?.let { deepLinkUri ->
@@ -166,9 +173,14 @@ class MainActivity : ComponentActivity() {
                 } ?: "null"
                 "chat/$friendId/${friendName ?: "Friend"}/${friendAvatar ?: "😊"}/$photoUrlEncoded"
             }
-            habitId != -1L -> "habit_details/$habitId"  // Works for both notification and deep link
+            habitId != -1L -> {
+                Log.d("MainActivity", "Setting start destination to habit_details/$habitId")
+                "habit_details/$habitId"  // Works for both notification and deep link
+            }
             else -> "loading"
         }
+        
+        Log.d("MainActivity", "Final startDestination: $startDestination")
         
         setContent {
             // Get saved theme with reactive state observation

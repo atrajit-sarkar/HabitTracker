@@ -173,17 +173,20 @@ object OverdueNotificationService {
         overdueHours: Int
     ): NotificationCompat.Builder {
         
-        // Intent to open habit details - same as regular notifications
-        val contentIntent = PendingIntent.getActivity(
-            context,
-            getNotificationId(habit.id, overdueHours),
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("habitId", habit.id)
-                putExtra("openHabitDetails", true)
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        // Intent to open habit details using TaskStackBuilder
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+        }
+        
+        val contentIntent = android.app.TaskStackBuilder.create(context).run {
+            addNextIntentWithParentStack(intent)
+            getPendingIntent(
+                getNotificationId(habit.id, overdueHours),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
         
         // Create habit avatar for the collapsed state
         val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)
