@@ -13,6 +13,8 @@ import it.atraj.habittracker.auth.User
 import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.notification.HabitReminderScheduler
 import it.atraj.habittracker.notification.HabitReminderService
+import it.atraj.habittracker.notification.OverdueNotificationScheduler
+import it.atraj.habittracker.notification.OverdueNotificationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +41,8 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val googleSignInHelper: GoogleSignInHelper,
     private val habitRepository: HabitRepository,
-    private val reminderScheduler: HabitReminderScheduler
+    private val reminderScheduler: HabitReminderScheduler,
+    private val overdueScheduler: OverdueNotificationScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -181,23 +184,42 @@ class AuthViewModel @Inject constructor(
                 try {
                     val habits = habitRepository.getAllHabits()
                     val habitIds = habits.map { it.id }
-                    var cancelledCount = 0
+                    var cancelledRemindersCount = 0
+                    var cancelledOverdueCount = 0
                     
-                    // Cancel all alarms
+                    // Cancel all regular reminder alarms and overdue alarms
                     habits.forEach { habit ->
                         try {
                             reminderScheduler.cancel(habit.id)
-                            cancelledCount++
+                            cancelledRemindersCount++
                         } catch (e: Exception) {
-                            Log.e("AuthViewModel", "Failed to cancel alarm for habit ${habit.id}", e)
+                            Log.e("AuthViewModel", "Failed to cancel reminder alarm for habit ${habit.id}", e)
+                        }
+                        
+                        try {
+                            overdueScheduler.cancelOverdueChecks(habit.id)
+                            cancelledOverdueCount++
+                        } catch (e: Exception) {
+                            Log.e("AuthViewModel", "Failed to cancel overdue alarms for habit ${habit.id}", e)
                         }
                     }
-                    Log.d("AuthViewModel", "Cancelled $cancelledCount alarms before logout")
+                    Log.d("AuthViewModel", "Cancelled $cancelledRemindersCount reminder alarms and $cancelledOverdueCount overdue alarms before logout")
                     
-                    // Delete all notification channels
+                    // Delete all notification channels (both regular and overdue)
                     if (habitIds.isNotEmpty()) {
                         HabitReminderService.deleteMultipleHabitChannels(context, habitIds)
-                        Log.d("AuthViewModel", "Deleted ${habitIds.size} notification channels before logout")
+                        Log.d("AuthViewModel", "Deleted ${habitIds.size} regular notification channels before logout")
+                        
+                        // Dismiss and delete overdue notifications and channels
+                        habitIds.forEach { habitId ->
+                            try {
+                                OverdueNotificationService.dismissAllOverdueNotifications(context, habitId)
+                                OverdueNotificationService.deleteOverdueChannel(context, habitId)
+                            } catch (e: Exception) {
+                                Log.e("AuthViewModel", "Failed to cleanup overdue notifications for habit $habitId", e)
+                            }
+                        }
+                        Log.d("AuthViewModel", "Dismissed and deleted ${habitIds.size} overdue notification channels before logout")
                     }
                 } catch (e: Exception) {
                     Log.e("AuthViewModel", "Error cleaning up alarms/channels during logout", e)
