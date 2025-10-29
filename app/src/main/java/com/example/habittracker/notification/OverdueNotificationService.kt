@@ -162,7 +162,7 @@ object OverdueNotificationService {
     }
     
     /**
-     * Build overdue notification with BigPictureStyle
+     * Build overdue notification with large overdue image icon and BigTextStyle for full message
      */
     private fun buildOverdueNotification(
         context: Context,
@@ -173,34 +173,31 @@ object OverdueNotificationService {
         overdueHours: Int
     ): NotificationCompat.Builder {
         
-        // Intent to open habit details
+        // Intent to open habit details - using single top to ensure navigation works
         val contentIntent = PendingIntent.getActivity(
             context,
             getNotificationId(habit.id, overdueHours),
             Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("habitId", habit.id)
                 putExtra("openHabitDetails", true)
+                action = Intent.ACTION_VIEW // Ensure intent is treated as new
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        // Create habit avatar bitmap for large icon (left side in collapsed state)
-        val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)
-        
-        // Build notification with BigPictureStyle
+        // Build notification with large overdue image and BigTextStyle for expandable message
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_habit)
-            .setLargeIcon(avatarBitmap) // Show habit avatar as large icon in collapsed state
+            .setLargeIcon(bigPicture) // Show overdue image as LARGE icon (bigger than avatar)
             .setColor(ContextCompat.getColor(context, R.color.purple_500))
             .setContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
             .setContentText(message)
             .setStyle(
-                NotificationCompat.BigPictureStyle()
-                    .bigPicture(bigPicture) // Overdue image (2hour, 3hour, etc.) shows when expanded
-                    .bigLargeIcon(avatarBitmap) // Keep showing avatar icon even when expanded
+                NotificationCompat.BigTextStyle()
+                    .bigText(message) // Full Gemini message shows when expanded
                     .setBigContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
-                    .setSummaryText(message)
             )
             .setContentIntent(contentIntent)
             .setAutoCancel(true) // Allow swipe to dismiss
