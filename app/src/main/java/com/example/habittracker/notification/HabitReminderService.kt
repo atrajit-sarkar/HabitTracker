@@ -3,7 +3,6 @@ package it.atraj.habittracker.notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -356,22 +355,16 @@ object HabitReminderService {
         val channelId = ensureHabitChannel(context, habit)
         
         val notificationManager = NotificationManagerCompat.from(context)
-        
-        // Create intent with extras
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("habitId", habit.id)
-            putExtra("openHabitDetails", true)
-        }
-        
-        // Use TaskStackBuilder for proper back stack
-        val contentIntent = TaskStackBuilder.create(context).run {
-            addNextIntentWithParentStack(intent)
-            getPendingIntent(
-                habit.id.toInt(),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            habit.id.toInt(),
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("habitId", habit.id)
+                putExtra("openHabitDetails", true)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val reminderTime = timeFormatter.format(
             habit.toLocalTime().atDate(java.time.LocalDate.now())
