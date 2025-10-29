@@ -627,8 +627,15 @@ class HabitViewModel @Inject constructor(
             
             android.util.Log.d("HabitViewModel", "Recalculating streaks for ${nonDeletedHabits.size} habits")
             
+            // NEW: Acquire per-day lock to prevent double deductions across multiple clients
+            val lockAcquired = userRewardsRepository.tryAcquireDailyStreakLock(currentDate)
+            if (!lockAcquired) {
+                android.util.Log.d("HabitViewModel", "Daily streak lock not acquired; skipping recalculation to avoid double deduction")
+                return
+            }
+            
             var totalDiamondsEarned = 0
-            var totalFreezeDaysUsed = 0
+            var totalFreezeDaysRequested = 0
             
             nonDeletedHabits.forEach { habit ->
                 try {
@@ -651,9 +658,9 @@ class HabitViewModel @Inject constructor(
                         availableFreezeDays = availableFreezeDays
                     )
                     
-                    // Track diamonds and freeze usage
+                    // Track diamonds and freeze usage (requested)
                     totalDiamondsEarned += result.diamondsEarned
-                    totalFreezeDaysUsed += result.freezeDaysUsed
+                    totalFreezeDaysRequested += result.freezeDaysUsed
                     
                     // Update habit only if streak changed
                     if (result.newStreak != habit.streak || 
@@ -684,12 +691,10 @@ class HabitViewModel @Inject constructor(
                 }
             }
             
-            // Apply freeze days usage (batch)
-            if (totalFreezeDaysUsed > 0) {
-                repeat(totalFreezeDaysUsed) {
-                    userRewardsRepository.useFreezeDayIfAvailable()
-                }
-                android.util.Log.d("HabitViewModel", "Used $totalFreezeDaysUsed freeze days total")
+            // Apply freeze days usage (idempotent) for today
+            if (totalFreezeDaysRequested > 0) {
+                val actuallyDeducted = userRewardsRepository.applyFreezeUsageForDate(currentDate, totalFreezeDaysRequested)
+                android.util.Log.d("HabitViewModel", "Freeze usage requested=$totalFreezeDaysRequested, actually deducted=$actuallyDeducted")
             }
             
             // Award diamonds (batch)
@@ -740,11 +745,10 @@ class HabitViewModel @Inject constructor(
                 "Streak result: newStreak=${result.newStreak}, diamonds=${result.diamondsEarned}, " +
                 "freezeUsed=${result.freezeDaysUsed}, grace=${result.graceUsed}")
             
-            // Use freeze days if needed
+            // Use freeze days idempotently (per-day) to avoid duplicates
             if (result.freezeDaysUsed > 0) {
-                repeat(result.freezeDaysUsed) {
-                    userRewardsRepository.useFreezeDayIfAvailable()
-                }
+                val deducted = userRewardsRepository.applyFreezeUsageForDate(currentDate, result.freezeDaysUsed)
+                android.util.Log.d("HabitViewModel", "Freeze usage requested=${result.freezeDaysUsed}, actually deducted=$deducted (single habit update)")
             }
             
             // Award diamonds for milestones

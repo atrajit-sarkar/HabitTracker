@@ -22,6 +22,8 @@ private const val USERS_COLLECTION = "users"
 private const val DIAMONDS_FIELD = "diamonds"
 private const val FREEZE_DAYS_FIELD = "freeze_days"
 private const val FIRST_FREEZE_PURCHASE_DATE_FIELD = "first_freeze_purchase_date"
+private const val STREAK_CALC_DATE_FIELD = "streak_calc_date" // epoch day (Long)
+private const val STREAK_CALC_USED_FIELD = "streak_calc_used"   // how many freeze days deducted for streak on that date (Int)
 private const val PURCHASED_THEMES_FIELD = "purchased_themes"
 private const val PURCHASED_HERO_BACKGROUNDS_FIELD = "purchased_hero_backgrounds"
 
@@ -217,6 +219,84 @@ class UserRewardsRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Error using freeze day", e)
             false
+        }
+    }
+    
+    /**
+     * Try to acquire a per-day streak calculation lock to prevent double deduction
+     * across multiple app variants/devices logged into the same account.
+     *
+     * Returns true if this client acquired the lock for the given date (and should proceed),
+     * false if another client has already processed today's calculation.
+     */
+    suspend fun tryAcquireDailyStreakLock(date: LocalDate): Boolean {
+        val userId = authRepository.currentUserSync?.uid ?: return false
+        return try {
+            val acquired = firestore.runTransaction { transaction ->
+                val docRef = firestore.collection(USERS_COLLECTION).document(userId)
+                val snapshot = transaction.get(docRef)
+                val existingEpoch = (snapshot.get(STREAK_CALC_DATE_FIELD) as? Long)
+                val todayEpoch = date.toEpochDay()
+                if (existingEpoch != null && existingEpoch == todayEpoch) {
+                    // Already processed today by another client
+                    false
+                } else {
+                    // Mark as processed for today
+                    transaction.update(docRef, STREAK_CALC_DATE_FIELD, todayEpoch)
+                    true
+                }
+            }.await()
+            Log.d(TAG, "Daily streak lock acquired=$acquired for ${date}")
+            acquired
+        } catch (e: Exception) {
+            Log.e(TAG, "Error acquiring daily streak lock", e)
+            // Fail-safe: don't proceed to avoid double deduction
+            false
+        }
+    }
+
+    /**
+     * Idempotent apply of freeze usage for a specific date.
+     * If the same date was processed before with some usage, only deduct the delta.
+     */
+    suspend fun applyFreezeUsageForDate(date: LocalDate, freezeToUse: Int): Int {
+        if (freezeToUse <= 0) return 0
+        val userId = authRepository.currentUserSync?.uid ?: return 0
+        return try {
+            val deducted = firestore.runTransaction { transaction ->
+                val docRef = firestore.collection(USERS_COLLECTION).document(userId)
+                val snapshot = transaction.get(docRef)
+                val todayEpoch = date.toEpochDay()
+                val existingEpoch = (snapshot.get(STREAK_CALC_DATE_FIELD) as? Long)
+                val existingUsed = (snapshot.get(STREAK_CALC_USED_FIELD) as? Long)?.toInt() ?: 0
+                val currentFreezeDays = (snapshot.get(FREEZE_DAYS_FIELD) as? Long)?.toInt() ?: 0
+
+                val alreadyForToday = (existingEpoch != null && existingEpoch == todayEpoch)
+                val requiredTotal = freezeToUse
+                val additionalNeeded = if (alreadyForToday) (requiredTotal - existingUsed).coerceAtLeast(0) else requiredTotal
+
+                if (additionalNeeded <= 0) {
+                    // Nothing to deduct, just ensure date and used are set
+                    transaction.update(docRef, mapOf(
+                        STREAK_CALC_DATE_FIELD to todayEpoch,
+                        STREAK_CALC_USED_FIELD to maxOf(existingUsed, requiredTotal)
+                    ))
+                    0
+                } else {
+                    val actualDeduct = minOf(additionalNeeded, currentFreezeDays)
+                    transaction.update(docRef, mapOf(
+                        FREEZE_DAYS_FIELD to (currentFreezeDays - actualDeduct),
+                        STREAK_CALC_DATE_FIELD to todayEpoch,
+                        STREAK_CALC_USED_FIELD to (maxOf(existingUsed, requiredTotal))
+                    ))
+                    actualDeduct
+                }
+            }.await()
+            Log.d(TAG, "Applied freeze usage idempotently for ${date}: deducted=$deducted of requested=$freezeToUse")
+            deducted
+        } catch (e: Exception) {
+            Log.e(TAG, "Error applying freeze usage idempotently", e)
+            0
         }
     }
     
