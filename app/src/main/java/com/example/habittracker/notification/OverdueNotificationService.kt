@@ -55,8 +55,12 @@ object OverdueNotificationService {
         userName: String?
     ) = withContext(Dispatchers.IO) {
         try {
+            Log.d(TAG, "🔔 Starting overdue notification generation...")
+            
             // Ensure channel exists
             val channelId = ensureOverdueChannel(context, habit)
+            
+            Log.d(TAG, "📝 Generating message with Gemini (this may take a few seconds)...")
             
             // Get or generate personalized message (pass description for aggressive 6+ hour messages)
             val message = generateOverdueMessage(
@@ -66,6 +70,8 @@ object OverdueNotificationService {
                 userName = userName,
                 habitDescription = habit.description
             )
+            
+            Log.d(TAG, "✅ Message generated successfully: ${message.take(50)}...")
             
             // Get the appropriate image for overdue duration (always use 6hour image for 6+)
             val imageResId = getOverdueImageResource(overdueHours)
@@ -86,7 +92,7 @@ object OverdueNotificationService {
             val notificationManager = NotificationManagerCompat.from(context)
             if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(notificationId, notification.build())
-                Log.d(TAG, "Overdue notification shown for habit: ${habit.title}, overdue: ${overdueHours}h")
+                Log.d(TAG, "🎉 Overdue notification shown for habit: ${habit.title}, overdue: ${overdueHours}h")
             } else {
                 Log.w(TAG, "Notifications are disabled by user")
             }
@@ -115,50 +121,57 @@ object OverdueNotificationService {
             if (!apiKey.isNullOrBlank() && !userName.isNullOrBlank()) {
                 Log.d(TAG, "Calling Gemini API for overdue message (hours: $overdueHours)...")
                 
-                // Generate personalized message with Gemini
+                // Generate personalized message with Gemini with timeout
                 val geminiService = GeminiApiService(apiKey)
                 
-                // Use aggressive messaging for 6+ hours overdue
-                val result = if (overdueHours >= 6) {
-                    Log.d(TAG, "Using aggressive messaging mode (6+ hours)")
-                    geminiService.generateAggressiveMotivationalMessage(
-                        userName = userName,
-                        habitTitle = habitTitle,
-                        habitDescription = habitDescription,
-                        hoursOverdue = overdueHours
-                    )
-                } else {
-                    // Regular encouraging message for 2-5 hours
-                    Log.d(TAG, "Using regular messaging mode (2-5 hours)")
-                    val prompt = """
-                        Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
-                        This habit is now $overdueHours hour(s) overdue.
-                        
-                        Requirements:
-                        - Address $userName by name
-                        - Mention the specific habit: "$habitTitle"
-                        - Be encouraging but firm - remind them it's $overdueHours hours late
-                        - Keep it short (1-2 sentences maximum)
-                        - Be supportive and motivating, not harsh
-                        - Don't use emojis
-                        - Generate ONLY the message text, nothing else
-                    """.trimIndent()
-                    geminiService.generateCustomMessage(prompt)
-                }
-                
-                Log.d(TAG, "Gemini API call completed. Success: ${result.isSuccess}")
-                
-                if (result.isSuccess) {
-                    val generatedMessage = result.getOrNull()
-                    if (!generatedMessage.isNullOrBlank()) {
-                        Log.d(TAG, "✅ Successfully generated personalized message with Gemini (aggressive: ${overdueHours >= 6})")
-                        Log.d(TAG, "Generated message: $generatedMessage")
-                        return@withContext generatedMessage
-                    } else {
-                        Log.w(TAG, "⚠️ Gemini returned empty message, using fallback")
+                try {
+                    // Use withTimeout to ensure we don't wait forever (60 seconds max)
+                    val result = kotlinx.coroutines.withTimeout(60000L) {
+                        // Use aggressive messaging for 6+ hours overdue
+                        if (overdueHours >= 6) {
+                            Log.d(TAG, "Using aggressive messaging mode (6+ hours)")
+                            geminiService.generateAggressiveMotivationalMessage(
+                                userName = userName,
+                                habitTitle = habitTitle,
+                                habitDescription = habitDescription,
+                                hoursOverdue = overdueHours
+                            )
+                        } else {
+                            // Regular encouraging message for 2-5 hours
+                            Log.d(TAG, "Using regular messaging mode (2-5 hours)")
+                            val prompt = """
+                                Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
+                                This habit is now $overdueHours hour(s) overdue.
+                                
+                                Requirements:
+                                - Address $userName by name
+                                - Mention the specific habit: "$habitTitle"
+                                - Be encouraging but firm - remind them it's $overdueHours hours late
+                                - Keep it short (1-2 sentences maximum)
+                                - Be supportive and motivating, not harsh
+                                - Don't use emojis
+                                - Generate ONLY the message text, nothing else
+                            """.trimIndent()
+                            geminiService.generateCustomMessage(prompt)
+                        }
                     }
-                } else {
-                    Log.e(TAG, "❌ Gemini API call failed: ${result.exceptionOrNull()?.message}")
+                    
+                    Log.d(TAG, "Gemini API call completed. Success: ${result.isSuccess}")
+                    
+                    if (result.isSuccess) {
+                        val generatedMessage = result.getOrNull()
+                        if (!generatedMessage.isNullOrBlank()) {
+                            Log.d(TAG, "✅ Successfully generated personalized message with Gemini (aggressive: ${overdueHours >= 6})")
+                            Log.d(TAG, "Generated message: $generatedMessage")
+                            return@withContext generatedMessage
+                        } else {
+                            Log.w(TAG, "⚠️ Gemini returned empty message, using fallback")
+                        }
+                    } else {
+                        Log.e(TAG, "❌ Gemini API call failed: ${result.exceptionOrNull()?.message}")
+                    }
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.e(TAG, "❌ Gemini API timeout after 60 seconds")
                 }
             } else {
                 Log.w(TAG, "⚠️ Skipping Gemini - API Key present: ${!apiKey.isNullOrBlank()}, UserName present: ${!userName.isNullOrBlank()}")
