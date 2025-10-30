@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expanded overdue notification with large overdue icon only -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <!-- Large Overdue Warning Icon on the Left (expanded state) -->
+    <ImageView
+        android:id="@+id/notification_overdue_icon"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:scaleType="centerCrop"
+        android:contentDescription="Overdue Warning" />
+
+    <!-- Text Content on the Right (full space without right avatar) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/notification_overdue_icon"
+        android:layout_toRightOf="@id/notification_overdue_icon"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_centerVertical="true"
+        android:orientation="vertical">
+
+        <!-- Title with Red Color for urgency (full text shown when expanded) -->
+        <TextView
+            android:id="@+id/notification_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FF5252"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="3" />
+
+        <!-- Body Text with Orange Color (full text shown when expanded) -->
+        <TextView
+            android:id="@+id/notification_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#FFA500"
+            android:textSize="14sp"
+            android:lineSpacingMultiplier="1.2" />
+    </LinearLayout>
+
+</RelativeLayout>

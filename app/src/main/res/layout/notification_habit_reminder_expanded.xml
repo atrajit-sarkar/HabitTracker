@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expanded notification view -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp">
+
+    <!-- Large Avatar Image on the Right (expanded state) -->
+    <ImageView
+        android:id="@+id/notification_avatar"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:scaleType="centerCrop"
+        android:contentDescription="Habit Avatar" />
+
+    <!-- Text Content on the Left -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/notification_avatar"
+        android:layout_toStartOf="@id/notification_avatar"
+        android:layout_marginEnd="12dp"
+        android:layout_marginRight="12dp"
+        android:orientation="vertical">
+
+        <!-- Title with Dark Yellow Color -->
+        <TextView
+            android:id="@+id/notification_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#F9A825"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="2" />
+
+        <!-- Body Text with Light Green Color (full text shown when expanded) -->
+        <TextView
+            android:id="@+id/notification_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#69F0AE"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+</RelativeLayout>

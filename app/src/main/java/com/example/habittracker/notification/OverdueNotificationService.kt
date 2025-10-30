@@ -110,12 +110,17 @@ object OverdueNotificationService {
             val geminiPrefs = GeminiPreferences(context)
             val apiKey = geminiPrefs.getApiKey()
             
+            Log.d(TAG, "Generating overdue message - API Key present: ${!apiKey.isNullOrBlank()}, UserName: $userName")
+            
             if (!apiKey.isNullOrBlank() && !userName.isNullOrBlank()) {
+                Log.d(TAG, "Calling Gemini API for overdue message (hours: $overdueHours)...")
+                
                 // Generate personalized message with Gemini
                 val geminiService = GeminiApiService(apiKey)
                 
                 // Use aggressive messaging for 6+ hours overdue
                 val result = if (overdueHours >= 6) {
+                    Log.d(TAG, "Using aggressive messaging mode (6+ hours)")
                     geminiService.generateAggressiveMotivationalMessage(
                         userName = userName,
                         habitTitle = habitTitle,
@@ -124,6 +129,7 @@ object OverdueNotificationService {
                     )
                 } else {
                     // Regular encouraging message for 2-5 hours
+                    Log.d(TAG, "Using regular messaging mode (2-5 hours)")
                     val prompt = """
                         Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
                         This habit is now $overdueHours hour(s) overdue.
@@ -140,19 +146,29 @@ object OverdueNotificationService {
                     geminiService.generateCustomMessage(prompt)
                 }
                 
+                Log.d(TAG, "Gemini API call completed. Success: ${result.isSuccess}")
+                
                 if (result.isSuccess) {
                     val generatedMessage = result.getOrNull()
                     if (!generatedMessage.isNullOrBlank()) {
-                        Log.d(TAG, "Generated personalized message with Gemini (aggressive: ${overdueHours >= 6})")
+                        Log.d(TAG, "✅ Successfully generated personalized message with Gemini (aggressive: ${overdueHours >= 6})")
+                        Log.d(TAG, "Generated message: $generatedMessage")
                         return@withContext generatedMessage
+                    } else {
+                        Log.w(TAG, "⚠️ Gemini returned empty message, using fallback")
                     }
+                } else {
+                    Log.e(TAG, "❌ Gemini API call failed: ${result.exceptionOrNull()?.message}")
                 }
+            } else {
+                Log.w(TAG, "⚠️ Skipping Gemini - API Key present: ${!apiKey.isNullOrBlank()}, UserName present: ${!userName.isNullOrBlank()}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error generating Gemini message, using fallback", e)
+            Log.e(TAG, "❌ Error generating Gemini message, using fallback", e)
         }
         
         // Fallback message (also more aggressive for 6+ hours)
+        Log.d(TAG, "Using fallback message")
         val userPrefix = if (!userName.isNullOrBlank()) "$userName, " else ""
         return@withContext if (overdueHours >= 6) {
             "${userPrefix}URGENT: \"${habitTitle}\" is $overdueHours hour(s) overdue! Stop procrastinating and take action NOW!"
@@ -207,26 +223,43 @@ object OverdueNotificationService {
         Log.d(TAG, "PendingIntent created with requestCode: ${getNotificationId(habit.id, overdueHours)}")
         Log.d(TAG, "════════════════════════════════════════════════════")
         
-        // Create habit avatar for the collapsed state
-        val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)
+        // Create small avatar for collapsed view (48dp)
+        val smallAvatarBitmap = createLargeAvatarBitmap(habit.avatar, context, habit.id, 128)
+        
+        // Create large avatar for expanded view (96dp)
+        val largeAvatarBitmap = createLargeAvatarBitmap(habit.avatar, context, habit.id, 256)
+        
+        // Create small overdue icon for collapsed view (48dp)
+        val smallOverdueIcon = Bitmap.createScaledBitmap(bigPicture, 128, 128, true)
+        
+        // Create large overdue icon for expanded view (96dp) 
+        val largeOverdueIcon = Bitmap.createScaledBitmap(bigPicture, 256, 256, true)
         
         // Create composite image: overdue image on left + message text on right (like image is speaking)
         val compositeImage = createCompositeNotificationImage(context, bigPicture, message, habit.title, overdueHours)
         
-        // Build notification with BigPictureStyle showing composite image
+        val titleText = "${habit.title}"
+        
+        // Create custom notification layout for collapsed view (small avatars, ellipsized text)
+        val collapsedView = android.widget.RemoteViews(context.packageName, R.layout.notification_overdue)
+        collapsedView.setTextViewText(R.id.notification_title, titleText)
+        collapsedView.setTextViewText(R.id.notification_text, message)
+        collapsedView.setImageViewBitmap(R.id.notification_avatar, smallAvatarBitmap)
+        collapsedView.setImageViewBitmap(R.id.notification_overdue_icon, smallOverdueIcon)
+
+        // Create custom notification layout for expanded view (large overdue icon only, no habit avatar)
+        val expandedView = android.widget.RemoteViews(context.packageName, R.layout.notification_overdue_expanded)
+        expandedView.setTextViewText(R.id.notification_title, titleText)
+        expandedView.setTextViewText(R.id.notification_text, message)
+        expandedView.setImageViewBitmap(R.id.notification_overdue_icon, largeOverdueIcon)
+        
+        // Build notification with custom layout
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_habit)
-            .setLargeIcon(avatarBitmap) // Show habit avatar on right side when collapsed
-            .setColor(ContextCompat.getColor(context, R.color.purple_500))
-            .setContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
-            .setContentText(message)
-            .setStyle(
-                NotificationCompat.BigPictureStyle()
-                    .bigPicture(compositeImage) // Composite image: overdue image on left, text on right
-                    .bigLargeIcon(avatarBitmap) // Keep avatar on right when expanded
-                    .setBigContentTitle("⚠️ ${habit.title} - ${overdueHours}h Overdue")
-                    .setSummaryText(message) // Full message text appears below the image when expanded
-            )
+            .setColor(ContextCompat.getColor(context, android.R.color.holo_red_light)) // Warning red/orange color
+            .setCustomContentView(collapsedView) // Small avatar + ellipsized text when collapsed
+            .setCustomBigContentView(expandedView) // Large avatar + full text when expanded
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle()) // Ensures proper styling
             .setContentIntent(contentIntent)
             .setAutoCancel(true) // Allow swipe to dismiss
             .setOngoing(false) // Not an ongoing notification
@@ -646,6 +679,89 @@ object OverdueNotificationService {
                 val centerY = size / 2f
                 val radius = size * 0.2f
                 canvas.drawCircle(centerX, centerY, radius, iconPaint)
+            }
+        }
+        
+        return bitmap
+    }
+
+    // Create large avatar for Duolingo-style notification (bigger mascot image)
+    private fun createLargeAvatarBitmap(avatar: HabitAvatar, context: Context, habitId: Long? = null, size: Int = 256): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        
+        // Draw background circle with slight shadow/glow effect
+        val backgroundPaint = Paint().apply {
+            color = avatar.backgroundColor.toColorInt()
+            isAntiAlias = true
+            setShadowLayer(10f, 0f, 0f, android.graphics.Color.BLACK)
+        }
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, backgroundPaint)
+        
+        when (avatar.type) {
+            HabitAvatarType.EMOJI -> {
+                // Draw emoji much larger
+                val textPaint = Paint().apply {
+                    textSize = size * 0.65f  // Larger emoji
+                    textAlign = Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+                val textY = size / 2f - (textPaint.descent() + textPaint.ascent()) / 2
+                canvas.drawText(avatar.value, size / 2f, textY, textPaint)
+            }
+            HabitAvatarType.DEFAULT_ICON -> {
+                // Draw larger default icon
+                val iconPaint = Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    isAntiAlias = true
+                    strokeWidth = 12f
+                    style = Paint.Style.STROKE
+                }
+                val centerX = size / 2f
+                val centerY = size / 2f
+                val radius = size * 0.25f
+                canvas.drawCircle(centerX, centerY, radius, iconPaint)
+            }
+            HabitAvatarType.CUSTOM_IMAGE -> {
+                // For custom images, try to load from cache
+                try {
+                    Log.d(TAG, "Loading large custom image for overdue notification")
+                    
+                    val imageLoader = coil.ImageLoader.Builder(context)
+                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .build()
+                    
+                    val cacheKey = "habit_avatar_$habitId"
+                    
+                    val drawable = imageLoader.diskCache?.get(cacheKey)?.use { snapshot ->
+                        android.graphics.BitmapFactory.decodeFile(snapshot.data.toFile().absolutePath)
+                    } ?: imageLoader.memoryCache?.get(coil.memory.MemoryCache.Key(cacheKey))?.bitmap
+                    
+                    if (drawable != null) {
+                        Log.d(TAG, "Successfully loaded large custom image for overdue notification")
+                        // Create circular bitmap from cached image
+                        val scaledBitmap = Bitmap.createScaledBitmap(drawable, size, size, true)
+                        val circlePaint = Paint().apply {
+                            isAntiAlias = true
+                        }
+                        canvas.drawBitmap(scaledBitmap, 0f, 0f, circlePaint)
+                        return bitmap
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading large custom image for overdue notification", e)
+                }
+                
+                // Fallback - larger camera icon
+                val iconPaint = Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    isAntiAlias = true
+                    textSize = size * 0.55f
+                    textAlign = Paint.Align.CENTER
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                }
+                val textY = size / 2f - (iconPaint.descent() + iconPaint.ascent()) / 2
+                canvas.drawText("📷", size / 2f, textY, iconPaint)
             }
         }
         

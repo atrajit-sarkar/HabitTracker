@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Collapsed notification view -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp">
+
+    <!-- Small Avatar Image on the Right (collapsed state) -->
+    <ImageView
+        android:id="@+id/notification_avatar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:scaleType="centerCrop"
+        android:contentDescription="Habit Avatar" />
+
+    <!-- Text Content on the Left -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/notification_avatar"
+        android:layout_toStartOf="@id/notification_avatar"
+        android:layout_marginEnd="12dp"
+        android:layout_marginRight="12dp"
+        android:orientation="vertical">
+
+        <!-- Title with Dark Yellow Color -->
+        <TextView
+            android:id="@+id/notification_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#F9A825"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:scrollHorizontally="false"
+            android:maxWidth="280dp" />
+
+        <!-- Body Text with Light Green Color (ellipsized when collapsed) -->
+        <TextView
+            android:id="@+id/notification_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#69F0AE"
+            android:textSize="14sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="1.1"
+            android:scrollHorizontally="false"
+            android:maxWidth="280dp" />
+    </LinearLayout>
+
+</RelativeLayout>
