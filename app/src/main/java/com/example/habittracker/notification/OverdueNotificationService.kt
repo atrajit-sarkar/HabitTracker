@@ -174,16 +174,38 @@ object OverdueNotificationService {
     ): NotificationCompat.Builder {
         
         // Intent to open habit details - same as regular notifications
+        Log.d(TAG, "════════════════════════════════════════════════════")
+        Log.d(TAG, "Creating overdue notification content intent")
+        Log.d(TAG, "Habit ID: ${habit.id}, Title: ${habit.title}")
+        Log.d(TAG, "Overdue hours: $overdueHours")
+        
+        // Create an intent that will launch the app's main activity regardless of which alias is active
+        // Use the launcher intent to ensure it always works even when activity-alias changes
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val intent = launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+            Log.d(TAG, "Using launcher intent: ${component?.className}")
+            Log.d(TAG, "Intent extras set: habitId=${habit.id}, openHabitDetails=true")
+            Log.d(TAG, "Intent flags: $flags")
+        } ?: Intent(context, MainActivity::class.java).apply {
+            // Fallback if getLaunchIntentForPackage fails
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+            Log.d(TAG, "Using fallback intent to MainActivity")
+        }
+        
         val contentIntent = PendingIntent.getActivity(
             context,
             getNotificationId(habit.id, overdueHours),
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("habitId", habit.id)
-                putExtra("openHabitDetails", true)
-            },
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        
+        Log.d(TAG, "PendingIntent created with requestCode: ${getNotificationId(habit.id, overdueHours)}")
+        Log.d(TAG, "════════════════════════════════════════════════════")
         
         // Create habit avatar for the collapsed state
         val avatarBitmap = createAvatarBitmap(habit.avatar, context, habit.id)

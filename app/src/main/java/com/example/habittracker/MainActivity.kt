@@ -30,12 +30,18 @@ import it.atraj.habittracker.service.OverdueHabitIconManager
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
 import javax.inject.Inject
 import androidx.annotation.Keep
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    // State flow to trigger navigation from notifications when app is already running
+    private val _pendingNavigationHabitId = MutableStateFlow<Long?>( null)
+    val pendingNavigationHabitId: StateFlow<Long?> = _pendingNavigationHabitId
     
     @Inject
     lateinit var googleSignInHelper: GoogleSignInHelper
@@ -86,10 +92,53 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(context)
     }
     
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        
+        Log.d("MainActivity", "════════════════════════════════════════════════════")
+        Log.d("MainActivity", "onNewIntent() called - App was already running")
+        Log.d("MainActivity", "Intent action: ${intent.action}")
+        Log.d("MainActivity", "Intent flags: ${intent.flags}")
+        Log.d("MainActivity", "Intent extras:")
+        intent.extras?.keySet()?.forEach { key ->
+            Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
+        }
+        
+        // Handle notification click when app is already running
+        val openHabitDetails = intent.getBooleanExtra("openHabitDetails", false)
+        val habitId = intent.getLongExtra("habitId", -1L)
+        
+        Log.d("MainActivity", "openHabitDetails: $openHabitDetails, habitId: $habitId")
+        
+        if (openHabitDetails && habitId != -1L) {
+            Log.d("MainActivity", "Triggering navigation to habit details: $habitId via StateFlow")
+            _pendingNavigationHabitId.value = habitId
+        } else {
+            Log.d("MainActivity", "No valid habit navigation intent found")
+        }
+        
+        Log.d("MainActivity", "════════════════════════════════════════════════════")
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        // DEBUG: Log all intent information
+        Log.d("MainActivity", "════════════════════════════════════════════════════")
+        Log.d("MainActivity", "onCreate() called")
+        Log.d("MainActivity", "Intent action: ${intent.action}")
+        Log.d("MainActivity", "Intent flags: ${intent.flags}")
+        Log.d("MainActivity", "Intent data: ${intent.data}")
+        Log.d("MainActivity", "Intent extras:")
+        intent.extras?.keySet()?.forEach { key ->
+            Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
+        }
+        Log.d("MainActivity", "openHabitDetails extra: ${intent.getBooleanExtra("openHabitDetails", false)}")
+        Log.d("MainActivity", "habitId extra: ${intent.getLongExtra("habitId", -1L)}")
+        Log.d("MainActivity", "════════════════════════════════════════════════════")
         
         // Apply saved language preference
         it.atraj.habittracker.util.LanguageManager.applyLanguage(this)
@@ -164,11 +213,23 @@ class MainActivity : ComponentActivity() {
                 val photoUrlEncoded = friendPhotoUrl?.let { 
                     java.net.URLEncoder.encode(it, "UTF-8") 
                 } ?: "null"
-                "chat/$friendId/${friendName ?: "Friend"}/${friendAvatar ?: "😊"}/$photoUrlEncoded"
+                val chatRoute = "chat/$friendId/${friendName ?: "Friend"}/${friendAvatar ?: "😊"}/$photoUrlEncoded"
+                Log.d("MainActivity", "Navigation: Starting at chat screen - $chatRoute")
+                chatRoute
             }
-            habitId != -1L -> "habit_details/$habitId"  // Works for both notification and deep link
-            else -> "loading"
+            habitId != -1L -> {
+                val habitRoute = "habit_details/$habitId"
+                Log.d("MainActivity", "Navigation: Starting at habit details screen - $habitRoute (openHabitDetails=$openHabitDetails, habitId=$habitId)")
+                habitRoute
+            }
+            else -> {
+                Log.d("MainActivity", "Navigation: Starting at loading screen (no special intent)")
+                "loading"
+            }
         }
+        
+        Log.d("MainActivity", "Final startDestination: $startDestination")
+        Log.d("MainActivity", "════════════════════════════════════════════════════")
         
         setContent {
             // Get saved theme with reactive state observation
@@ -240,7 +301,9 @@ class MainActivity : ComponentActivity() {
                 HabitTrackerNavigation(
                     startDestination = startDestination,
                     googleSignInHelper = googleSignInHelper,
-                    onCheckForUpdates = checkForUpdatesManually
+                    onCheckForUpdates = checkForUpdatesManually,
+                    pendingNavigationHabitId = pendingNavigationHabitId,
+                    onNavigationHandled = { _pendingNavigationHabitId.value = null }
                 )
                 
                 // Update dialog

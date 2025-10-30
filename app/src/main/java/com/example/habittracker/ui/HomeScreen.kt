@@ -1666,6 +1666,111 @@ private fun HabitCard(
                         }
                     }
                 }
+                
+                // DEBUG: Test notification buttons (only in debug builds)
+                if (it.atraj.habittracker.BuildConfig.DEBUG) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Test Regular Notification
+                        OutlinedButton(
+                            onClick = {
+                                android.util.Log.d("NotificationDebug", "=== TEST REGULAR NOTIFICATION CLICKED ===")
+                                android.util.Log.d("NotificationDebug", "Habit ID: ${habit.id}, Title: ${habit.title}")
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                    try {
+                                        // Convert HabitCardUi to Habit
+                                        val testHabit = it.atraj.habittracker.data.local.Habit(
+                                            id = habit.id,
+                                            title = habit.title,
+                                            description = habit.description,
+                                            reminderHour = habit.reminderTime.hour,
+                                            reminderMinute = habit.reminderTime.minute,
+                                            reminderEnabled = habit.isReminderEnabled,
+                                            avatar = habit.avatar
+                                        )
+                                        android.util.Log.d("NotificationDebug", "Triggering regular notification for habit: ${testHabit.title}")
+                                        it.atraj.habittracker.notification.HabitReminderService.showHabitNotification(context, testHabit)
+                                        android.util.Log.d("NotificationDebug", "Regular notification triggered successfully")
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("NotificationDebug", "Error triggering regular notification", e)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.Yellow
+                            ),
+                            border = BorderStroke(1.dp, Color.Yellow.copy(alpha = 0.7f))
+                        ) {
+                            Text(
+                                text = "🔔 Regular",
+                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp
+                            )
+                        }
+                        
+                        // Test Overdue Notification
+                        OutlinedButton(
+                            onClick = {
+                                android.util.Log.d("NotificationDebug", "=== TEST OVERDUE NOTIFICATION CLICKED ===")
+                                android.util.Log.d("NotificationDebug", "Habit ID: ${habit.id}, Title: ${habit.title}")
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                    try {
+                                        // Convert HabitCardUi to Habit
+                                        val testHabit = it.atraj.habittracker.data.local.Habit(
+                                            id = habit.id,
+                                            title = habit.title,
+                                            description = habit.description,
+                                            reminderHour = habit.reminderTime.hour,
+                                            reminderMinute = habit.reminderTime.minute,
+                                            reminderEnabled = habit.isReminderEnabled,
+                                            avatar = habit.avatar
+                                        )
+                                        android.util.Log.d("NotificationDebug", "Triggering overdue notification (2h) for habit: ${testHabit.title}")
+                                        
+                                        // Get user name from preferences
+                                        val prefs = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                                        val userName = prefs.getString("user_name", null)
+                                        
+                                        it.atraj.habittracker.notification.OverdueNotificationService.showOverdueNotification(
+                                            context = context,
+                                            habit = testHabit,
+                                            overdueHours = 2,
+                                            userName = userName
+                                        )
+                                        android.util.Log.d("NotificationDebug", "Overdue notification triggered successfully")
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("NotificationDebug", "Error triggering overdue notification", e)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.Red
+                            ),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.7f))
+                        ) {
+                            Text(
+                                text = "⚠️ Overdue",
+                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
 
                 // Compact "Details" button for completed habits
                 if (habit.isCompletedToday) {

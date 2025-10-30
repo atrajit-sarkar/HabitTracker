@@ -59,6 +59,12 @@
             android:enabled="true">
             <!-- NO LAUNCHER intent-filter here - handled by activity-aliases -->
             
+            <!-- Intent filter for notification clicks -->
+            <intent-filter>
+                <action android:name="it.atraj.habittracker.OPEN_HABIT_DETAILS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            
             <!-- Deep link for email notifications (custom scheme) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

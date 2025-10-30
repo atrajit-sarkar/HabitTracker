@@ -56,6 +56,7 @@ import it.atraj.habittracker.music.ui.*
 import it.atraj.habittracker.data.model.UserFolder
 import it.atraj.habittracker.data.firestore.FriendRepository
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -64,12 +65,39 @@ fun HabitTrackerNavigation(
     navController: NavHostController = rememberNavController(),
     startDestination: String = "loading",
     googleSignInHelper: GoogleSignInHelper,
-    onCheckForUpdates: () -> Unit = {}
+    onCheckForUpdates: () -> Unit = {},
+    pendingNavigationHabitId: StateFlow<Long?>? = null,
+    onNavigationHandled: () -> Unit = {}
 ) {
     // Prevent navigation black screen by ensuring stable content
     DisposableEffect(navController) {
         // Keep the navigation controller stable
         onDispose { }
+    }
+    
+    // Observe pending navigation from notifications (when app is already running)
+    val pendingHabitId by pendingNavigationHabitId?.collectAsState() ?: remember { mutableStateOf(null) }
+    
+    LaunchedEffect(pendingHabitId) {
+        if (pendingHabitId != null && pendingHabitId != -1L) {
+            android.util.Log.d("HabitNavigation", "════════════════════════════════════════════════════")
+            android.util.Log.d("HabitNavigation", "Pending navigation detected: habit ID = $pendingHabitId")
+            android.util.Log.d("HabitNavigation", "Current destination: ${navController.currentDestination?.route}")
+            
+            try {
+                // Navigate to habit details
+                navController.navigate("habit_details/$pendingHabitId") {
+                    launchSingleTop = true
+                }
+                android.util.Log.d("HabitNavigation", "Navigation triggered successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("HabitNavigation", "Navigation failed", e)
+            }
+            
+            // Clear the pending navigation
+            onNavigationHandled()
+            android.util.Log.d("HabitNavigation", "════════════════════════════════════════════════════")
+        }
     }
     
     // Safe navigation wrapper to prevent black screens and duplicate navigations

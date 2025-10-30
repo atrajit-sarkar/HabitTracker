@@ -27,6 +27,7 @@ import it.atraj.habittracker.data.local.HabitAvatarType
 import it.atraj.habittracker.data.local.NotificationSound
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import android.util.Log
 
 object HabitReminderService {
     private const val CHANNEL_PREFIX = "habit_reminder_channel_"
@@ -355,16 +356,38 @@ object HabitReminderService {
         val channelId = ensureHabitChannel(context, habit)
         
         val notificationManager = NotificationManagerCompat.from(context)
+        
+        Log.d("HabitReminderService", "════════════════════════════════════════════════════")
+        Log.d("HabitReminderService", "Creating regular notification content intent")
+        Log.d("HabitReminderService", "Habit ID: ${habit.id}, Title: ${habit.title}")
+        
+        // Create an intent that will launch the app's main activity regardless of which alias is active
+        // Use the launcher intent to ensure it always works even when activity-alias changes
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val intent = launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+            Log.d("HabitReminderService", "Using launcher intent: ${component?.className}")
+            Log.d("HabitReminderService", "Intent extras set: habitId=${habit.id}, openHabitDetails=true")
+            Log.d("HabitReminderService", "Intent flags: $flags")
+        } ?: Intent(context, MainActivity::class.java).apply {
+            // Fallback if getLaunchIntentForPackage fails
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+            Log.d("HabitReminderService", "Using fallback intent to MainActivity")
+        }
+        
         val contentIntent = PendingIntent.getActivity(
             context,
             habit.id.toInt(),
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("habitId", habit.id)
-                putExtra("openHabitDetails", true)
-            },
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        
+        Log.d("HabitReminderService", "PendingIntent created with requestCode: ${habit.id.toInt()}")
+        Log.d("HabitReminderService", "════════════════════════════════════════════════════")
 
         val reminderTime = timeFormatter.format(
             habit.toLocalTime().atDate(java.time.LocalDate.now())
