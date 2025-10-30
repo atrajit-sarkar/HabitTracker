@@ -368,7 +368,8 @@ private fun Habit.toFirestoreHabit(docId: String, numericId: Long? = null): Fire
         highestStreakAchieved = highestStreakAchieved,
         lastStreakUpdate = lastStreakUpdate?.toEpochDay(),
         currentGapStartDate = currentGapStartDate?.toEpochDay(),
-        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap
+        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap,
+        freezeAppliedDates = freezeAppliedDates.map { it.toEpochDay() }
     )
 }
 
@@ -406,7 +407,10 @@ private fun FirestoreHabit.toHabit(): Habit {
         highestStreakAchieved = highestStreakAchieved,
         lastStreakUpdate = lastStreakUpdate?.let { LocalDate.ofEpochDay(it) },
         currentGapStartDate = currentGapStartDate?.let { LocalDate.ofEpochDay(it) },
-        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap
+        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap,
+        freezeAppliedDates = freezeAppliedDates.mapNotNull { epochDay ->
+            try { LocalDate.ofEpochDay(epochDay) } catch (e: Exception) { null }
+        }.toSet()
     )
 }
 

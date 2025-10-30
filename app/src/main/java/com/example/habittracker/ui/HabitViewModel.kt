@@ -188,6 +188,10 @@ class HabitViewModel @Inject constructor(
                     
                     // Recalculate streaks for all non-deleted habits
                     viewModelScope.launch(Dispatchers.IO) {
+                        // Run reconciliation ONCE on first load (blocking) before daily calc
+                        if (isFirstLoad) {
+                            reconcileFreezeTracking()
+                        }
                         recalculateAllStreaks()
                     }
                     
@@ -671,19 +675,28 @@ class HabitViewModel @Inject constructor(
                         val updatedHabit = habit.copy(
                             streak = result.newStreak,
                             highestStreakAchieved = newHighest,
-                            lastStreakUpdate = currentDate
+                            lastStreakUpdate = currentDate,
+                            currentGapStartDate = result.gapStartDate,
+                            freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap,
+                            freezeAppliedDates = result.freezeAppliedDates
                         )
                         
                         habitRepository.updateHabit(updatedHabit)
                         android.util.Log.d("HabitViewModel", 
                             "Updated ${habit.title}: streak=${result.newStreak}, " +
-                            "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}")
+                            "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}, " +
+                            "gapStart=${result.gapStartDate}, totalFreezeForGap=${result.totalFreezeDaysUsedForGap}")
                     } else {
                         // Even if no changes, update lastStreakUpdate to prevent recalculation
-                        val updatedHabit = habit.copy(lastStreakUpdate = currentDate)
+                        val updatedHabit = habit.copy(
+                            lastStreakUpdate = currentDate,
+                            currentGapStartDate = result.gapStartDate,
+                            freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap,
+                            freezeAppliedDates = result.freezeAppliedDates
+                        )
                         habitRepository.updateHabit(updatedHabit)
                         android.util.Log.d("HabitViewModel", 
-                            "No changes for ${habit.title}, but marked as calculated today")
+                            "No streak changes for ${habit.title}, but updated gap tracking and marked as calculated today")
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("HabitViewModel", 
@@ -707,6 +720,82 @@ class HabitViewModel @Inject constructor(
             
         } catch (e: Exception) {
             android.util.Log.e("HabitViewModel", "Error in recalculateAllStreaks", e)
+        }
+    }
+    
+    /**
+     * One-time reconciliation to fix stale gap tracking for existing habits.
+     * This populates freezeAppliedDates for ALL habits by recalculating from scratch.
+     * Run blocking on first app launch to ensure data integrity before daily calculations.
+     */
+    private suspend fun reconcileFreezeTracking() {
+        try {
+            val habits = habitRepository.getAllHabits()
+            val nonDeletedHabits = habits.filter { !it.isDeleted }
+            val currentDate = LocalDate.now()
+            
+            android.util.Log.d("HabitViewModel", "Starting freeze tracking reconciliation for ${nonDeletedHabits.size} habits")
+            
+            var reconciledCount = 0
+            
+            nonDeletedHabits.forEach { habit ->
+                try {
+                    val completions = habitRepository.getHabitCompletions(habit.id)
+                    if (completions.isEmpty()) return@forEach
+                    
+                    // Check if habit needs reconciliation:
+                    // - Missing freezeAppliedDates (empty set), OR
+                    // - Has a current gap but gap tracking is incomplete
+                    val needsReconciliation = habit.freezeAppliedDates.isEmpty() || 
+                        (habit.currentGapStartDate != null && habit.freezeDaysUsedForCurrentGap == 0)
+                    
+                    if (needsReconciliation) {
+                        val sortedCompletions = completions.sortedByDescending { it.completedDate }
+                        val mostRecentCompletion = sortedCompletions.first().completedDate
+                        val daysSinceLastCompletion = ChronoUnit.DAYS.between(mostRecentCompletion, currentDate).toInt()
+                        
+                        val availableFreezeDays = _userRewards.value.freezeDays
+                        
+                        // Calculate what the gap tracking SHOULD be
+                        val result = StreakCalculator.calculateStreak(
+                            habit = habit,
+                            completions = completions,
+                            currentDate = currentDate,
+                            availableFreezeDays = availableFreezeDays
+                        )
+                        
+                        // Update habit with correct gap tracking (but don't deduct freeze days again!)
+                        // Only update if something changed
+                        val hasChanges = habit.currentGapStartDate != result.gapStartDate ||
+                            habit.freezeDaysUsedForCurrentGap != result.totalFreezeDaysUsedForGap ||
+                            habit.freezeAppliedDates != result.freezeAppliedDates
+                        
+                        if (hasChanges) {
+                            val updatedHabit = habit.copy(
+                                currentGapStartDate = result.gapStartDate,
+                                freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap,
+                                freezeAppliedDates = result.freezeAppliedDates,
+                                lastStreakUpdate = currentDate
+                            )
+                            
+                            habitRepository.updateHabit(updatedHabit)
+                            reconciledCount++
+                            
+                            android.util.Log.d("HabitViewModel", 
+                                "Reconciled ${habit.title}: gapStart=${result.gapStartDate}, " +
+                                "totalFreezeForGap=${result.totalFreezeDaysUsedForGap}, " +
+                                "freezeDates=${result.freezeAppliedDates.size} dates")
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("HabitViewModel", "Error reconciling ${habit.title}", e)
+                }
+            }
+            
+            android.util.Log.d("HabitViewModel", "Reconciliation complete: fixed $reconciledCount habits")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("HabitViewModel", "Error in reconcileFreezeTracking", e)
         }
     }
     
@@ -762,11 +851,15 @@ class HabitViewModel @Inject constructor(
             val updatedHabit = habit.copy(
                 streak = result.newStreak,
                 highestStreakAchieved = newHighest,
-                lastStreakUpdate = currentDate
+                lastStreakUpdate = currentDate,
+                currentGapStartDate = result.gapStartDate,
+                freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap,
+                freezeAppliedDates = result.freezeAppliedDates
             )
             
             habitRepository.updateHabit(updatedHabit)
-            android.util.Log.d("HabitViewModel", "Updated habit streak to ${result.newStreak}")
+            android.util.Log.d("HabitViewModel", "Updated habit streak to ${result.newStreak}, " +
+                "gapStart=${result.gapStartDate}, totalFreezeForGap=${result.totalFreezeDaysUsedForGap}")
             
         } catch (e: Exception) {
             android.util.Log.e("HabitViewModel", "Error updating habit streak", e)

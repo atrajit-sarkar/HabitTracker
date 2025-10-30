@@ -35,7 +35,9 @@ data class FirestoreHabit(
     val lastStreakUpdate: Long? = null, // epoch day
     // Gap tracking to prevent re-deducting freeze days
     val currentGapStartDate: Long? = null, // epoch day
-    val freezeDaysUsedForCurrentGap: Int = 0
+    val freezeDaysUsedForCurrentGap: Int = 0,
+    // Track all dates where freeze was applied (for fast calendar UI)
+    val freezeAppliedDates: List<Long> = emptyList() // epoch days
 )
 
 @Serializable
@@ -88,7 +90,8 @@ fun DocumentSnapshot.toFirestoreHabit(): FirestoreHabit? {
             highestStreakAchieved = (data["highestStreakAchieved"] as? Long)?.toInt() ?: 0,
             lastStreakUpdate = data["lastStreakUpdate"] as? Long,
             currentGapStartDate = data["currentGapStartDate"] as? Long,
-            freezeDaysUsedForCurrentGap = (data["freezeDaysUsedForCurrentGap"] as? Long)?.toInt() ?: 0
+            freezeDaysUsedForCurrentGap = (data["freezeDaysUsedForCurrentGap"] as? Long)?.toInt() ?: 0,
+            freezeAppliedDates = (data["freezeAppliedDates"] as? List<*>)?.mapNotNull { it as? Long } ?: emptyList()
         )
     } catch (e: Exception) {
         null

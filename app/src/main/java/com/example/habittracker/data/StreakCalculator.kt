@@ -17,7 +17,8 @@ data class StreakCalculationResult(
     val freezeDaysUsed: Int, // INCREMENTAL freeze days used (only new deductions)
     val graceUsed: Boolean,
     val gapStartDate: LocalDate?, // When current gap started
-    val totalFreezeDaysUsedForGap: Int // Total freeze days used for this gap so far
+    val totalFreezeDaysUsedForGap: Int, // Total freeze days used for this gap so far
+    val freezeAppliedDates: Set<LocalDate> // All dates where freeze was applied
 )
 
 /**
@@ -51,7 +52,8 @@ object StreakCalculator {
                 freezeDaysUsed = 0,
                 graceUsed = false,
                 gapStartDate = null,
-                totalFreezeDaysUsedForGap = 0
+                totalFreezeDaysUsedForGap = 0,
+                freezeAppliedDates = emptySet()
             )
         }
         
@@ -73,13 +75,15 @@ object StreakCalculator {
             
             Log.d(TAG, "Completed today, current streak: $currentStreak, diamonds: $diamondsEarned")
             
+            // Preserve existing freeze applied dates when completing
             return StreakCalculationResult(
                 newStreak = currentStreak,
                 diamondsEarned = diamondsEarned,
                 freezeDaysUsed = 0,
                 graceUsed = false,
                 gapStartDate = null, // No gap - completed today
-                totalFreezeDaysUsedForGap = 0
+                totalFreezeDaysUsedForGap = 0,
+                freezeAppliedDates = habit.freezeAppliedDates // Keep historical freeze dates
             )
         }
         
@@ -96,7 +100,8 @@ object StreakCalculator {
                 freezeDaysUsed = 0,
                 graceUsed = false,
                 gapStartDate = null, // Still in grace period
-                totalFreezeDaysUsedForGap = 0
+                totalFreezeDaysUsedForGap = 0,
+                freezeAppliedDates = habit.freezeAppliedDates // Keep historical freeze dates
             )
         }
         
@@ -153,6 +158,36 @@ object StreakCalculator {
         
         Log.d(TAG, "New streak: $newStreak (was $currentStreak)")
         
+        // Calculate which dates had freeze applied
+        // We need to find the ACTUAL missed dates in the gap, skip grace, then apply freeze
+        val newFreezeAppliedDates = mutableSetOf<LocalDate>()
+        if (totalFreezeDaysUsedForGap > 0) {
+            // Find all missed dates in this gap (excluding today)
+            val missedDatesInGap = mutableListOf<LocalDate>()
+            var checkDate = gapStartDate
+            val gapEndDate = currentDate.minusDays(1) // Don't include today
+            
+            while (!checkDate.isAfter(gapEndDate)) {
+                // Check if this date was NOT completed
+                if (!completions.any { it.completedDate == checkDate }) {
+                    missedDatesInGap.add(checkDate)
+                }
+                checkDate = checkDate.plusDays(1)
+            }
+            
+            // First missed date gets grace (no freeze)
+            // Remaining missed dates up to totalFreezeDaysUsedForGap get freeze
+            if (missedDatesInGap.size > 1) {
+                val freezeDatesToMark = missedDatesInGap.drop(1).take(totalFreezeDaysUsedForGap)
+                newFreezeAppliedDates.addAll(freezeDatesToMark)
+                Log.d(TAG, "Freeze applied to dates: $newFreezeAppliedDates")
+            }
+        }
+        
+        // Merge with existing freeze dates (keep historical ones)
+        val allFreezeAppliedDates = habit.freezeAppliedDates.toMutableSet()
+        allFreezeAppliedDates.addAll(newFreezeAppliedDates)
+        
         // No diamonds for broken streaks
         return StreakCalculationResult(
             newStreak = newStreak,
@@ -160,7 +195,8 @@ object StreakCalculator {
             freezeDaysUsed = freezeDaysUsed, // INCREMENTAL freeze days used
             graceUsed = graceUsed,
             gapStartDate = gapStartDate,
-            totalFreezeDaysUsedForGap = totalFreezeDaysUsedForGap
+            totalFreezeDaysUsedForGap = totalFreezeDaysUsedForGap,
+            freezeAppliedDates = allFreezeAppliedDates
         )
     }
     
@@ -272,20 +308,35 @@ object StreakCalculator {
     /**
      * Determine if a missed day is protected by a freeze
      * 
-     * IMPORTANT: This should only show freeze for dates that are ACTUALLY protected.
-     * The issue is that freeze days are consumed chronologically across ALL gaps in the habit,
-     * not per-gap. We need to simulate the entire streak calculation to know which specific
-     * dates consumed freeze days.
+     * IMPORTANT: Uses the stored freezeAppliedDates from the habit to determine
+     * which dates have freeze protection. This ensures historical accuracy.
      * 
-     * Simplified approach: A date gets a freeze icon ONLY if:
-     * 1. It's a missed day (not completed)
-     * 2. It's after the first freeze purchase date
-     * 3. It's part of the CURRENT ongoing gap (from most recent completion to today)
-     * 4. It's within the freeze coverage for that current gap
-     * 
-     * For old/historical gaps, we DON'T show freeze icons because we can't accurately
-     * determine which historical days actually consumed freeze vs penalty.
+     * @param habit The habit with stored freezeAppliedDates
+     * @param date The date to check
+     * @param completions List of habit completions for fallback calculation
      */
+    fun isFreezeDay(
+        habit: Habit,
+        date: LocalDate,
+        completions: List<HabitCompletion>
+    ): Boolean {
+        // Don't show freeze on today - user still has time to complete
+        val today = LocalDate.now()
+        if (date >= today) return false
+        
+        // Make sure it's not actually completed
+        val isCompleted = completions.any { it.completedDate == date }
+        if (isCompleted) return false
+        
+        // Check if this date is in the stored freeze applied dates
+        return habit.freezeAppliedDates.contains(date)
+    }
+    
+    /**
+     * DEPRECATED: Legacy isFreezeDay for backward compatibility
+     * Use isFreezeDay(habit, date, completions) instead
+     */
+    @Deprecated("Use isFreezeDay(habit, date, completions) that uses stored freezeAppliedDates")
     fun isFreezeDay(
         lastCompletedDate: LocalDate?,
         date: LocalDate,
@@ -293,7 +344,7 @@ object StreakCalculator {
         freezeDaysAvailable: Int,
         firstFreezePurchaseDate: LocalDate? = null
     ): Boolean {
-        if (lastCompletedDate == null || freezeDaysAvailable <= 0) return false
+        if (lastCompletedDate == null) return false
         
         // Don't show freeze on today - user still has time to complete
         val today = LocalDate.now()
@@ -308,52 +359,46 @@ object StreakCalculator {
         val isCompleted = completions.any { it.completedDate == date }
         if (isCompleted) return false
         
-        // CRITICAL FIX: Only show freeze icons for the MOST RECENT gap
-        // (from last completion to today), not for historical gaps
-        val sortedCompletions = completions.sortedByDescending { it.completedDate }
+        // Find the gap this date belongs to
+        val sortedCompletions = completions.sortedBy { it.completedDate }
         if (sortedCompletions.isEmpty()) return false
         
-        val mostRecentCompletion = sortedCompletions.first().completedDate
+        // Find the completion BEFORE this date and the completion AFTER this date
+        val completionBefore = sortedCompletions.lastOrNull { it.completedDate < date }
+        val completionAfter = sortedCompletions.firstOrNull { it.completedDate > date }
         
-        // Only process if this date is in the current gap (after most recent completion)
-        if (date <= mostRecentCompletion) {
-            return false // This is a historical gap, don't show freeze
+        if (completionBefore == null) {
+            // Date is before first completion, no freeze applies
+            return false
         }
         
-        // Calculate days since most recent completion
-        val daysSince = ChronoUnit.DAYS.between(mostRecentCompletion, date).toInt()
+        // Find all missed dates in THIS specific gap
+        val gapStart = completionBefore.completedDate.plusDays(1)
+        val gapEnd = completionAfter?.completedDate?.minusDays(1) ?: today.minusDays(1)
         
-        // Freeze applies after grace day (day 2+)
-        if (daysSince >= 2) {
-            // Find all missed dates in current gap (from most recent completion to today)
-            val allMissedDatesInCurrentGap = mutableListOf<LocalDate>()
-            val daysSinceToToday = ChronoUnit.DAYS.between(mostRecentCompletion, today).toInt()
-            
-            for (i in 1 until daysSinceToToday) { // Exclude today
-                val checkDate = mostRecentCompletion.plusDays(i.toLong())
-                if (!completions.any { it.completedDate == checkDate }) {
-                    allMissedDatesInCurrentGap.add(checkDate)
-                }
+        val missedDatesInGap = mutableListOf<LocalDate>()
+        var currentDate = gapStart
+        while (!currentDate.isAfter(gapEnd)) {
+            if (!completions.any { it.completedDate == currentDate }) {
+                missedDatesInGap.add(currentDate)
             }
-            allMissedDatesInCurrentGap.sort()
-            
-            // Find position of this date
-            val positionOfThisDate = allMissedDatesInCurrentGap.indexOf(date) + 1 // 1-indexed
-            
-            if (positionOfThisDate < 1) return false // Date not in missed dates list
-            
-            // Calculate protection:
-            // Position 1 = Grace (no freeze icon)
-            // Positions 2 to (1 + freezeDaysAvailable) = Freeze protected
-            // Beyond that = Penalty (no freeze icon)
-            
-            val graceDays = 1
-            val freezeProtectedDays = freezeDaysAvailable
-            val totalProtectedDays = graceDays + freezeProtectedDays
-            
-            return positionOfThisDate > graceDays && positionOfThisDate <= totalProtectedDays
+            currentDate = currentDate.plusDays(1)
         }
         
-        return false
+        // Find position of this date in the gap
+        val positionInGap = missedDatesInGap.indexOf(date) + 1 // 1-indexed
+        
+        if (positionInGap < 1) return false // Date not in missed dates list
+        
+        // Calculate protection:
+        // Position 1 = Grace (no freeze icon, shows ice cube instead)
+        // Positions 2 to (1 + freezeDaysAvailable) = Freeze protected (snowflake)
+        // Beyond that = Penalty (no icon)
+        
+        val graceDays = 1
+        val freezeProtectedDays = freezeDaysAvailable
+        val totalProtectedDays = graceDays + freezeProtectedDays
+        
+        return positionInGap > graceDays && positionInGap <= totalProtectedDays
     }
 }

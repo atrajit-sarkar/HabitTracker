@@ -1009,9 +1009,11 @@ private fun calculateDiamondsEarned(highestStreak: Int): Int {
     val tenDayMilestones = highestStreak / 10
     total += tenDayMilestones * 20
     
-    // Every 100 days = additional 100 diamonds (on top of the 10-day reward)
-    val hundredDayMilestones = highestStreak / 100
-    total += hundredDayMilestones * 100
+    // Every 100 days = bonus equal to milestone number (MATCHES StreakCalculator)
+    // Day 100: +100 diamonds, Day 200: +200 diamonds, etc.
+    for (milestone in 1..(highestStreak / 100)) {
+        total += milestone * 100
+    }
     
     return total
 }
@@ -1273,7 +1275,8 @@ private fun CalendarSection(
                         onDateSelected(date)
                     },
                     progress = progress,
-                    userRewards = userRewards
+                    userRewards = userRewards,
+                    habit = habit
                 )
                 
                 // Helper text
@@ -1301,7 +1304,8 @@ private fun MonthCalendar(
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
     progress: HabitProgress,
-    userRewards: it.atraj.habittracker.data.local.UserRewards
+    userRewards: it.atraj.habittracker.data.local.UserRewards,
+    habit: Habit
 ) {
     // Calculate streak at each date for proper coloring
     val streakAtDate = remember(completedDates) {
@@ -1365,21 +1369,14 @@ private fun MonthCalendar(
                 } ?: false
                 
                 // Determine if this is a freeze day
-                // Freeze only shows on PAST dates protected by streak freeze
-                // AND only for dates after freeze was first purchased
+                // Use the stored freezeAppliedDates from the habit for accurate historical display
                 val isFreezeDay = date?.let { d ->
-                    if (d !in completedDates && d >= habitCreationDate && d < today) {
-                        val previousCompletions = completedDates.filter { it < d }.sorted()
-                        if (previousCompletions.isNotEmpty()) {
-                            val lastCompletion = previousCompletions.last()
-                            StreakCalculator.isFreezeDay(
-                                lastCompletedDate = lastCompletion,
-                                date = d,
-                                completions = completions,
-                                freezeDaysAvailable = userRewards.freezeDays,
-                                firstFreezePurchaseDate = userRewards.firstFreezePurchaseDate
-                            )
-                        } else false
+                    if (d < today) {
+                        StreakCalculator.isFreezeDay(
+                            habit = habit,
+                            date = d,
+                            completions = completions
+                        )
                     } else false
                 } ?: false
                 

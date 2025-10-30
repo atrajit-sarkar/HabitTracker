@@ -28,7 +28,9 @@ data class Habit(
     val lastStreakUpdate: LocalDate? = null, // Track when streak was last calculated
     // Track current gap to prevent re-deducting freeze days for same gap
     val currentGapStartDate: LocalDate? = null, // When current gap started (first missed day)
-    val freezeDaysUsedForCurrentGap: Int = 0 // How many freeze days already used for this gap
+    val freezeDaysUsedForCurrentGap: Int = 0, // How many freeze days already used for this gap
+    // Track ALL dates where freeze was applied (for calendar UI)
+    val freezeAppliedDates: Set<LocalDate> = emptySet() // All dates that had freeze protection applied
 ) {
     // Helper function to get NotificationSound object
     fun getNotificationSound(): NotificationSound {
