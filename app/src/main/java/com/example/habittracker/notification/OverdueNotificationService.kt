@@ -123,19 +123,22 @@ object OverdueNotificationService {
                         hoursOverdue = overdueHours
                     )
                 } else {
-                    // Regular encouraging message for 2-5 hours
+                    // Regular encouraging message for 2-5 hours (very short and concise)
                     val prompt = """
-                        Generate a personalized reminder message for $userName who has not completed their habit "$habitTitle".
-                        This habit is now $overdueHours hour(s) overdue.
+                        Generate a VERY SHORT personalized reminder for $userName about their overdue habit "$habitTitle" ($overdueHours hours late).
                         
                         Requirements:
+                        - Maximum 8-10 words total
                         - Address $userName by name
-                        - Mention the specific habit: "$habitTitle"
-                        - Be encouraging but firm - remind them it's $overdueHours hours late
-                        - Keep it short (1-2 sentences maximum)
-                        - Be supportive and motivating, not harsh
+                        - Be direct and motivating
                         - Don't use emojis
+                        - Don't mention hours overdue (we show it separately)
                         - Generate ONLY the message text, nothing else
+                        
+                        Example formats:
+                        "$userName, time to complete $habitTitle!"
+                        "$userName, your $habitTitle needs attention now!"
+                        "$userName, don't forget $habitTitle today!"
                     """.trimIndent()
                     geminiService.generateCustomMessage(prompt)
                 }
@@ -152,12 +155,12 @@ object OverdueNotificationService {
             Log.e(TAG, "Error generating Gemini message, using fallback", e)
         }
         
-        // Fallback message (also more aggressive for 6+ hours)
+        // Fallback message (short and concise for notification image)
         val userPrefix = if (!userName.isNullOrBlank()) "$userName, " else ""
         return@withContext if (overdueHours >= 6) {
-            "${userPrefix}URGENT: \"${habitTitle}\" is $overdueHours hour(s) overdue! Stop procrastinating and take action NOW!"
+            "${userPrefix}Complete \"${habitTitle}\" NOW!"
         } else {
-            "${userPrefix}Your habit \"${habitTitle}\" is $overdueHours hour(s) overdue. Complete it now to stay on track!"
+            "${userPrefix}Time to finish \"${habitTitle}\"!"
         }
     }
     
@@ -550,7 +553,7 @@ object OverdueNotificationService {
      * Same as HabitReminderService implementation
      */
     private fun createAvatarBitmap(avatar: HabitAvatar, context: Context, habitId: Long? = null): Bitmap {
-        val size = 128
+        val size = 320 // Much larger like Duolingo notification icon
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
