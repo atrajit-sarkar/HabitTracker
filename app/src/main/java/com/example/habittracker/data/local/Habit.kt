@@ -25,7 +25,10 @@ data class Habit(
     // Streak and rewards fields
     val streak: Int = 0,
     val highestStreakAchieved: Int = 0,
-    val lastStreakUpdate: LocalDate? = null // Track when streak was last calculated
+    val lastStreakUpdate: LocalDate? = null, // Track when streak was last calculated
+    // Track current gap to prevent re-deducting freeze days for same gap
+    val currentGapStartDate: LocalDate? = null, // When current gap started (first missed day)
+    val freezeDaysUsedForCurrentGap: Int = 0 // How many freeze days already used for this gap
 ) {
     // Helper function to get NotificationSound object
     fun getNotificationSound(): NotificationSound {

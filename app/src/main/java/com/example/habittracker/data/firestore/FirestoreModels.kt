@@ -32,7 +32,10 @@ data class FirestoreHabit(
     // Streak and rewards fields
     val streak: Int = 0,
     val highestStreakAchieved: Int = 0,
-    val lastStreakUpdate: Long? = null // epoch day
+    val lastStreakUpdate: Long? = null, // epoch day
+    // Gap tracking to prevent re-deducting freeze days
+    val currentGapStartDate: Long? = null, // epoch day
+    val freezeDaysUsedForCurrentGap: Int = 0
 )
 
 @Serializable
@@ -83,7 +86,9 @@ fun DocumentSnapshot.toFirestoreHabit(): FirestoreHabit? {
             deletedAt = data["deletedAt"] as? Long,
             streak = (data["streak"] as? Long)?.toInt() ?: 0,
             highestStreakAchieved = (data["highestStreakAchieved"] as? Long)?.toInt() ?: 0,
-            lastStreakUpdate = data["lastStreakUpdate"] as? Long
+            lastStreakUpdate = data["lastStreakUpdate"] as? Long,
+            currentGapStartDate = data["currentGapStartDate"] as? Long,
+            freezeDaysUsedForCurrentGap = (data["freezeDaysUsedForCurrentGap"] as? Long)?.toInt() ?: 0
         )
     } catch (e: Exception) {
         null

@@ -14,8 +14,10 @@ private const val TAG = "StreakCalculator"
 data class StreakCalculationResult(
     val newStreak: Int,
     val diamondsEarned: Int,
-    val freezeDaysUsed: Int,
-    val graceUsed: Boolean
+    val freezeDaysUsed: Int, // INCREMENTAL freeze days used (only new deductions)
+    val graceUsed: Boolean,
+    val gapStartDate: LocalDate?, // When current gap started
+    val totalFreezeDaysUsedForGap: Int // Total freeze days used for this gap so far
 )
 
 /**
@@ -47,7 +49,9 @@ object StreakCalculator {
                 newStreak = 0,
                 diamondsEarned = 0,
                 freezeDaysUsed = 0,
-                graceUsed = false
+                graceUsed = false,
+                gapStartDate = null,
+                totalFreezeDaysUsedForGap = 0
             )
         }
         
@@ -73,7 +77,9 @@ object StreakCalculator {
                 newStreak = currentStreak,
                 diamondsEarned = diamondsEarned,
                 freezeDaysUsed = 0,
-                graceUsed = false
+                graceUsed = false,
+                gapStartDate = null, // No gap - completed today
+                totalFreezeDaysUsedForGap = 0
             )
         }
         
@@ -88,7 +94,9 @@ object StreakCalculator {
                 newStreak = currentStreak,
                 diamondsEarned = 0,
                 freezeDaysUsed = 0,
-                graceUsed = false
+                graceUsed = false,
+                gapStartDate = null, // Still in grace period
+                totalFreezeDaysUsedForGap = 0
             )
         }
         
@@ -98,21 +106,41 @@ object StreakCalculator {
         
         Log.d(TAG, "Missed $missedDays days")
         
-        // First missed day gets automatic grace
+        // CRITICAL FIX: Determine gap start date and calculate INCREMENTAL freeze usage
+        val gapStartDate = mostRecentCompletion.plusDays(1) // First day after last completion
+        val isNewGap = habit.currentGapStartDate != gapStartDate
+        
+        if (isNewGap) {
+            // This is a NEW gap - reset freeze tracking
+            Log.d(TAG, "NEW gap detected starting ${gapStartDate}, resetting freeze tracking")
+        } else {
+            Log.d(TAG, "EXISTING gap from ${habit.currentGapStartDate}, already used ${habit.freezeDaysUsedForCurrentGap} freeze days")
+        }
+        
+        // Calculate TOTAL freeze days needed for this entire gap
         var graceUsed = false
-        var freezeDaysNeeded = missedDays
+        var freezeDaysNeededTotal = missedDays
         
         if (missedDays >= 1) {
             graceUsed = true
-            freezeDaysNeeded = missedDays - 1
-            Log.d(TAG, "Applied grace for 1 day, need $freezeDaysNeeded freeze days")
+            freezeDaysNeededTotal = missedDays - 1
+            Log.d(TAG, "Applied grace for 1 day, total freeze needed for gap: $freezeDaysNeededTotal")
         }
         
-        // Calculate how many freeze days we can use
-        val freezeDaysUsed = minOf(freezeDaysNeeded, availableFreezeDays)
-        val unprotectedMissedDays = freezeDaysNeeded - freezeDaysUsed
+        // Calculate INCREMENTAL freeze days needed (only what we haven't already used)
+        val alreadyUsedForThisGap = if (isNewGap) 0 else habit.freezeDaysUsedForCurrentGap
+        val freezeDaysNeededIncremental = (freezeDaysNeededTotal - alreadyUsedForThisGap).coerceAtLeast(0)
         
-        Log.d(TAG, "Used $freezeDaysUsed freeze days, $unprotectedMissedDays unprotected")
+        Log.d(TAG, "Incremental freeze needed: $freezeDaysNeededIncremental (total needed: $freezeDaysNeededTotal, already used: $alreadyUsedForThisGap)")
+        
+        // Calculate how many freeze days we can use RIGHT NOW
+        val freezeDaysUsed = minOf(freezeDaysNeededIncremental, availableFreezeDays)
+        val totalFreezeDaysUsedForGap = alreadyUsedForThisGap + freezeDaysUsed
+        
+        // Calculate unprotected days based on TOTAL needs vs TOTAL usage
+        val unprotectedMissedDays = (freezeDaysNeededTotal - totalFreezeDaysUsedForGap).coerceAtLeast(0)
+        
+        Log.d(TAG, "Using $freezeDaysUsed NEW freeze days (total for gap now: $totalFreezeDaysUsedForGap), $unprotectedMissedDays unprotected")
         
         // Calculate new streak
         val currentStreak = calculateCurrentStreak(sortedCompletions)
@@ -129,8 +157,10 @@ object StreakCalculator {
         return StreakCalculationResult(
             newStreak = newStreak,
             diamondsEarned = 0,
-            freezeDaysUsed = freezeDaysUsed,
-            graceUsed = graceUsed
+            freezeDaysUsed = freezeDaysUsed, // INCREMENTAL freeze days used
+            graceUsed = graceUsed,
+            gapStartDate = gapStartDate,
+            totalFreezeDaysUsedForGap = totalFreezeDaysUsedForGap
         )
     }
     

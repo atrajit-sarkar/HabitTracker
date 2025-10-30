@@ -366,7 +366,9 @@ private fun Habit.toFirestoreHabit(docId: String, numericId: Long? = null): Fire
         deletedAt = deletedAt?.toEpochMilli(),
         streak = streak,
         highestStreakAchieved = highestStreakAchieved,
-        lastStreakUpdate = lastStreakUpdate?.toEpochDay()
+        lastStreakUpdate = lastStreakUpdate?.toEpochDay(),
+        currentGapStartDate = currentGapStartDate?.toEpochDay(),
+        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap
     )
 }
 
@@ -402,7 +404,9 @@ private fun FirestoreHabit.toHabit(): Habit {
         deletedAt = deletedAt?.let { Instant.ofEpochMilli(it) },
         streak = streak,
         highestStreakAchieved = highestStreakAchieved,
-        lastStreakUpdate = lastStreakUpdate?.let { LocalDate.ofEpochDay(it) }
+        lastStreakUpdate = lastStreakUpdate?.let { LocalDate.ofEpochDay(it) },
+        currentGapStartDate = currentGapStartDate?.let { LocalDate.ofEpochDay(it) },
+        freezeDaysUsedForCurrentGap = freezeDaysUsedForCurrentGap
     )
 }
 
