@@ -130,7 +130,7 @@ object StreakCalculator {
         // Calculate INCREMENTAL freeze days needed (only what we haven't already used)
         val alreadyUsedForThisGap = if (isNewGap) 0 else habit.freezeDaysUsedForCurrentGap
         val freezeDaysNeededIncremental = (freezeDaysNeededTotal - alreadyUsedForThisGap).coerceAtLeast(0)
-        
+
         Log.d(TAG, "Incremental freeze needed: $freezeDaysNeededIncremental (total needed: $freezeDaysNeededTotal, already used: $alreadyUsedForThisGap)")
         
         // Calculate how many freeze days we can use RIGHT NOW

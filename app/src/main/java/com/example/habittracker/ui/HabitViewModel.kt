@@ -662,26 +662,22 @@ class HabitViewModel @Inject constructor(
                     totalDiamondsEarned += result.diamondsEarned
                     totalFreezeDaysRequested += result.freezeDaysUsed
                     
-                    // Update habit only if streak changed OR gap tracking changed
+                    // Update habit only if streak changed
                     if (result.newStreak != habit.streak || 
                         result.diamondsEarned > 0 || 
-                        result.freezeDaysUsed > 0 ||
-                        result.gapStartDate != habit.currentGapStartDate) {
+                        result.freezeDaysUsed > 0) {
                         
                         val newHighest = maxOf(habit.highestStreakAchieved, result.newStreak)
                         val updatedHabit = habit.copy(
                             streak = result.newStreak,
                             highestStreakAchieved = newHighest,
-                            lastStreakUpdate = currentDate,
-                            currentGapStartDate = result.gapStartDate,
-                            freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap
+                            lastStreakUpdate = currentDate
                         )
                         
                         habitRepository.updateHabit(updatedHabit)
                         android.util.Log.d("HabitViewModel", 
                             "Updated ${habit.title}: streak=${result.newStreak}, " +
-                            "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}, " +
-                            "gapStart=${result.gapStartDate}, totalFreezeForGap=${result.totalFreezeDaysUsedForGap}")
+                            "diamonds=${result.diamondsEarned}, freeze=${result.freezeDaysUsed}")
                     } else {
                         // Even if no changes, update lastStreakUpdate to prevent recalculation
                         val updatedHabit = habit.copy(lastStreakUpdate = currentDate)
@@ -761,20 +757,16 @@ class HabitViewModel @Inject constructor(
                 android.util.Log.d("HabitViewModel", "Awarded ${result.diamondsEarned} diamonds!")
             }
             
-            // Update habit with new streak and gap tracking
+            // Update habit with new streak
             val newHighest = maxOf(habit.highestStreakAchieved, result.newStreak)
             val updatedHabit = habit.copy(
                 streak = result.newStreak,
                 highestStreakAchieved = newHighest,
-                lastStreakUpdate = currentDate,
-                currentGapStartDate = result.gapStartDate,
-                freezeDaysUsedForCurrentGap = result.totalFreezeDaysUsedForGap
+                lastStreakUpdate = currentDate
             )
             
             habitRepository.updateHabit(updatedHabit)
-            android.util.Log.d("HabitViewModel", 
-                "Updated habit streak to ${result.newStreak}, gapStart=${result.gapStartDate}, " +
-                "totalFreezeForGap=${result.totalFreezeDaysUsedForGap}")
+            android.util.Log.d("HabitViewModel", "Updated habit streak to ${result.newStreak}")
             
         } catch (e: Exception) {
             android.util.Log.e("HabitViewModel", "Error updating habit streak", e)

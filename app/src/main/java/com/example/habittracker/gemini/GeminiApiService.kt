@@ -114,23 +114,24 @@ class GeminiApiService(private val apiKey: String) {
         hoursOverdue: Int
     ): Result<String> = withContext(Dispatchers.IO) {
         val prompt = """
-            Generate a VERY SHORT but firm message for $userName who hasn't completed "$habitTitle" for $hoursOverdue hours.
+            Generate a VERY firm, aggressive, and motivational message for $userName who has NOT completed their habit "$habitTitle" for $hoursOverdue hours.
             
             Habit description: "$habitDescription"
             
             Requirements:
-            - Maximum 10-12 words total
-            - Be direct and urgent
-            - Address $userName by name
-            - Mention the habit directly
+            - Use an AGGRESSIVE and URGENT tone (this is serious!)
+            - Be VERY direct and firm - no more gentle reminders
+            - Include a powerful motivational quote or statement related to the habit's purpose
+            - Reference the specific habit ("$habitTitle") and its description to make it personal
+            - Emphasize the consequences of continued delay
+            - Push them to take immediate action NOW
+            - Use commanding language (but not insulting)
+            - Keep it 2-3 sentences maximum
             - Don't use emojis
-            - Don't mention hours (we show it separately)
-            - Generate ONLY the message text
+            - Address them by name
+            - Make them feel the urgency and importance
             
-            Example formats:
-            "$userName! Stop delaying $habitTitle - DO IT NOW!"
-            "$userName, complete $habitTitle immediately - no excuses!"
-            "$userName! $habitTitle won't finish itself - act now!"
+            Generate ONLY the message text, nothing else.
         """.trimIndent()
         
         generateContent(prompt)

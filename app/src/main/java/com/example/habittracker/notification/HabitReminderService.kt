@@ -454,7 +454,7 @@ object HabitReminderService {
     }
 
     private fun createAvatarBitmap(avatar: HabitAvatar, context: Context, habitId: Long? = null): Bitmap {
-        val size = 320 // Much larger like Duolingo notification icon
+        val size = 128
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
