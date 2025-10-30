@@ -870,6 +870,7 @@ fun HabitHomeScreen(
             ) { habit ->
                 HabitCard(
                     habit = habit,
+                    user = user, // Pass user for Gemini personalization
                     isSelectionMode = state.isSelectionMode,
                     currentTheme = currentTheme,
                     themeConfig = themeConfig,
@@ -987,6 +988,7 @@ fun HabitHomeScreen(
                         androidx.compose.runtime.key(habit.id) {
                             HabitCard(
                                 habit = habit,
+                                user = user, // Pass user for Gemini personalization
                                 isSelectionMode = state.isSelectionMode,
                                 currentTheme = currentTheme,
                                 themeConfig = themeConfig,
@@ -1361,6 +1363,7 @@ private fun DrawerContent(
 @Composable
 private fun HabitCard(
     habit: HabitCardUi,
+    user: User?, // User for Gemini personalization
     isSelectionMode: Boolean = false,
     currentTheme: AppTheme, // OPTIMIZATION: Pass as parameter instead of collecting per-card
     themeConfig: it.atraj.habittracker.ui.theme.ThemeConfig, // OPTIMIZATION: Pass as parameter
@@ -1736,9 +1739,9 @@ private fun HabitCard(
                                         )
                                         android.util.Log.d("NotificationDebug", "Triggering overdue notification (2h) for habit: ${testHabit.title}")
                                         
-                                        // Get user name from preferences
-                                        val prefs = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
-                                        val userName = prefs.getString("user_name", null)
+                                        // Get user name from user object (effectiveDisplayName includes customDisplayName if set)
+                                        val userName = user?.effectiveDisplayName
+                                        android.util.Log.d("NotificationDebug", "User name: $userName")
                                         
                                         it.atraj.habittracker.notification.OverdueNotificationService.showOverdueNotification(
                                             context = context,

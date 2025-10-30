@@ -92,12 +92,12 @@ class OverdueNotificationReceiver : BroadcastReceiver() {
         
         // Only show notification if habit is still overdue and matches the expected duration
         if (overdueStatus.isOverdue && overdueStatus.overdueHours >= overdueHours) {
-            // Get user name for personalization
+            // Get user name for personalization (use effectiveDisplayName to include custom name if set)
             val user = authRepository.currentUser.firstOrNull()
-            val userName = user?.displayName
+            val userName = user?.effectiveDisplayName
             
             // Show overdue notification
-            Log.d(TAG, "Showing overdue notification for habit: ${habit.title}, overdue: ${overdueHours}h")
+            Log.d(TAG, "Showing overdue notification for habit: ${habit.title}, overdue: ${overdueHours}h, userName: $userName")
             OverdueNotificationService.showOverdueNotification(
                 context,
                 habit,
