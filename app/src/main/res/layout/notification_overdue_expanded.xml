@@ -5,49 +5,113 @@
     android:layout_height="wrap_content"
     android:padding="16dp">
 
-    <!-- Large Overdue Warning Icon on the Left (expanded state) -->
-    <ImageView
-        android:id="@+id/notification_overdue_icon"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
+    <!-- Circular frame for large overdue icon with adaptive shadow and glowing border -->
+    <FrameLayout
+        android:id="@+id/notification_overdue_frame"
+        android:layout_width="108dp"
+        android:layout_height="108dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
-        android:scaleType="centerCrop"
-        android:contentDescription="Overdue Warning" />
+        android:background="@drawable/circular_shadow_white_large">
+        
+        <!-- Red border frame -->
+        <FrameLayout
+            android:layout_width="104dp"
+            android:layout_height="104dp"
+            android:layout_gravity="center"
+            android:background="@drawable/circular_glow_border_large">
+            
+            <!-- Large Overdue Warning Icon on the Left (expanded state) - Circular -->
+            <ImageView
+                android:id="@+id/notification_overdue_icon"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                android:background="@drawable/circle_shape"
+                android:clipToOutline="true"
+                android:contentDescription="Overdue Warning" />
+        </FrameLayout>
+    </FrameLayout>
 
-    <!-- Text Content on the Right (full space without right avatar) -->
-    <LinearLayout
+    <!-- Thought Bubble Container (to the right of overdue icon) -->
+    <FrameLayout
+        android:id="@+id/thought_bubble_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/notification_overdue_icon"
-        android:layout_toRightOf="@id/notification_overdue_icon"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        android:layout_centerVertical="true"
-        android:orientation="vertical">
-
-        <!-- Title with Red Color for urgency (full text shown when expanded) -->
-        <TextView
-            android:id="@+id/notification_title"
+        android:layout_toEndOf="@id/notification_overdue_frame"
+        android:layout_toRightOf="@id/notification_overdue_frame"
+        android:layout_marginStart="6dp"
+        android:layout_marginLeft="6dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginRight="12dp"
+        android:layout_centerVertical="true">
+        
+        <!-- Thought puff - small (closest to overdue icon) -->
+        <ImageView
+            android:layout_width="7dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginLeft="0dp"
+            android:layout_marginTop="36dp"
+            android:src="@drawable/thought_bubble_puff_small"
+            android:contentDescription="Thought puff" />
+        
+        <!-- Thought puff - medium (overlapping) -->
+        <ImageView
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginTop="26dp"
+            android:src="@drawable/thought_bubble_puff_medium"
+            android:contentDescription="Thought puff" />
+        
+        <!-- Thought puff - large (overlapping, closest to text bubble) -->
+        <ImageView
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginLeft="14dp"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/thought_bubble_puff_large"
+            android:contentDescription="Thought puff" />
+        
+        <!-- Main thought bubble with text content -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#FF5252"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:maxLines="3" />
+            android:layout_marginStart="32dp"
+            android:layout_marginLeft="32dp"
+            android:background="@drawable/thought_bubble_main"
+            android:orientation="vertical"
+            android:paddingStart="10dp"
+            android:paddingLeft="10dp"
+            android:paddingEnd="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
 
-        <!-- Body Text with Orange Color (full text shown when expanded) -->
-        <TextView
-            android:id="@+id/notification_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#FFA500"
-            android:textSize="14sp"
-            android:lineSpacingMultiplier="1.2" />
-    </LinearLayout>
+            <!-- Title with Red Color for urgency (full text shown when expanded) -->
+            <TextView
+                android:id="@+id/notification_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FF5252"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Body Text with Orange Color (full text shown when expanded) -->
+            <TextView
+                android:id="@+id/notification_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#FFA500"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.1" />
+        </LinearLayout>
+    </FrameLayout>
 
 </RelativeLayout>

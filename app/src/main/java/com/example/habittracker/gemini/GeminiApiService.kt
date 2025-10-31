@@ -29,9 +29,9 @@ class GeminiApiService(private val apiKey: String) {
     
     companion object {
         private const val TAG = "GeminiApiService"
-        // Using gemini-2.0-flash-exp as it's the latest experimental version
+        // Using gemini-2.0-flash-exp as it's the latest experimental version with improved performance
         // Alternative: Use "gemini-1.5-flash" for stable version
-        private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+        private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
     }
     
     /**

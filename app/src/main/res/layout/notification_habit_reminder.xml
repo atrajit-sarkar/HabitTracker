@@ -5,23 +5,41 @@
     android:layout_height="wrap_content"
     android:padding="12dp">
 
-    <!-- Small Avatar Image on the Right (collapsed state) -->
-    <ImageView
-        android:id="@+id/notification_avatar"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+    <!-- Small Avatar with Shadow and Circular Frame (collapsed state) -->
+    <FrameLayout
+        android:id="@+id/notification_avatar_frame"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_centerVertical="true"
-        android:scaleType="centerCrop"
-        android:contentDescription="Habit Avatar" />
+        android:layout_centerVertical="true">
+        
+        <!-- Shadow Layer -->
+        <ImageView
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:src="@drawable/circular_shadow_white"
+            android:contentDescription="Shadow" />
+        
+        <!-- Avatar Image with Circular Clipping -->
+        <ImageView
+            android:id="@+id/notification_avatar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:background="@drawable/circle_shape"
+            android:clipToOutline="true"
+            android:scaleType="centerCrop"
+            android:contentDescription="Habit Avatar" />
+    </FrameLayout>
 
     <!-- Text Content on the Left -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_toLeftOf="@id/notification_avatar"
-        android:layout_toStartOf="@id/notification_avatar"
+        android:layout_toLeftOf="@id/notification_avatar_frame"
+        android:layout_toStartOf="@id/notification_avatar_frame"
         android:layout_marginEnd="12dp"
         android:layout_marginRight="12dp"
         android:orientation="vertical">
@@ -47,7 +65,7 @@
             android:layout_marginTop="4dp"
             android:textColor="#69F0AE"
             android:textSize="14sp"
-            android:maxLines="2"
+            android:maxLines="1"
             android:ellipsize="end"
             android:lineSpacingMultiplier="1.1"
             android:scrollHorizontally="false"

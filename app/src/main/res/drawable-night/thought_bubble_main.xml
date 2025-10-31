@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Main thought bubble with rounded corners (dark mode) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#2C2C2C" />
+    <corners android:radius="16dp" />
+    <stroke
+        android:width="2dp"
+        android:color="#424242" />
+</shape>
