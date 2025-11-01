@@ -124,6 +124,15 @@ class HabitViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val habits = habitRepository.getAllHabits()
+                android.util.Log.d("HabitViewModel", "Loaded ${habits.size} habits on startup")
+                
+                // Log bad habits
+                val badHabits = habits.filter { it.isBadHabit }
+                android.util.Log.d("HabitViewModel", "Found ${badHabits.size} bad habits:")
+                badHabits.forEach { habit ->
+                    android.util.Log.d("HabitViewModel", "  - ${habit.title} (ID: ${habit.id}, targetApp: ${habit.targetAppName}, isBadHabit: ${habit.isBadHabit})")
+                }
+                
                 var rescheduled = 0
                 habits.filter { !it.isDeleted && it.reminderEnabled }.forEach { habit ->
                     try {
@@ -171,12 +180,26 @@ class HabitViewModel @Inject constructor(
                 val dateChanged = currentDate != lastKnownDate
                 lastKnownDate = currentDate
                 
+                android.util.Log.d("HabitViewModel", "observeHabits: Received ${habits.size} total habits from repository")
+                
+                // Filter out bad habits from the home screen - they should be shown in a separate section
+                val badHabits = habits.filter { it.isBadHabit }
+                val regularHabits = habits.filter { !it.isBadHabit }
+                
+                android.util.Log.d("HabitViewModel", "Filtering: ${badHabits.size} bad habits, ${regularHabits.size} regular habits")
+                badHabits.forEach { habit ->
+                    android.util.Log.d("HabitViewModel", "  🚫 Bad habit filtered out: ${habit.title} (ID: ${habit.id}, isBadHabit: ${habit.isBadHabit})")
+                }
+                
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
-                        habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
+                        habits = regularHabits.map(::mapToUi).sortedBy { it.reminderTime },
+                        badHabits = badHabits.filter { !it.isDeleted } // Update bad habits list
                     )
                 }
+                
+                android.util.Log.d("HabitViewModel", "UI updated with ${regularHabits.size} regular habits only")
                 
                 // Recalculate streaks on app open or date change
                 if (isFirstLoad || dateChanged) {
@@ -250,14 +273,22 @@ class HabitViewModel @Inject constructor(
     fun refreshHabitsUI() {
         viewModelScope.launch(Dispatchers.IO) {
             val habits = habitRepository.getAllHabits()
+            android.util.Log.d("HabitViewModel", "refreshHabitsUI: Retrieved ${habits.size} total habits")
+            
+            // Filter out bad habits - they should be shown in a separate section
+            val badHabits = habits.filter { it.isBadHabit }
+            val regularHabits = habits.filter { !it.isBadHabit }
+            
+            android.util.Log.d("HabitViewModel", "refreshHabitsUI: Filtering ${badHabits.size} bad habits, ${regularHabits.size} regular habits")
+            
             withContext(Dispatchers.Main) {
                 _uiState.update { state ->
                     state.copy(
-                        habits = habits.map(::mapToUi).sortedBy { it.reminderTime }
+                        habits = regularHabits.map(::mapToUi).sortedBy { it.reminderTime }
                     )
                 }
             }
-            android.util.Log.d("HabitViewModel", "Habits UI refreshed - completion states recalculated")
+            android.util.Log.d("HabitViewModel", "Habits UI refreshed with ${regularHabits.size} regular habits - completion states recalculated")
         }
     }
     
@@ -375,6 +406,93 @@ class HabitViewModel @Inject constructor(
                 addHabitState = state.addHabitState.copy(avatar = avatar)
             )
         }
+    }
+
+    fun onTargetAppChange(packageName: String, appName: String) {
+        _uiState.update { state ->
+            state.copy(
+                addHabitState = state.addHabitState.copy(
+                    targetAppPackageName = packageName.ifBlank { null },
+                    targetAppName = appName
+                )
+            )
+        }
+    }
+
+    suspend fun saveBadHabit() {
+        val currentState = _uiState.value
+        if (currentState.addHabitState.isSaving) return
+        val title = currentState.addHabitState.title.trim()
+        if (title.isBlank()) {
+            _uiState.update { state ->
+                state.copy(
+                    addHabitState = state.addHabitState.copy(
+                        nameError = "Habit name is required"
+                    )
+                )
+            }
+            return
+        }
+        
+        _uiState.update { it.copy(addHabitState = it.addHabitState.copy(isSaving = true)) }
+        val addForm = _uiState.value.addHabitState
+        
+        android.util.Log.d("HabitViewModel", "Saving bad habit: ${title}")
+        android.util.Log.d("HabitViewModel", "Target app: ${addForm.targetAppName} (${addForm.targetAppPackageName})")
+        
+        val habit = Habit(
+            title = title,
+            description = addForm.description.trim(),
+            reminderHour = 8, // Default time for bad habits (not shown to user)
+            reminderMinute = 0,
+            reminderEnabled = true, // Always enabled for bad habits to send notifications
+            frequency = HabitFrequency.DAILY,
+            notificationSoundId = addForm.notificationSound.id,
+            notificationSoundName = addForm.notificationSound.displayName,
+            notificationSoundUri = addForm.notificationSound.uri,
+            avatar = addForm.avatar,
+            isBadHabit = true,
+            targetAppPackageName = addForm.targetAppPackageName,
+            targetAppName = addForm.targetAppName
+        )
+        
+        android.util.Log.d("HabitViewModel", "Created Habit object with isBadHabit=${habit.isBadHabit}, targetApp=${habit.targetAppName}")
+        
+        val savedHabit = withContext(Dispatchers.IO) {
+            val id = habitRepository.insertHabit(habit)
+            android.util.Log.d("HabitViewModel", "✅ Bad habit inserted with ID: $id, isBadHabit=${habit.isBadHabit}")
+            habit.copy(id = id)
+        }
+        
+        // Create notification channel
+        HabitReminderService.updateHabitChannel(context, savedHabit)
+        
+        // Schedule app usage tracking worker
+        scheduleAppUsageTracking(savedHabit.id)
+        
+        _uiState.update { state ->
+            state.copy(
+                snackbarMessage = "Bad habit tracker created",
+                addHabitState = AddHabitState(availableSounds = availableSounds),
+                isAddSheetVisible = false
+            )
+        }
+        
+        // Update widget
+        withContext(Dispatchers.Main) {
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+        }
+        
+        // Update user's stats
+        viewModelScope.launch(Dispatchers.IO) {
+            updateUserStatsAsync()
+        }
+    }
+    
+    private fun scheduleAppUsageTracking(habitId: Long) {
+        // Schedule immediate check followed by periodic 2-hour checks
+        it.atraj.habittracker.worker.AppUsageTrackingWorker.scheduleWithImmediateCheck(context, habitId)
+        android.util.Log.d("HabitViewModel", "Scheduled immediate + periodic app usage tracking for habit $habitId")
     }
 
     suspend fun saveHabit() {
@@ -654,6 +772,13 @@ class HabitViewModel @Inject constructor(
             
             nonDeletedHabits.forEach { habit ->
                 try {
+                    // Skip bad habits - they don't use streak/freeze mechanics
+                    if (habit.isBadHabit) {
+                        android.util.Log.d("HabitViewModel", 
+                            "Skipping ${habit.title}: bad habits don't use streak system")
+                        return@forEach
+                    }
+                    
                     // CRITICAL FIX: Skip if streak was already calculated today
                     // This prevents duplicate freeze day deductions when opening habit details
                     if (habit.lastStreakUpdate == currentDate) {
@@ -751,6 +876,11 @@ class HabitViewModel @Inject constructor(
             
             nonDeletedHabits.forEach { habit ->
                 try {
+                    // Skip bad habits - they don't use streak/freeze mechanics
+                    if (habit.isBadHabit) {
+                        return@forEach
+                    }
+                    
                     val completions = habitRepository.getHabitCompletions(habit.id)
                     if (completions.isEmpty()) return@forEach
                     
@@ -817,6 +947,14 @@ class HabitViewModel @Inject constructor(
     private suspend fun updateHabitStreak(habitId: Long) {
         try {
             val habit = habitRepository.getHabitById(habitId)
+            
+            // Skip bad habits - they don't use streak/freeze mechanics
+            if (habit.isBadHabit) {
+                android.util.Log.d("HabitViewModel", 
+                    "Skipping ${habit.title}: bad habits don't use streak system")
+                return
+            }
+            
             val completions = habitRepository.getHabitCompletions(habitId)
             val currentDate = LocalDate.now()
             
@@ -1100,7 +1238,8 @@ class HabitViewModel @Inject constructor(
             frequencyText = frequencyText,
             avatar = habit.avatar,
             isSelected = isSelected,
-            isOverdue = isOverdue
+            isOverdue = isOverdue,
+            isBadHabit = habit.isBadHabit
         )
     }
 

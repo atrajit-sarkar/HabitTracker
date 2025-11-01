@@ -37,7 +37,13 @@ data class FirestoreHabit(
     val currentGapStartDate: Long? = null, // epoch day
     val freezeDaysUsedForCurrentGap: Int = 0,
     // Track all dates where freeze was applied (for fast calendar UI)
-    val freezeAppliedDates: List<Long> = emptyList() // epoch days
+    val freezeAppliedDates: List<Long> = emptyList(), // epoch days
+    // Bad habit fields
+    val isBadHabit: Boolean = false,
+    val targetAppPackageName: String? = null,
+    val targetAppName: String? = null,
+    val lastAppUsageCheckDate: Long? = null, // epoch day
+    val totalCompletions: Int = 0 // Total completions count (optimized for bad habits)
 )
 
 @Serializable
@@ -91,7 +97,13 @@ fun DocumentSnapshot.toFirestoreHabit(): FirestoreHabit? {
             lastStreakUpdate = data["lastStreakUpdate"] as? Long,
             currentGapStartDate = data["currentGapStartDate"] as? Long,
             freezeDaysUsedForCurrentGap = (data["freezeDaysUsedForCurrentGap"] as? Long)?.toInt() ?: 0,
-            freezeAppliedDates = (data["freezeAppliedDates"] as? List<*>)?.mapNotNull { it as? Long } ?: emptyList()
+            freezeAppliedDates = (data["freezeAppliedDates"] as? List<*>)?.mapNotNull { it as? Long } ?: emptyList(),
+            // Support both "isBadHabit" and "badHabit" field names for backward compatibility
+            isBadHabit = (data["isBadHabit"] as? Boolean) ?: (data["badHabit"] as? Boolean) ?: false,
+            targetAppPackageName = data["targetAppPackageName"] as? String,
+            targetAppName = data["targetAppName"] as? String,
+            lastAppUsageCheckDate = data["lastAppUsageCheckDate"] as? Long,
+            totalCompletions = (data["totalCompletions"] as? Long)?.toInt() ?: 0
         )
     } catch (e: Exception) {
         null

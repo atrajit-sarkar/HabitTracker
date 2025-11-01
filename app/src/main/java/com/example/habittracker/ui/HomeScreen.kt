@@ -238,11 +238,13 @@ fun HabitHomeRoute(
     userRewards: it.atraj.habittracker.data.local.UserRewards,
     unreadNewsCount: Int = 0,
     onAddHabitClick: () -> Unit,
+    onAddBadHabitClick: () -> Unit = {},
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit = {},
+    onBadHabitsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onNotificationGuideClick: () -> Unit = {},
     onEditHabitClick: (Long) -> Unit = {},
@@ -347,11 +349,13 @@ fun HabitHomeRoute(
         unreadNewsCount = unreadNewsCount,
         snackbarHostState = snackbarHostState,
         onAddHabitClick = onAddHabitClick,
+        onAddBadHabitClick = onAddBadHabitClick,
         onToggleReminder = onToggleReminder,
         onMarkHabitCompleted = onMarkHabitCompleted,
         onDeleteHabit = onDeleteHabit,
         onHabitDetailsClick = onHabitDetailsClick,
         onTrashClick = onTrashClick,
+        onBadHabitsClick = onBadHabitsClick,
         onProfileClick = onProfileClick,
         onNewsClick = onNewsClick,
         notificationPermissionVisible = shouldShowPermissionCard,
@@ -379,11 +383,13 @@ fun HabitHomeScreen(
     unreadNewsCount: Int = 0,
     snackbarHostState: SnackbarHostState,
     onAddHabitClick: () -> Unit,
+    onAddBadHabitClick: () -> Unit = {},
     onToggleReminder: (Long, Boolean) -> Unit,
     onMarkHabitCompleted: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHabitDetailsClick: (Long) -> Unit,
     onTrashClick: () -> Unit,
+    onBadHabitsClick: () -> Unit = {},
     onProfileClick: () -> Unit,
     onNewsClick: () -> Unit = {},
     notificationPermissionVisible: Boolean,
@@ -652,6 +658,13 @@ fun HabitHomeScreen(
                         drawerState.close()
                         kotlinx.coroutines.delay(250) // Wait for drawer close animation
                         onTrashClick()
+                    }
+                },
+                onBadHabitsClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250) // Wait for drawer close animation
+                        onBadHabitsClick()
                     }
                 },
                 onProfileClick = {
@@ -1161,6 +1174,7 @@ fun HabitHomeScreen(
 @Composable
 private fun DrawerContent(
     onTrashClick: () -> Unit,
+    onBadHabitsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
@@ -1315,6 +1329,74 @@ private fun DrawerContent(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(18.dp) // Reduced from 20dp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(6.dp)) // Reduced from 8dp
+                
+                // Bad Habits Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableOnce {
+                            onBadHabitsClick()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFFF6B6B),
+                                            Color(0xFFFFB347)
+                                        )
+                                    ),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "🚫",
+                                fontSize = 18.sp
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Bad Habits",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "Track apps to avoid",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -1525,6 +1607,45 @@ private fun HabitCard(
                                 }
                             }
                         }
+                        
+                        // Bad Habit Badge
+                        if (habit.isBadHabit) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                Color(0xFFFF6B6B),
+                                                Color(0xFFFFB347)
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .graphicsLayer {
+                                        // Glowing effect
+                                        shadowElevation = 8f
+                                    },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "🚫",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = "BAD HABIT",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                        
                         if (habit.description.isNotBlank()) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Row(
@@ -1633,42 +1754,45 @@ private fun HabitCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilledTonalButton(
-                            onClick = {
-                                android.util.Log.d("HabitDoneAnim", "Done button clicked for habit: ${habit.id}")
-                                
-                                // Show animation on this card
-                                showLocalHabitDoneAnimation = true
-                                
-                                // Play theme-specific sound
-                                playThemeCompletionSound(context, currentTheme, soundPlayer)
-                                
-                                // Mark habit as completed
-                                onMarkCompleted()
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(36.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
-                                containerColor = Color.White,
-                                contentColor = palette.accent
-                            )
-                        ) {
-                            // Custom check icon based on theme
-                            ThemeCheckIcon(
-                                currentTheme = currentTheme,
-                                themeConfig = themeConfig,
-                                size = 18.dp,
-                                tint = palette.accent
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = doneText,
-                                fontWeight = FontWeight.Medium,
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                        // Show Done button only for regular habits
+                        if (!habit.isBadHabit) {
+                            FilledTonalButton(
+                                onClick = {
+                                    android.util.Log.d("HabitDoneAnim", "Done button clicked for habit: ${habit.id}")
+                                    
+                                    // Show animation on this card
+                                    showLocalHabitDoneAnimation = true
+                                    
+                                    // Play theme-specific sound
+                                    playThemeCompletionSound(context, currentTheme, soundPlayer)
+                                    
+                                    // Mark habit as completed
+                                    onMarkCompleted()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = Color.White,
+                                    contentColor = palette.accent
+                                )
+                            ) {
+                                // Custom check icon based on theme
+                                ThemeCheckIcon(
+                                    currentTheme = currentTheme,
+                                    themeConfig = themeConfig,
+                                    size = 18.dp,
+                                    tint = palette.accent
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = doneText,
+                                    fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                         
                         OutlinedButton(

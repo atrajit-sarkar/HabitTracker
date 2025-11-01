@@ -127,11 +127,13 @@ fun HabitDetailsScreen(
             // Progress Stats Cards
             ProgressStatsSection(habit = habit, progress = progress)
             
-            // Rewards and Streak Info Section
-            StreakRewardsSection(
-                habit = habit,
-                userRewards = userRewards
-            )
+            // Rewards and Streak Info Section (hidden for bad habits)
+            if (!habit.isBadHabit) {
+                StreakRewardsSection(
+                    habit = habit,
+                    userRewards = userRewards
+                )
+            }
 
             // Calendar View
             CalendarSection(
@@ -339,8 +341,9 @@ private fun HeroSection(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
             )
 
-            // Complete Button with Animation
-            if (isSelectedDateCompleted) {
+            // Complete Button with Animation - hide for bad habits (they're auto-tracked)
+            if (!habit.isBadHabit) {
+                if (isSelectedDateCompleted) {
                 // Success animation
                 val successScale by animateFloatAsState(
                     targetValue = 1f,
@@ -452,6 +455,7 @@ private fun HeroSection(
                 }
             }
         }
+        } // End of !habit.isBadHabit check
     }
     
     // Title dialog
@@ -557,30 +561,63 @@ private fun ProgressStatsSection(habit: Habit, progress: HabitProgress) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                EnhancedStatCard(
-                    title = "Current Streak",
-                    value = habit.streak.toString(),
-                    subtitle = "days",
-                    icon = Icons.Default.LocalFireDepartment,
-                    gradient = listOf(
-                        Color(0xFFFF6B35),
-                        Color(0xFFFF8E53)
-                    ),
-                    modifier = Modifier.weight(1f),
-                    useLottieAnimation = true,
-                    lottieAsset = if (habit.streak == 0) "fireblack.json" else "Fire.json"
-                )
-                EnhancedStatCard(
-                    title = "Longest Streak",
-                    value = progress.longestStreak.toString(),
-                    subtitle = "days",
-                    icon = Icons.Default.Star,
-                    gradient = listOf(
-                        Color(0xFFFFD700),
-                        Color(0xFFFFA500)
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
+                // Hide streak cards for bad habits
+                if (!habit.isBadHabit) {
+                    EnhancedStatCard(
+                        title = "Current Streak",
+                        value = habit.streak.toString(),
+                        subtitle = "days",
+                        icon = Icons.Default.LocalFireDepartment,
+                        gradient = listOf(
+                            Color(0xFFFF6B35),
+                            Color(0xFFFF8E53)
+                        ),
+                        modifier = Modifier.weight(1f),
+                        useLottieAnimation = true,
+                        lottieAsset = if (habit.streak == 0) "fireblack.json" else "Fire.json"
+                    )
+                    EnhancedStatCard(
+                        title = "Longest Streak",
+                        value = progress.longestStreak.toString(),
+                        subtitle = "days",
+                        icon = Icons.Default.Star,
+                        gradient = listOf(
+                            Color(0xFFFFD700),
+                            Color(0xFFFFA500)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    // For bad habits, show different stats using optimized totalCompletions
+                    EnhancedStatCard(
+                        title = "Days Avoided",
+                        value = habit.totalCompletions.toString(),
+                        subtitle = "days",
+                        icon = Icons.Default.CheckCircle,
+                        gradient = listOf(
+                            Color(0xFF4CAF50),
+                            Color(0xFF66BB6A)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    // Calculate days since habit creation
+                    val habitCreationDate = habit.createdAt.atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                    val daysSinceCreation = java.time.temporal.ChronoUnit.DAYS.between(habitCreationDate, LocalDate.now()).toInt() + 1
+                    val daysFailed = (daysSinceCreation - habit.totalCompletions).coerceAtLeast(0)
+                    
+                    EnhancedStatCard(
+                        title = "Days Failed",
+                        value = daysFailed.toString(),
+                        subtitle = "days",
+                        icon = Icons.Default.Close,
+                        gradient = listOf(
+                            Color(0xFFF44336),
+                            Color(0xFFEF5350)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1354,31 +1391,35 @@ private fun MonthCalendar(
                     month.atDay(dayNumber)
                 } else null
 
-                // Determine if this is a grace day
+                // Determine if this is a grace day (not applicable to bad habits)
                 // Grace only shows on PAST dates (not today) - user still has time to complete today
-                val isGraceDay = date?.let { d ->
-                    if (d !in completedDates && d >= habitCreationDate && d < today) {
-                        // Check if there's a completion before this date
-                        val previousCompletions = completedDates.filter { it < d }.sorted()
-                        if (previousCompletions.isNotEmpty()) {
-                            val lastCompletion = previousCompletions.last()
-                            // Use StreakCalculator for consistent logic
-                            StreakCalculator.isGraceDay(lastCompletion, d, completions)
+                val isGraceDay = if (!habit.isBadHabit) {
+                    date?.let { d ->
+                        if (d !in completedDates && d >= habitCreationDate && d < today) {
+                            // Check if there's a completion before this date
+                            val previousCompletions = completedDates.filter { it < d }.sorted()
+                            if (previousCompletions.isNotEmpty()) {
+                                val lastCompletion = previousCompletions.last()
+                                // Use StreakCalculator for consistent logic
+                                StreakCalculator.isGraceDay(lastCompletion, d, completions)
+                            } else false
                         } else false
-                    } else false
-                } ?: false
+                    } ?: false
+                } else false
                 
-                // Determine if this is a freeze day
+                // Determine if this is a freeze day (not applicable to bad habits)
                 // Use the stored freezeAppliedDates from the habit for accurate historical display
-                val isFreezeDay = date?.let { d ->
-                    if (d < today) {
-                        StreakCalculator.isFreezeDay(
-                            habit = habit,
-                            date = d,
-                            completions = completions
-                        )
-                    } else false
-                } ?: false
+                val isFreezeDay = if (!habit.isBadHabit) {
+                    date?.let { d ->
+                        if (d < today) {
+                            StreakCalculator.isFreezeDay(
+                                habit = habit,
+                                date = d,
+                                completions = completions
+                            )
+                        } else false
+                    } ?: false
+                } else false
                 
                 CalendarDay(
                     date = date,
@@ -1397,7 +1438,8 @@ private fun MonthCalendar(
                     isFreezeDay = isFreezeDay,
                     isBeforeFirstCompletion = date?.let { d -> 
                         firstCompletionDate?.let { d < it } ?: true 
-                    } ?: false
+                    } ?: false,
+                    isBadHabit = habit.isBadHabit
                 )
             }
         }
@@ -1415,15 +1457,18 @@ private fun CalendarDay(
     streakLevel: Int = 0,  // 0 = broken/none, 1-4 = building, 5+ = strong
     isGraceDay: Boolean = false,  // Grace day indicator
     isFreezeDay: Boolean = false,  // Freeze day indicator
-    isBeforeFirstCompletion: Boolean = false  // Before first completion - no streak tracking yet
+    isBeforeFirstCompletion: Boolean = false,  // Before first completion - no streak tracking yet
+    isBadHabit: Boolean = false  // Bad habit indicator
 ) {
     // Allow selecting any past date (incl. before habit creation) for backfill
     val isClickable = date != null && !date.isAfter(LocalDate.now())
 
-    // Background color with special handling for freeze days
+    // Background color with special handling for freeze days and bad habits
     val backgroundColor = when {
         date == null -> Color.Transparent
         isFreezeDay -> Color(0xFFE0F7FA)  // Light frost cyan background for freeze days
+        isBadHabit && isCompleted -> Color(0xFFE8F5E9)  // Light green for bad habit success
+        isBadHabit && date < LocalDate.now() && !isBeforeHabitCreation -> Color(0xFFFFEBEE)  // Light red for bad habit failure
         isCompleted -> MaterialTheme.colorScheme.primary
         isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
@@ -1520,6 +1565,47 @@ private fun CalendarDay(
     ) {
         if (date != null) {
             when {
+                isBadHabit -> {
+                    // For bad habits: checkmark = success (app not used), cross = failure (app used)
+                    when {
+                        isCompleted -> {
+                            // Success! User avoided the app
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Avoided app",
+                                tint = Color(0xFF4CAF50),  // Green for success
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        date < LocalDate.now() && !isBeforeHabitCreation && !isFreezeDay -> {
+                            // Past date, not completed = failure (used the app)
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Used app",
+                                tint = Color(0xFFF44336),  // Red for failure
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        isFreezeDay -> {
+                            // Freeze day - show snowflake
+                            Icon(
+                                imageVector = Icons.Default.AcUnit,
+                                contentDescription = "Freeze day",
+                                tint = Color(0xFF00838F),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        else -> {
+                            // Future date or today - show day number
+                            Text(
+                                text = date.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor,
+                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
                 isCompleted -> {
                     Icon(
                         imageVector = Icons.Default.Check,

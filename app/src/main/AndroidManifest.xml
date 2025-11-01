@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
     
+    <!-- Usage stats permission for bad habit tracking -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" 
+        tools:ignore="ProtectedPermissions" />
+    
     <!-- REQUEST_INSTALL_PACKAGES only needed for GitHub flavor (in-app updates) -->
     <!-- Play Store flavor doesn't need this permission -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" 

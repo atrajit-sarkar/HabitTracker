@@ -30,7 +30,13 @@ data class Habit(
     val currentGapStartDate: LocalDate? = null, // When current gap started (first missed day)
     val freezeDaysUsedForCurrentGap: Int = 0, // How many freeze days already used for this gap
     // Track ALL dates where freeze was applied (for calendar UI)
-    val freezeAppliedDates: Set<LocalDate> = emptySet() // All dates that had freeze protection applied
+    val freezeAppliedDates: Set<LocalDate> = emptySet(), // All dates that had freeze protection applied
+    // Bad habit fields
+    val isBadHabit: Boolean = false, // Flag to distinguish bad habits from regular habits
+    val targetAppPackageName: String? = null, // Package name of the app to track (e.g., "com.facebook.katana")
+    val targetAppName: String? = null, // Display name of the app being tracked
+    val lastAppUsageCheckDate: LocalDate? = null, // Last date when app usage was checked
+    val totalCompletions: Int = 0 // Total number of completions (for bad habits - days app was avoided)
 ) {
     // Helper function to get NotificationSound object
     fun getNotificationSound(): NotificationSound {

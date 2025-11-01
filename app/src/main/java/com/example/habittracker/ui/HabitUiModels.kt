@@ -19,7 +19,8 @@ data class HabitCardUi(
     val frequencyText: String,
     val avatar: HabitAvatar,
     val isSelected: Boolean = false,
-    val isOverdue: Boolean = false
+    val isOverdue: Boolean = false,
+    val isBadHabit: Boolean = false
 )
 
 data class AddHabitState(
@@ -38,13 +39,17 @@ data class AddHabitState(
     val nameError: String? = null,
     val isSaving: Boolean = false,
     val isEditMode: Boolean = false,
-    val editingHabitId: Long? = null
+    val editingHabitId: Long? = null,
+    // Bad habit fields
+    val targetAppPackageName: String? = null,
+    val targetAppName: String? = null
 ) {
     val time: LocalTime get() = LocalTime.of(hour, minute)
 }
 
 data class HabitScreenState(
     val habits: List<HabitCardUi> = emptyList(),
+    val badHabits: List<Habit> = emptyList(), // Bad habits shown separately
     val deletedHabits: List<Habit> = emptyList(),
     val isLoading: Boolean = false,
     val isAddSheetVisible: Boolean = false,

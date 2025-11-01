@@ -288,6 +288,9 @@ fun HabitTrackerNavigation(
             val onNewsClick = rememberNavigationHandler {
                 safeNavigate("news")
             }
+            val onAddBadHabitClick = rememberNavigationHandler {
+                safeNavigate("add_bad_habit")
+            }
             
             
             HabitHomeRoute(
@@ -296,6 +299,7 @@ fun HabitTrackerNavigation(
                 userRewards = userRewards,
                 unreadNewsCount = unreadNewsCount,
                 onAddHabitClick = onAddHabitClick,
+                onAddBadHabitClick = onAddBadHabitClick,
                 onToggleReminder = viewModel::toggleReminder,
                 onMarkHabitCompleted = viewModel::markHabitCompleted,
                 onDeleteHabit = viewModel::deleteHabit,
@@ -308,6 +312,7 @@ fun HabitTrackerNavigation(
                     }
                 },
                 onTrashClick = onTrashClick,
+                onBadHabitsClick = { safeNavigate("bad_habits") },
                 onProfileClick = onProfileClick,
                 onNotificationGuideClick = onNotificationGuideClick,
                 onEditHabitClick = onEditHabitClick,
@@ -418,6 +423,49 @@ fun HabitTrackerNavigation(
             )
         }
         
+        composable("add_bad_habit") {
+            val viewModel: HabitViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val coroutineScope = rememberCoroutineScope()
+            var saveTriggered by remember { mutableStateOf(false) }
+            
+            // Navigate back when save completes
+            LaunchedEffect(state.addHabitState.isSaving, saveTriggered) {
+                if (saveTriggered && !state.addHabitState.isSaving) {
+                    kotlinx.coroutines.delay(200)
+                    navController.popBackStack()
+                }
+            }
+            
+            val onBackClick = rememberNavigationHandler {
+                viewModel.resetAddHabitState()
+                navController.popBackStack()
+            }
+            
+            val onSaveHabit = rememberNavigationHandler {
+                coroutineScope.launch {
+                    saveTriggered = true
+                    viewModel.saveBadHabit()
+                }
+            }
+            
+            AddBadHabitScreen(
+                habitName = state.addHabitState.title,
+                habitDescription = state.addHabitState.description,
+                selectedSound = state.addHabitState.notificationSound,
+                availableSounds = state.addHabitState.availableSounds,
+                targetAppPackageName = state.addHabitState.targetAppPackageName,
+                targetAppName = state.addHabitState.targetAppName,
+                isSaving = state.addHabitState.isSaving,
+                onHabitNameChange = viewModel::onHabitNameChange,
+                onHabitDescriptionChange = viewModel::onHabitDescriptionChange,
+                onNotificationSoundChange = viewModel::onNotificationSoundChange,
+                onTargetAppChange = viewModel::onTargetAppChange,
+                onBackClick = onBackClick,
+                onSaveHabit = onSaveHabit
+            )
+        }
+        
         composable("habit_details/{habitId}") { backStackEntry ->
             val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: return@composable
             val viewModel: HabitViewModel = hiltViewModel()
@@ -449,6 +497,33 @@ fun HabitTrackerNavigation(
                 onPermanentlyDeleteHabit = viewModel::permanentlyDeleteHabit,
                 onEmptyTrash = viewModel::emptyTrash,
                 onBackClick = onBackClick
+            )
+        }
+        
+        composable("bad_habits") {
+            val viewModel: HabitViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            
+            // Debounced back navigation
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            // Habit details navigation
+            val onBadHabitClick: (Long) -> Unit = { habitId ->
+                safeNavigate("habit_details/$habitId")
+            }
+            
+            // Debounced add bad habit navigation
+            val onAddBadHabitClick = rememberNavigationHandler {
+                safeNavigate("add_bad_habit")
+            }
+            
+            BadHabitsScreen(
+                badHabits = state.badHabits,
+                onBackClick = onBackClick,
+                onBadHabitClick = onBadHabitClick,
+                onAddBadHabitClick = onAddBadHabitClick
             )
         }
         
