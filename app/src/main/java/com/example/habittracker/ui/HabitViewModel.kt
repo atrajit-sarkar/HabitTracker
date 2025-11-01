@@ -596,6 +596,9 @@ class HabitViewModel @Inject constructor(
             
             // Notify icon manager to check for overdue habits
             it.atraj.habittracker.receiver.HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
+            
+            // Update widget to reflect completion
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {

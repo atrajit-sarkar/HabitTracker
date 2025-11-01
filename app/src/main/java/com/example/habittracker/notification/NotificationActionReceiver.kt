@@ -47,6 +47,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         
                         // Trigger icon check after habit completion
                         HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
+                        
+                        // Update widget to reflect completion
+                        it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -78,6 +81,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         
                         // Trigger icon check after habit completion
                         HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
+                        
+                        // Update widget to reflect completion
+                        it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

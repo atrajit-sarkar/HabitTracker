@@ -7,6 +7,7 @@ import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.notification.NotificationReliabilityHelper
 import it.atraj.habittracker.service.OverdueHabitIconManager
 import it.atraj.habittracker.service.AppIconManager
+import it.atraj.habittracker.widget.WidgetDataObserver
 import it.atraj.habittracker.worker.OverdueHabitWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -25,6 +26,9 @@ class HabitTrackerApp : Application(), Configuration.Provider {
     
     @Inject
     lateinit var habitRepository: HabitRepository
+    
+    @Inject
+    lateinit var widgetDataObserver: WidgetDataObserver
 
     override fun onCreate() {
         super.onCreate()
@@ -37,6 +41,9 @@ class HabitTrackerApp : Application(), Configuration.Provider {
         
         // Schedule periodic checks for overdue habits
         OverdueHabitWorker.schedulePeriodicCheck(this)
+        
+        // Start observing habit data changes for automatic widget updates
+        widgetDataObserver.startObserving()
     }
 
     override val workManagerConfiguration: Configuration
