@@ -1,55 +1,49 @@
 """
-Remove black/dark background from widget PNG images using AI
+Remove background from widget PNG images using AI (rembg)
 """
 import sys
 import os
 from pathlib import Path
 from PIL import Image
-import numpy as np
 
-def remove_dark_background(input_path, output_path, threshold=50):
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    REMBG_AVAILABLE = False
+    print("⚠️  rembg not available. Install with: pip install rembg")
+
+def remove_background_ai(input_path, output_path):
     """
-    Remove dark/black background from PNG image
+    Remove background using AI model (rembg)
     
     Args:
         input_path: Path to input PNG
         output_path: Path to output PNG
-        threshold: RGB value below which pixels are considered background (0-255)
     """
-    print(f"Processing: {input_path}")
+    if not REMBG_AVAILABLE:
+        print(f"❌ Cannot process {input_path} - rembg not installed")
+        return False
     
-    # Open image
-    img = Image.open(input_path).convert('RGBA')
-    data = np.array(img)
+    print(f"🤖 AI Processing: {input_path}")
     
-    r, g, b, a = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
-    
-    # Detect dark pixels (likely background)
-    dark_mask = (r < threshold) & (g < threshold) & (b < threshold)
-    
-    # Calculate gradient to detect edges (preserve anti-aliasing)
-    gray = (r.astype(float) + g.astype(float) + b.astype(float)) / 3
-    gradient_x = np.abs(np.diff(gray, axis=1, prepend=gray[:,0:1]))
-    gradient_y = np.abs(np.diff(gray, axis=0, prepend=gray[0:1,:]))
-    gradient = np.sqrt(gradient_x**2 + gradient_y**2)
-    
-    # Preserve edges (anti-aliased pixels)
-    edge_mask = gradient > 10
-    
-    # Remove dark pixels that are not near edges
-    removal_mask = dark_mask & ~edge_mask
-    
-    # Set alpha to 0 for background pixels
-    data[removal_mask, 3] = 0
-    
-    # Also reduce alpha for semi-dark pixels (smooth transition)
-    semi_dark_mask = (r < threshold * 2) & (g < threshold * 2) & (b < threshold * 2) & ~removal_mask
-    data[semi_dark_mask, 3] = (data[semi_dark_mask, 3] * 0.3).astype(np.uint8)
-    
-    # Save result
-    result = Image.fromarray(data, 'RGBA')
-    result.save(output_path, 'PNG', optimize=True)
-    print(f"Saved: {output_path}")
+    try:
+        # Open image
+        with open(input_path, 'rb') as input_file:
+            input_data = input_file.read()
+        
+        # Remove background using AI
+        output_data = remove(input_data)
+        
+        # Save result
+        with open(output_path, 'wb') as output_file:
+            output_file.write(output_data)
+        
+        print(f"✅ Saved: {output_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error processing {input_path}: {e}")
+        return False
 
 def process_widget_assets():
     """Process all widget asset PNG files"""
@@ -68,6 +62,7 @@ def process_widget_assets():
         'no-overdue.png'
     ]
     
+    success_count = 0
     for filename in png_files:
         input_path = input_dir / filename
         if input_path.exists():
@@ -75,14 +70,14 @@ def process_widget_assets():
             output_name = f"widget_{filename.replace('-', '_')}"
             output_path = output_dir / output_name
             
-            try:
-                remove_dark_background(input_path, output_path, threshold=50)
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
+            if remove_background_ai(str(input_path), str(output_path)):
+                success_count += 1
         else:
-            print(f"File not found: {input_path}")
+            print(f"❌ File not found: {input_path}")
+    
+    print(f"\n✨ Processed {success_count}/{len(png_files)} images successfully!")
 
 if __name__ == '__main__':
-    print("🎨 Removing backgrounds from widget assets...")
+    print("🎨 Removing backgrounds from widget assets using AI...")
     process_widget_assets()
     print("✅ Done!")

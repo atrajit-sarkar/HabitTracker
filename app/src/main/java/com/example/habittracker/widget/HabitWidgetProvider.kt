@@ -122,6 +122,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
     }
 
     private suspend fun setupNoOverdueState(context: Context, views: RemoteViews) {
+        // Set morning sunrise gradient background
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_morning)
+        
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_no_overdue)
         views.setTextViewText(R.id.widget_title, "✨ Great Start!")
         
@@ -140,13 +143,16 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors
-        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#10B981"))
-        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#374151"))
-        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#6B7280"))
+        // Set colors for sunrise theme
+        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#92400E"))
+        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#451A03"))
+        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#78350F"))
     }
 
     private suspend fun setupAllDoneState(context: Context, views: RemoteViews, completedCount: Int) {
+        // Set chill vibe gradient background
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_all_done)
+        
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_all_done)
         views.setTextViewText(R.id.widget_title, "🎉 Amazing!")
         
@@ -165,10 +171,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors
-        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#10B981"))
-        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#374151"))
-        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#059669"))
+        // Set colors for chill vibe theme
+        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#065F46"))
+        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#064E3B"))
+        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#047857"))
     }
 
     private suspend fun setupOneOverdueState(
@@ -176,6 +182,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views: RemoteViews, 
         habit: it.atraj.habittracker.data.local.Habit
     ) {
+        // Set gray sad gradient background
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_one_overdue)
+        
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_1_overdue)
         views.setTextViewText(R.id.widget_title, "⏰ Time's Up!")
         
@@ -198,10 +207,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors
-        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#F59E0B"))
-        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#374151"))
-        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#D97706"))
+        // Set colors for sad gray theme
+        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#374151"))
+        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#1F2937"))
+        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#4B5563"))
     }
 
     private suspend fun setupMultipleOverdueState(
@@ -209,6 +218,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views: RemoteViews,
         overdueHabits: List<it.atraj.habittracker.data.local.Habit>
     ) {
+        // Set fiery anger gradient background
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_multiple_overdue)
+        
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_more_overdue)
         views.setTextViewText(R.id.widget_title, "🚨 Urgent!")
         
@@ -231,10 +243,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors
-        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#EF4444"))
-        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#374151"))
-        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#DC2626"))
+        // Set colors for fiery anger theme
+        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#991B1B"))
+        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#7F1D1D"))
+        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#B91C1C"))
     }
 
     private suspend fun generateGeminiMessage(context: Context, prompt: String): String? {
