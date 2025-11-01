@@ -195,14 +195,23 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.widget_message, message)
         views.setTextViewText(R.id.widget_habit_info, "${habit.title} • ${habit.streak} day streak 🔥")
         
-        // Click opens habit details
-        val intent = Intent(context, MainActivity::class.java).apply {
-            action = "it.atraj.habittracker.OPEN_HABIT_DETAILS"
+        // Click opens habit details - Use launcher intent to work with any activity alias
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val intent = launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
+        } ?: Intent(context, MainActivity::class.java).apply {
+            // Fallback if getLaunchIntentForPackage fails
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("habitId", habit.id)
+            putExtra("openHabitDetails", true)
         }
+        
         val pendingIntent = PendingIntent.getActivity(
-            context, habit.id.toInt(), intent,
+            context, 
+            habit.id.toInt(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)

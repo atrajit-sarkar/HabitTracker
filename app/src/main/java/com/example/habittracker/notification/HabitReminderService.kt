@@ -481,6 +481,10 @@ object HabitReminderService {
             if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(habit.id.toInt(), notification)
                 android.util.Log.d("HabitReminderService", "Notification shown for habit: ${habit.title} with sound: ${habit.notificationSoundName}")
+                
+                // Update widget to reflect current habit status
+                it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                android.util.Log.d("HabitReminderService", "Widget update requested after notification sent")
             } else {
                 android.util.Log.w("HabitNotification", "Notifications are disabled by user")
             }

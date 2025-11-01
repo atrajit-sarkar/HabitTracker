@@ -93,6 +93,10 @@ object OverdueNotificationService {
             if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(notificationId, notification.build())
                 Log.d(TAG, "🎉 Overdue notification shown for habit: ${habit.title}, overdue: ${overdueHours}h")
+                
+                // Update widget to reflect current overdue status
+                it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                Log.d(TAG, "Widget update requested after overdue notification sent")
             } else {
                 Log.w(TAG, "Notifications are disabled by user")
             }
