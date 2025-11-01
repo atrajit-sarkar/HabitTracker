@@ -398,6 +398,18 @@
             android:exported="false">
         </receiver>
 
+        <!-- Habit Widget Provider -->
+        <receiver
+            android:name=".widget.HabitWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
         <!-- Reschedule reminders on time / timezone / date changes -->
         <receiver
             android:name=".notification.TimeChangeReceiver"

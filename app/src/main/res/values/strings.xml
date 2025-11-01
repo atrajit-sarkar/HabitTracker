@@ -294,4 +294,7 @@
     <string name="sign_out">Sign Out</string>
     <string name="sign_out_confirmation">Are you sure you want to sign out? You will need to log in again to access your habits.</string>
     <string name="close">Close</string>
+    
+    <!-- Widget -->
+    <string name="widget_description">Shows due habits with motivational messages or your best streak when no habits are due</string>
 </resources>

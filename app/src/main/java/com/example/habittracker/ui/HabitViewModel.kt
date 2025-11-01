@@ -486,6 +486,11 @@ class HabitViewModel @Inject constructor(
             )
         }
         
+        // Update widget after habit is saved
+        withContext(Dispatchers.Main) {
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+        }
+        
         // Update user's stats on leaderboard in background (non-blocking)
         // Launch in separate coroutine to avoid blocking UI
         viewModelScope.launch(Dispatchers.IO) {
@@ -535,6 +540,9 @@ class HabitViewModel @Inject constructor(
             
             // Notify icon manager to check for overdue habits
             it.atraj.habittracker.receiver.HabitCompletionReceiver.sendHabitCompletedBroadcast(context)
+            
+            // Update widget to reflect completion
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
         }
         // Update stats after completion in separate coroutine (non-blocking)
         viewModelScope.launch(Dispatchers.IO) {
@@ -936,6 +944,9 @@ class HabitViewModel @Inject constructor(
                     isDeleting = false  // Clear immediately for instant UI response
                 )
             }
+            
+            // Update widget after habit deletion
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
         }
         
         // Update user's stats on leaderboard in background (non-blocking, separate coroutine)
@@ -975,6 +986,9 @@ class HabitViewModel @Inject constructor(
             _uiState.update { state ->
                 state.copy(snackbarMessage = "\"${habit.title}\" restored")
             }
+            
+            // Update widget after habit restoration
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
         }
         
         // Update user's stats on leaderboard in background (non-blocking, separate coroutine)

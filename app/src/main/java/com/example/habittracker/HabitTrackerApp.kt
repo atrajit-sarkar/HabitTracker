@@ -3,6 +3,7 @@ package it.atraj.habittracker
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import it.atraj.habittracker.data.HabitRepository
 import it.atraj.habittracker.notification.NotificationReliabilityHelper
 import it.atraj.habittracker.service.OverdueHabitIconManager
 import it.atraj.habittracker.service.AppIconManager
@@ -21,6 +22,9 @@ class HabitTrackerApp : Application(), Configuration.Provider {
     
     @Inject
     lateinit var appIconManager: AppIconManager
+    
+    @Inject
+    lateinit var habitRepository: HabitRepository
 
     override fun onCreate() {
         super.onCreate()
