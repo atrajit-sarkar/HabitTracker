@@ -858,6 +858,26 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                     
+                    // Widget Settings
+                    WidgetSettingsCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                                    )
+                                )
+                            )
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                    
                     // Language Settings
                     Row(
                         modifier = Modifier
@@ -3408,4 +3428,63 @@ private fun GeminiSettingsDialog(
             }
         }
     )
+}
+
+@Composable
+private fun WidgetSettingsCard(modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val widgetCount = remember { it.atraj.habittracker.widget.WidgetHelper.getWidgetCount(context) }
+    
+    Row(
+        modifier = modifier
+            .clickableOnce {
+                it.atraj.habittracker.widget.WidgetHelper.requestAddWidget(context)
+            }
+            .padding(20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Widgets,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Column {
+                Text(
+                    text = "Home Screen Widget",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = if (widgetCount > 0) {
+                        "$widgetCount widget${if (widgetCount > 1) "s" else ""} active  Tap to add more"
+                    } else {
+                        "Stay on track with quick access"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Add Widget",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(32.dp)
+        )
+    }
 }

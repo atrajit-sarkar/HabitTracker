@@ -26,8 +26,8 @@ android {
         applicationId = "it.atraj.habittracker"
         minSdk = 29
         targetSdk = 36
-        versionCode = 34
-        versionName = "7.1.5"
+        versionCode = 35
+        versionName = "7.1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

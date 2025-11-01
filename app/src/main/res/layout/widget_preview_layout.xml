@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Preview Layout - Shows how the widget looks in widget picker -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_bg_all_done">
+
+    <!-- Left side: Text content -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="12dp">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎉 All Done!"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#10B981"
+            android:layout_marginBottom="6dp" />
+
+        <!-- Message -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="All habits completed! Keep up the great work"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="1.2"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Habit Info / Streak -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3/3 completed • 🔥 7 day streak"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280" />
+
+    </LinearLayout>
+
+    <!-- Right side: Image -->
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/widget_all_done"
+        android:scaleType="fitCenter"
+        android:contentDescription="All habits completed" />
+
+</LinearLayout>

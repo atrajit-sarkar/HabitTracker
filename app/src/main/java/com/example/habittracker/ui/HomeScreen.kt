@@ -154,6 +154,7 @@ import it.atraj.habittracker.data.local.HabitFrequency
 import it.atraj.habittracker.data.local.NotificationSound
 import it.atraj.habittracker.ui.DeleteHabitConfirmationDialog
 import it.atraj.habittracker.ui.dialogs.FirstLaunchNotificationDialog
+import it.atraj.habittracker.ui.dialogs.WidgetPromotionDialog
 import it.atraj.habittracker.util.clickableOnce
 import it.atraj.habittracker.service.AppIconManager
 import kotlinx.coroutines.launch
@@ -262,6 +263,11 @@ fun HabitHomeRoute(
     var showFirstLaunchDialog by rememberSaveable { 
         mutableStateOf(!prefs.getBoolean("notification_guide_shown", false)) 
     }
+    
+    // Widget promotion dialog state - show after first launch dialog
+    var showWidgetPromotionDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
 
     // Get theme configuration for custom icons
     val themeConfig = LocalThemeConfig.current
@@ -303,11 +309,33 @@ fun HabitHomeRoute(
             onDismiss = {
                 showFirstLaunchDialog = false
                 prefs.edit().putBoolean("notification_guide_shown", true).apply()
+                // Show widget promotion dialog after first launch dialog if user has habits
+                if (state.habits.isNotEmpty() && !prefs.getBoolean("widget_promotion_shown", false)) {
+                    showWidgetPromotionDialog = true
+                }
             },
             onOpenGuide = {
                 showFirstLaunchDialog = false
                 prefs.edit().putBoolean("notification_guide_shown", true).apply()
                 onNotificationGuideClick()
+                // Show widget promotion dialog after returning from guide if user has habits
+                if (state.habits.isNotEmpty() && !prefs.getBoolean("widget_promotion_shown", false)) {
+                    showWidgetPromotionDialog = true
+                }
+            }
+        )
+    }
+    
+    // Widget promotion dialog - show after first launch dialog and only if user has habits
+    if (showWidgetPromotionDialog) {
+        WidgetPromotionDialog(
+            onDismiss = {
+                showWidgetPromotionDialog = false
+                prefs.edit().putBoolean("widget_promotion_shown", true).apply()
+            },
+            onAddWidget = {
+                showWidgetPromotionDialog = false
+                prefs.edit().putBoolean("widget_promotion_shown", true).apply()
             }
         )
     }
