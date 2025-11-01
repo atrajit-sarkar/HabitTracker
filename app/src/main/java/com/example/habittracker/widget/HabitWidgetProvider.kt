@@ -81,30 +81,59 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 // Get completed today
                 val completedToday = scheduledToday.filter { it.lastCompletedDate == today }
                 
+                // Get habits whose time has passed (should have been done by now)
+                val habitsDueByNow = scheduledToday.filter { habit ->
+                    val habitTime = LocalTime.of(habit.reminderHour, habit.reminderMinute)
+                    currentTime.isAfter(habitTime)
+                }
+                
+                // Debug logging
+                android.util.Log.d("HabitWidget", "=== Widget State Debug ===")
+                android.util.Log.d("HabitWidget", "Current time: $currentTime")
+                android.util.Log.d("HabitWidget", "Scheduled today: ${scheduledToday.size} habits")
+                android.util.Log.d("HabitWidget", "Habits due by now: ${habitsDueByNow.size} (${habitsDueByNow.map { "${it.title} @ ${it.reminderHour}:${it.reminderMinute}" }})")
+                android.util.Log.d("HabitWidget", "Completed today: ${completedToday.size} (${completedToday.map { it.title }})")
+                android.util.Log.d("HabitWidget", "Overdue habits: ${overdueHabits.size}")
+                
                 // Determine widget state
                 when {
-                    scheduledToday.isEmpty() -> {
-                        // NO_OVERDUE: No habits scheduled today
-                        setupNoOverdueState(context, views)
-                    }
-                    
-                    overdueHabits.isEmpty() && completedToday.isNotEmpty() -> {
-                        // ALL_DONE: All scheduled habits completed
-                        setupAllDoneState(context, views, completedToday.size)
-                    }
-                    
-                    overdueHabits.size == 1 -> {
-                        // ONE_OVERDUE: Single habit overdue
-                        setupOneOverdueState(context, views, overdueHabits.first())
-                    }
-                    
+                    // PRIORITY 1: Multiple habits overdue - Show angry urgent state
                     overdueHabits.size > 1 -> {
-                        // MULTIPLE_OVERDUE: Multiple habits overdue
+                        android.util.Log.d("HabitWidget", "STATE: MULTIPLE_OVERDUE (${overdueHabits.size} habits)")
                         setupMultipleOverdueState(context, views, overdueHabits)
                     }
                     
+                    // PRIORITY 2: Single habit overdue - Show gentle reminder
+                    overdueHabits.size == 1 -> {
+                        android.util.Log.d("HabitWidget", "STATE: ONE_OVERDUE (${overdueHabits.first().title})")
+                        setupOneOverdueState(context, views, overdueHabits.first())
+                    }
+                    
+                    // PRIORITY 3: All scheduled habits completed - Show champion!
+                    completedToday.size == scheduledToday.size && scheduledToday.isNotEmpty() -> {
+                        android.util.Log.d("HabitWidget", "STATE: CHAMPION (ALL scheduled habits completed)")
+                        val bestHabit = habits
+                            .filter { !it.isDeleted && it.reminderEnabled }
+                            .maxByOrNull { it.streak }
+                        
+                        android.util.Log.d("HabitWidget", "Best habit: ${bestHabit?.title}, streak: ${bestHabit?.streak}")
+                        
+                        if (bestHabit != null && bestHabit.streak > 0) {
+                            setupBestHabitState(context, views, bestHabit, completedToday.size)
+                        } else {
+                            setupAllDoneState(context, views, completedToday.size)
+                        }
+                    }
+                    
+                    // PRIORITY 4: Some habits done, no overdue, future habits pending - Show all complete
+                    overdueHabits.isEmpty() && completedToday.isNotEmpty() && completedToday.size < scheduledToday.size -> {
+                        android.util.Log.d("HabitWidget", "STATE: ALL_COMPLETE (${completedToday.size} done, ${scheduledToday.size - completedToday.size} pending later)")
+                        setupAllDoneState(context, views, completedToday.size)
+                    }
+                    
+                    // PRIORITY 5: Morning state - No habits done yet, or no habits scheduled
                     else -> {
-                        // NO_OVERDUE: Waiting for scheduled time
+                        android.util.Log.d("HabitWidget", "STATE: READY_TO_START (morning/waiting)")
                         setupNoOverdueState(context, views)
                     }
                 }
@@ -126,11 +155,14 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_morning)
         
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_no_overdue)
-        views.setTextViewText(R.id.widget_title, "✨ Great Start!")
+        views.setViewVisibility(R.id.widget_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.GONE)
+        
+        views.setTextViewText(R.id.widget_title, "✨ READY TO START")
         
         val message = generateGeminiMessage(context, 
-            "Generate a motivating 'good morning' or 'new day' message (max 20 words) for someone starting their day with no overdue habits. Be encouraging and positive. Don't use emojis."
-        ) ?: "Good morning! Ready to crush your goals today? You've got this! 💪"
+            "Motivating morning message (max 12 words). Be positive and energetic."
+        ) ?: "Ready to conquer today's goals! 💪"
         
         views.setTextViewText(R.id.widget_message, message)
         views.setTextViewText(R.id.widget_habit_info, "No habits due yet")
@@ -143,7 +175,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors for sunrise theme
+        // Set colors for sunrise theme - Bold and modern
         views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#92400E"))
         views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#451A03"))
         views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#78350F"))
@@ -154,14 +186,17 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_all_done)
         
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_all_done)
-        views.setTextViewText(R.id.widget_title, "🎉 Amazing!")
+        views.setViewVisibility(R.id.widget_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.GONE)
+        
+        views.setTextViewText(R.id.widget_title, "🎉 ALL COMPLETE")
         
         val message = generateGeminiMessage(context,
-            "Generate a congratulatory message (max 20 words) for someone who completed all $completedCount habits today. Be proud and encouraging. Don't use emojis."
-        ) ?: "Incredible work! You completed all $completedCount habits today! Keep this momentum going! 🌟"
+            "Congratulatory message for $completedCount completed habits (max 12 words). Be proud."
+        ) ?: "All $completedCount habits crushed! 🌟"
         
         views.setTextViewText(R.id.widget_message, message)
-        views.setTextViewText(R.id.widget_habit_info, "All $completedCount habits completed! 🔥")
+        views.setTextViewText(R.id.widget_habit_info, "$completedCount habits completed 🔥")
         
         // Click opens main app
         val intent = Intent(context, MainActivity::class.java)
@@ -171,10 +206,170 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors for chill vibe theme
+        // Set colors for chill vibe theme - Bold modern green
         views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#065F46"))
         views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#064E3B"))
         views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#047857"))
+    }
+
+    /**
+     * Setup widget state for best habit with longest streak
+     * Shows when all habits are completed - celebrates the champion habit!
+     */
+    private suspend fun setupBestHabitState(
+        context: Context, 
+        views: RemoteViews, 
+        bestHabit: it.atraj.habittracker.data.local.Habit,
+        completedCount: Int
+    ) {
+        android.util.Log.d("HabitWidget", "Setting up CHAMPION state for: ${bestHabit.title}, streak: ${bestHabit.streak}")
+        
+        // Set golden victory gradient background
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_all_done)
+        
+        // Show champion trophy image (background removed)
+        views.setImageViewResource(R.id.widget_image, R.drawable.widget_champion)
+        views.setViewVisibility(R.id.widget_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.GONE)
+        
+        views.setTextViewText(R.id.widget_title, "🏆 CHAMPION HABIT")
+        
+        // Generate personalized message based on habit description  
+        val habitDescription = if (bestHabit.description.isNotBlank()) {
+            bestHabit.description
+        } else {
+            bestHabit.title
+        }
+        
+        val message = generateGeminiMessage(context,
+            "Motivational message for '${habitDescription}' with ${bestHabit.streak} day streak (max 12 words)."
+        ) ?: "${bestHabit.streak} day streak! 🌟"
+        
+        views.setTextViewText(R.id.widget_message, message)
+        views.setTextViewText(R.id.widget_habit_info, "${bestHabit.title} • ${bestHabit.streak} days 🔥")
+        
+        // Click opens habit details
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val intent = launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("habitId", bestHabit.id)
+            putExtra("openHabitDetails", true)
+        } ?: Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("habitId", bestHabit.id)
+            putExtra("openHabitDetails", true)
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            context, 
+            bestHabit.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+        
+        // Set colors for golden victory theme (same as all done - green success)
+        views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#065F46"))
+        views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#064E3B"))
+        views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#047857"))
+    }
+    
+    /**
+     * Load and display habit avatar in widget
+     * Returns true if avatar loaded successfully, false if fallback needed
+     */
+    private fun loadHabitAvatar(context: Context, views: RemoteViews, habit: it.atraj.habittracker.data.local.Habit): Boolean {
+        return try {
+            when (habit.avatar.type) {
+                it.atraj.habittracker.data.local.HabitAvatarType.EMOJI -> {
+                    // Create bitmap with emoji text
+                    val bitmap = createEmojiBitmap(context, habit.avatar.value, habit.avatar.backgroundColor)
+                    if (bitmap != null) {
+                        views.setViewVisibility(R.id.widget_image, android.view.View.GONE)
+                        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.VISIBLE)
+                        views.setImageViewBitmap(R.id.widget_habit_avatar, bitmap)
+                        android.util.Log.d("HabitWidget", "Loaded emoji avatar: ${habit.avatar.value}")
+                        true
+                    } else {
+                        false
+                    }
+                }
+                it.atraj.habittracker.data.local.HabitAvatarType.DEFAULT_ICON -> {
+                    // Load icon from drawable resources
+                    val iconResource = getIconResourceId(context, habit.avatar.value)
+                    if (iconResource != 0) {
+                        views.setViewVisibility(R.id.widget_image, android.view.View.GONE)
+                        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.VISIBLE)
+                        views.setImageViewResource(R.id.widget_habit_avatar, iconResource)
+                        android.util.Log.d("HabitWidget", "Loaded icon avatar: ${habit.avatar.value}")
+                        true
+                    } else {
+                        android.util.Log.e("HabitWidget", "Icon resource not found: ${habit.avatar.value}")
+                        false
+                    }
+                }
+                it.atraj.habittracker.data.local.HabitAvatarType.CUSTOM_IMAGE -> {
+                    // Load custom image from URI
+                    val uri = android.net.Uri.parse(habit.avatar.value)
+                    views.setViewVisibility(R.id.widget_image, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.VISIBLE)
+                    views.setImageViewUri(R.id.widget_habit_avatar, uri)
+                    android.util.Log.d("HabitWidget", "Loaded custom image avatar: ${habit.avatar.value}")
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HabitWidget", "Error loading habit avatar", e)
+            false
+        }
+    }
+    
+    /**
+     * Create a bitmap with emoji text on colored background
+     */
+    private fun createEmojiBitmap(context: Context, emoji: String, backgroundColor: String): android.graphics.Bitmap? {
+        return try {
+            val size = 200 // Size in pixels (will be scaled down to 80dp by widget)
+            val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            
+            // Draw background
+            val bgPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor(backgroundColor)
+                isAntiAlias = true
+            }
+            canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), bgPaint)
+            
+            // Draw emoji text
+            val textPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = size * 0.6f // 60% of bitmap size
+                isAntiAlias = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            
+            // Center the emoji
+            val xPos = size / 2f
+            val yPos = (size / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
+            
+            canvas.drawText(emoji, xPos, yPos, textPaint)
+            
+            bitmap
+        } catch (e: Exception) {
+            android.util.Log.e("HabitWidget", "Error creating emoji bitmap", e)
+            null
+        }
+    }
+    
+    /**
+     * Get drawable resource ID from icon name
+     */
+    private fun getIconResourceId(context: Context, iconName: String): Int {
+        return try {
+            context.resources.getIdentifier(iconName, "drawable", context.packageName)
+        } catch (e: Exception) {
+            0
+        }
     }
 
     private suspend fun setupOneOverdueState(
@@ -186,14 +381,17 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_one_overdue)
         
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_1_overdue)
-        views.setTextViewText(R.id.widget_title, "⏰ Time's Up!")
+        views.setViewVisibility(R.id.widget_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.GONE)
+        
+        views.setTextViewText(R.id.widget_title, "⏰ TIME'S UP")
         
         val message = generateGeminiMessage(context,
-            "Generate a motivating reminder (max 20 words) to complete habit '${habit.title}'. Be encouraging but firm. Don't use emojis."
-        ) ?: "Time to complete '${habit.title}'! Don't break your streak! You can do this! 💪"
+            "Reminder to complete '${habit.title}' (max 10 words). Be firm."
+        ) ?: "Complete '${habit.title}' now! 💪"
         
         views.setTextViewText(R.id.widget_message, message)
-        views.setTextViewText(R.id.widget_habit_info, "${habit.title} • ${habit.streak} day streak 🔥")
+        views.setTextViewText(R.id.widget_habit_info, "${habit.title} • ${habit.streak} days 🔥")
         
         // Click opens habit details - Use launcher intent to work with any activity alias
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -231,15 +429,18 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg_multiple_overdue)
         
         views.setImageViewResource(R.id.widget_image, R.drawable.widget_more_overdue)
-        views.setTextViewText(R.id.widget_title, "🚨 Urgent!")
+        views.setViewVisibility(R.id.widget_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.widget_habit_avatar, android.view.View.GONE)
+        
+        views.setTextViewText(R.id.widget_title, "🚨 ACTION REQUIRED")
         
         val count = overdueHabits.size
         val habitNames = overdueHabits.take(2).joinToString(", ") { it.title }
-        val moreText = if (count > 2) " + ${count - 2} more" else ""
+        val moreText = if (count > 2) " +${count - 2}" else ""
         
         val message = generateGeminiMessage(context,
-            "Generate a firm, urgent message (max 20 words) for someone with $count overdue habits. Be direct and motivating. Create urgency. Don't use emojis."
-        ) ?: "You have $count overdue habits! Time to take action NOW! Don't let them pile up! 🔴"
+            "$count overdue habits! Urgent reminder (max 10 words)."
+        ) ?: "$count habits need attention now! 🔴"
         
         views.setTextViewText(R.id.widget_message, message)
         views.setTextViewText(R.id.widget_habit_info, "$habitNames$moreText")
@@ -255,7 +456,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         
-        // Set colors for fiery anger theme
+        // Set colors for fiery anger theme - Bold red
         views.setTextColor(R.id.widget_title, android.graphics.Color.parseColor("#991B1B"))
         views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor("#7F1D1D"))
         views.setTextColor(R.id.widget_habit_info, android.graphics.Color.parseColor("#B91C1C"))

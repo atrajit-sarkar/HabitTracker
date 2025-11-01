@@ -28,6 +28,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val habitId = intent.getLongExtra("habitId", -1L)
         if (habitId == -1L) return
 
+        // Use goAsync() to keep receiver alive while async work completes
+        val pendingResult = goAsync()
+
         when (intent.action) {
             "COMPLETE_HABIT" -> {
                 // Play theme-specific sound immediately (on main thread)
@@ -50,8 +53,14 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         
                         // Update widget to reflect completion
                         it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                        
+                        // Small delay to ensure widget update is processed
+                        kotlinx.coroutines.delay(100)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                    } finally {
+                        // Finish the pending result to let system know we're done
+                        pendingResult.finish()
                     }
                 }
             }
@@ -84,8 +93,14 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         
                         // Update widget to reflect completion
                         it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                        
+                        // Small delay to ensure widget update is processed
+                        kotlinx.coroutines.delay(100)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                    } finally {
+                        // Finish the pending result to let system know we're done
+                        pendingResult.finish()
                     }
                 }
             }

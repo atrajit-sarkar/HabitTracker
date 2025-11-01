@@ -43,6 +43,10 @@ class TimeChangeReceiver : BroadcastReceiver() {
                     }
                 }
                 Log.d("TimeChangeReceiver", "Rescheduled $count reminders after time change event")
+                
+                // Update widget to reflect new time/timezone
+                it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                Log.d("TimeChangeReceiver", "Widget updated after time change")
             } catch (e: Exception) {
                 Log.e("TimeChangeReceiver", "Error loading habits: ${e.message}")
             } finally {

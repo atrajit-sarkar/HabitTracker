@@ -112,6 +112,10 @@ class DailyCompletionReceiver : BroadcastReceiver() {
                     userName,
                     habitsForToday.size
                 )
+                
+                // Update widget at day end to reflect completion status
+                it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+                Log.d(TAG, "Widget updated at day end")
             } else {
                 Log.d(TAG, "Not all habits completed, skipping notification")
             }

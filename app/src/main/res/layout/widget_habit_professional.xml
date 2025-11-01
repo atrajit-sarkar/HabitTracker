@@ -52,13 +52,29 @@
 
     </LinearLayout>
 
-    <!-- Right side: Image -->
-    <ImageView
-        android:id="@+id/widget_image"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:scaleType="fitCenter"
-        android:contentDescription="Widget status image"
-        tools:src="@drawable/widget_no_overdue" />
+    <!-- Right side: Image / Habit Avatar -->
+    <FrameLayout
+        android:layout_width="120dp"
+        android:layout_height="120dp">
+        
+        <!-- Default state image (used for normal widget states) -->
+        <ImageView
+            android:id="@+id/widget_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:contentDescription="Widget status image"
+            tools:src="@drawable/widget_no_overdue" />
+        
+        <!-- Habit avatar (shown when displaying best habit) -->
+        <ImageView
+            android:id="@+id/widget_habit_avatar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="Habit avatar"
+            android:visibility="gone" />
+        
+    </FrameLayout>
 
 </LinearLayout>

@@ -71,6 +71,10 @@ class BootReceiver : BroadcastReceiver() {
             dailyCompletionScheduler.scheduleDailyCheck()
             Log.d("BootReceiver", "Rescheduled daily completion check at 11:50 PM")
             
+            // Update widget after boot/app update
+            it.atraj.habittracker.widget.HabitWidgetProvider.requestUpdate(context)
+            Log.d("BootReceiver", "Widget updated after boot/app update")
+            
             Log.d("BootReceiver", "Successfully rescheduled $rescheduled reminders out of ${habits.size} total habits")
         } catch (e: Exception) {
             Log.e("BootReceiver", "Error getting habits from repository: ${e.message}", e)
