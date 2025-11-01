@@ -98,8 +98,21 @@
                     android:host="habittracker.atraj.it" />
             </intent-filter>
         </activity>
+        
+        <!-- Overdue Habits Activity - Shows all overdue habits with urgency animations -->
+        <activity
+            android:name=".ui.OverdueHabitsActivity"
+            android:exported="true"
+            android:label="Overdue Habits"
+            android:theme="@style/Theme.HabitTracker"
+            android:parentActivityName=".MainActivity">
+            <intent-filter>
+                <action android:name="it.atraj.habittracker.SHOW_OVERDUE_HABITS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
-        <!-- Activity alias for default icon (user-selectable) -->
+        <!-- Activity alias for default icon -->
         <activity-alias
             android:name=".MainActivity.Default"
             android:targetActivity=".MainActivity"

@@ -235,10 +235,13 @@ class HabitWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.widget_message, message)
         views.setTextViewText(R.id.widget_habit_info, "$habitNames$moreText")
         
-        // Click opens main app (will show all habits)
-        val intent = Intent(context, MainActivity::class.java)
+        // Click opens OverdueHabitsActivity to show all overdue habits with urgency animations
+        val intent = Intent(context, it.atraj.habittracker.ui.OverdueHabitsActivity::class.java).apply {
+            action = "it.atraj.habittracker.SHOW_OVERDUE_HABITS"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
         val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
+            context, 1000, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
