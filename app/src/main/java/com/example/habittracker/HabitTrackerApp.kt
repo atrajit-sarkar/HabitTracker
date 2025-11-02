@@ -1,6 +1,8 @@
 package it.atraj.habittracker
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import it.atraj.habittracker.data.HabitRepository
@@ -29,6 +31,8 @@ class HabitTrackerApp : Application(), Configuration.Provider {
     
     @Inject
     lateinit var widgetDataObserver: WidgetDataObserver
+    
+    private var activityCount = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -44,6 +48,26 @@ class HabitTrackerApp : Application(), Configuration.Provider {
         
         // Start observing habit data changes for automatic widget updates
         widgetDataObserver.startObserving()
+        
+        // Register lifecycle callbacks to cleanup icons when app goes to background
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {
+                activityCount++
+            }
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {
+                activityCount--
+                // When all activities are stopped, app is in background
+                if (activityCount == 0) {
+                    // Clean up old icons now that user isn't actively using the app
+                    appIconManager.cleanupOldIconsInBackground()
+                }
+            }
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
     }
 
     override val workManagerConfiguration: Configuration

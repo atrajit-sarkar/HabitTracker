@@ -1,5 +1,6 @@
 package it.atraj.habittracker.ui.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -258,7 +259,7 @@ fun AppIconSelectionScreen(
             },
             text = {
                 Text(
-                    "Your app icon will change to \"${option.name}\". The app may restart to apply the change.",
+                    "Your app icon will change to \"${option.name}\". The new icon will appear on your launcher immediately, with no app restart!",
                     textAlign = TextAlign.Center
                 )
             },
@@ -267,6 +268,11 @@ fun AppIconSelectionScreen(
                     onClick = {
                         viewModel.changeAppIcon(option.id, option.alias)
                         showConfirmationDialog = null
+                        Toast.makeText(
+                            context,
+                            "Icon changed to ${option.name}! Check your launcher.",
+                            Toast.LENGTH_LONG
+                        ).show()
                     },
                     enabled = !isChangingIcon
                 ) {

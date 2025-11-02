@@ -53,10 +53,12 @@ class AppIconViewModel @Inject constructor(
             _isChangingIcon.value = true
             
             try {
-                val success = appIconManager.changeAppIcon(iconId, activityAlias)
-                if (success) {
-                    _currentIconId.value = iconId
-                }
+                // Use scheduled icon change for smooth transition
+                // This updates the UI immediately but delays the actual component change
+                appIconManager.scheduleIconChange(iconId, activityAlias)
+                
+                // Update UI state immediately
+                _currentIconId.value = iconId
             } catch (e: Exception) {
                 // Handle error - could show a toast or error state
             } finally {

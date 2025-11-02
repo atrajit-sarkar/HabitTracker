@@ -5,7 +5,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,6 +20,8 @@ class AppIconManager @Inject constructor(
 ) {
     private val packageManager = context.packageManager
     private val prefs = context.getSharedPreferences("app_icon_prefs", Context.MODE_PRIVATE)
+    private val iconChangeScope = CoroutineScope(Dispatchers.Default)
+    private var pendingIconChangeJob: Job? = null
     
     companion object {
         private const val TAG = "AppIconManager"
@@ -25,6 +31,7 @@ class AppIconManager @Inject constructor(
         private const val PREF_IS_CHANGING_ICON = "is_changing_icon"
         private const val PREF_ICON_CHANGE_TIMESTAMP = "icon_change_timestamp"
         private const val PREF_FIRST_LAUNCH = "is_first_launch"
+        private const val PREF_NEEDS_CLEANUP = "needs_icon_cleanup"
         
         // Available icon aliases (only user-selected custom icons)
         private val ICON_ALIASES = mapOf(
@@ -125,6 +132,68 @@ class AppIconManager @Inject constructor(
         }
     }
     
+    /**
+     * Schedule icon change with smooth transition.
+     * Shows the change immediately in the UI but applies component changes
+     * after a delay to make the transition less jarring.
+     */
+    fun scheduleIconChange(iconId: String, activityAlias: String) {
+        // Cancel any pending icon change
+        pendingIconChangeJob?.cancel()
+        
+        // Save preferences immediately so UI updates
+        prefs.edit()
+            .putString(PREF_CURRENT_ICON_ID, iconId)
+            .putString(PREF_USER_SELECTED_ICON_ID, iconId)
+            .putString(PREF_USER_SELECTED_ALIAS, activityAlias)
+            .putLong(PREF_ICON_CHANGE_TIMESTAMP, System.currentTimeMillis())
+            .putBoolean(PREF_NEEDS_CLEANUP, true) // Mark that we need to cleanup old icons
+            .apply()
+        
+        Log.d(TAG, "Scheduled icon change to: $iconId (will cleanup when app goes to background)")
+        
+        // Enable the new icon immediately (this doesn't kill the app)
+        try {
+            setComponentEnabled(activityAlias, true)
+            Log.d(TAG, "Enabled new icon: $activityAlias")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to enable new icon", e)
+        }
+        
+        // DON'T disable old icons here - that would kill the app!
+        // They will be disabled when app goes to background via cleanupOldIconsInBackground()
+    }
+    
+    /**
+     * Apply icon change immediately (fallback method for backward compatibility).
+     */
+    suspend fun changeAppIconImmediate(iconId: String, activityAlias: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Immediate icon change to: $iconId (alias: $activityAlias)")
+            
+            prefs.edit()
+                .putString(PREF_CURRENT_ICON_ID, iconId)
+                .putString(PREF_USER_SELECTED_ICON_ID, iconId)
+                .putString(PREF_USER_SELECTED_ALIAS, activityAlias)
+                .putLong(PREF_ICON_CHANGE_TIMESTAMP, System.currentTimeMillis())
+                .apply()
+            
+            setComponentEnabled(activityAlias, true)
+            
+            val allAliases = ICON_ALIASES.values + OVERDUE_ICON_ALIASES
+            allAliases.forEach { alias ->
+                if (alias != activityAlias) {
+                    setComponentEnabled(alias, false)
+                }
+            }
+            
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed immediate icon change", e)
+            false
+        }
+    }
+    
     internal fun setComponentEnabled(componentName: String, enabled: Boolean) {
         val component = ComponentName(context, componentName)
         val newState = if (enabled) {
@@ -159,11 +228,73 @@ class AppIconManager @Inject constructor(
             val currentIconId = getCurrentIconId()
             Log.d(TAG, "Initializing AppIconManager with icon: $currentIconId")
             
-            // Just log the current state - don't actually change components at startup
-            // Component changes will happen when user explicitly selects an icon
+            // DON'T clean up on app start - this would kill the app!
+            // Cleanup will happen when app goes to background
+            
             Log.d(TAG, "Current icon ID: $currentIconId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AppIconManager", e)
+        }
+    }
+    
+    /**
+     * Cleanup old icons when app goes to background.
+     * This is called by Application lifecycle callbacks when all activities are stopped.
+     * Since the app is in background, disabling components won't disrupt the user.
+     */
+    fun cleanupOldIconsInBackground() {
+        // Check if cleanup is needed
+        val needsCleanup = prefs.getBoolean(PREF_NEEDS_CLEANUP, false)
+        if (!needsCleanup) {
+            Log.d(TAG, "No icon cleanup needed")
+            return
+        }
+        
+        iconChangeScope.launch(Dispatchers.IO) {
+            try {
+                val userSelectedAlias = getUserSelectedAlias()
+                Log.d(TAG, "App went to background - instantly cleaning up old icons, keeping: $userSelectedAlias")
+                
+                // No delay - cleanup immediately so user doesn't see duplicate icons
+                val allAliases = ICON_ALIASES.values + OVERDUE_ICON_ALIASES
+                allAliases.forEach { alias ->
+                    if (alias != userSelectedAlias) {
+                        setComponentEnabled(alias, false)
+                        Log.d(TAG, "Disabled old icon: $alias")
+                    }
+                }
+                
+                // Mark cleanup as complete
+                prefs.edit().putBoolean(PREF_NEEDS_CLEANUP, false).apply()
+                
+                Log.d(TAG, "Old icons cleanup complete instantly (in background)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to cleanup old icons in background", e)
+            }
+        }
+    }
+    
+    /**
+     * Cleanup old icons - disable all icons except the current one.
+     * This is kept for backward compatibility but should only be used on app startup
+     * if absolutely necessary.
+     */
+    private fun cleanupOldIcons() {
+        try {
+            val userSelectedAlias = getUserSelectedAlias()
+            Log.d(TAG, "Cleaning up old icons, keeping: $userSelectedAlias")
+            
+            val allAliases = ICON_ALIASES.values + OVERDUE_ICON_ALIASES
+            allAliases.forEach { alias ->
+                if (alias != userSelectedAlias) {
+                    setComponentEnabled(alias, false)
+                    Log.d(TAG, "Disabled old icon: $alias")
+                }
+            }
+            
+            Log.d(TAG, "Old icons cleanup complete")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to cleanup old icons", e)
         }
     }
 }
