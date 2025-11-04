@@ -3149,14 +3149,14 @@ private fun TopBarActions(
     
     Spacer(modifier = Modifier.width(8.dp))
     
-    // Freeze Days Counter
+    // Freeze Days Counter - DISABLED
     Row(
         modifier = Modifier
             .background(
                 Color(0xFF87CEEB).copy(alpha = 0.15f),
                 RoundedCornerShape(12.dp)
             )
-            .clickableOnce { onFreezeStoreClick() }
+            // .clickableOnce { onFreezeStoreClick() } // DISABLED: Freeze day store
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
