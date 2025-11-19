@@ -24,6 +24,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHabitRepository(impl: FirestoreHabitRepository): HabitRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNoteRepository(impl: it.atraj.habittracker.data.firestore.FirestoreNoteRepository): it.atraj.habittracker.data.repository.NoteRepository
 }
 
 @Module

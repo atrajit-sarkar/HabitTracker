@@ -251,7 +251,8 @@ fun HabitHomeRoute(
     onExitSelectionMode: () -> Unit = {},
     onDeleteSelectedHabits: () -> Unit = {},
     onFreezeStoreClick: () -> Unit = {},
-    onNewsClick: () -> Unit = {}
+    onNewsClick: () -> Unit = {},
+    onNotesClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notificationPermissionState = rememberNotificationPermissionState()
@@ -366,7 +367,8 @@ fun HabitHomeRoute(
         onStartSelectionMode = onStartSelectionMode,
         onExitSelectionMode = onExitSelectionMode,
         onDeleteSelectedHabits = onDeleteSelectedHabits,
-        onFreezeStoreClick = onFreezeStoreClick
+        onFreezeStoreClick = onFreezeStoreClick,
+        onNotesClick = onNotesClick
     )
 }
 
@@ -394,7 +396,8 @@ fun HabitHomeScreen(
     onStartSelectionMode: (Long) -> Unit = {},
     onExitSelectionMode: () -> Unit = {},
     onDeleteSelectedHabits: () -> Unit = {},
-    onFreezeStoreClick: () -> Unit = {}
+    onFreezeStoreClick: () -> Unit = {},
+    onNotesClick: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -663,6 +666,13 @@ fun HabitHomeScreen(
                 },
                 onCloseDrawer = { 
                     scope.launch { drawerState.close() }
+                },
+                onNotesClick = {
+                    scope.launch {
+                        drawerState.close()
+                        kotlinx.coroutines.delay(250)
+                        onNotesClick()
+                    }
                 }
             )
         },
@@ -1162,7 +1172,8 @@ fun HabitHomeScreen(
 private fun DrawerContent(
     onTrashClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onCloseDrawer: () -> Unit
+    onCloseDrawer: () -> Unit,
+    onNotesClick: () -> Unit
 ) {
     // Responsive drawer width: max 280dp or 75% of screen width (whichever is smaller)
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
@@ -1380,6 +1391,69 @@ private fun DrawerContent(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(18.dp) // Reduced from 20dp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                // Notes Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableOnce { onNotesClick() },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Notes",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "Write and save notes",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

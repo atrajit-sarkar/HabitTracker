@@ -55,6 +55,8 @@ import it.atraj.habittracker.ui.profile.AppIconSelectionScreen
 import it.atraj.habittracker.music.ui.*
 import it.atraj.habittracker.data.model.UserFolder
 import it.atraj.habittracker.data.firestore.FriendRepository
+import it.atraj.habittracker.ui.notes.NotesScreen
+import it.atraj.habittracker.ui.notes.NoteEditorScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
@@ -288,6 +290,10 @@ fun HabitTrackerNavigation(
             val onNewsClick = rememberNavigationHandler {
                 safeNavigate("news")
             }
+
+            val onNotesClick = rememberNavigationHandler {
+                safeNavigate("notes")
+            }
             
             
             HabitHomeRoute(
@@ -316,7 +322,8 @@ fun HabitTrackerNavigation(
                 onExitSelectionMode = viewModel::exitSelectionMode,
                 onDeleteSelectedHabits = viewModel::deleteSelectedHabits,
                 onFreezeStoreClick = { safeNavigate("freeze_store") },
-                onNewsClick = onNewsClick
+                onNewsClick = onNewsClick,
+                onNotesClick = onNotesClick
             )
         }
         
@@ -924,6 +931,40 @@ fun HabitTrackerNavigation(
             }
             
             YouTubeDownloaderScreen(
+                onBackClick = onBackClick
+            )
+        }
+
+        // Notes Feature
+        composable("notes") {
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            val onNoteClick: (String) -> Unit = { noteId ->
+                safeNavigate("note_editor/$noteId")
+            }
+            
+            val onAddNoteClick = rememberNavigationHandler {
+                safeNavigate("note_editor/new")
+            }
+            
+            NotesScreen(
+                onBackClick = onBackClick,
+                onNoteClick = onNoteClick,
+                onAddNoteClick = onAddNoteClick
+            )
+        }
+        
+        composable("note_editor/{noteId}") { backStackEntry ->
+            val noteId = backStackEntry.arguments?.getString("noteId")
+            
+            val onBackClick = rememberNavigationHandler {
+                navController.popBackStack()
+            }
+            
+            NoteEditorScreen(
+                noteId = noteId,
                 onBackClick = onBackClick
             )
         }

@@ -123,6 +123,29 @@ service cloud.firestore {
         // Users can unmark news (delete read status)
         allow delete: if isOwner(userId);
       }
+      
+      
+      // ============================================================================
+      // USER SUB-COLLECTIONS: NOTES
+      // Personal notes
+      // ============================================================================
+      
+      match /notes/{noteId} {
+        // Users can read their own notes
+        allow read: if isOwner(userId);
+        
+        // Users can create their own notes
+        allow create: if isOwner(userId)
+          && hasRequiredFields(['title', 'content', 'createdAt', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.content is string;
+        
+        // Users can update their own notes
+        allow update: if isOwner(userId);
+        
+        // Users can delete their own notes
+        allow delete: if isOwner(userId);
+      }
     }
     
     
